@@ -1,0 +1,15 @@
+# وابستگی‌های نرم‌افزار کبیر
+# نصب:  pip install -r requirements.txt
+
+# رابط گرافیکی Qt (چندسکویی)
+PySide6>=6.5
+
+# خروجی PDF فارسی
+reportlab>=4.0
+
+# شکل‌دهی متن فارسی برای PDF (راست‌به‌چپ)
+arabic-reshaper>=3.0
+python-bidi>=0.4.2
+
+# خروجی اکسل (اختیاری اما توصیه‌شده)
+openpyxl>=3.1
