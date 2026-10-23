@@ -10,7 +10,7 @@ from pathlib import Path
 
 APP_NAME = "کبیر"
 APP_NAME_EN = "KabirCabinet"
-APP_VERSION = "1.0.0"
+APP_VERSION = "2.0.0"
 ORG_NAME = "Kabir"
 
 SYSTEM = platform.system()          # 'Windows' | 'Linux' | 'Darwin'
