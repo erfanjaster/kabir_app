@@ -7,25 +7,29 @@
 
 فقط از کتابخانه‌ی استاندارد پایتون استفاده می‌کند (بدون وابستگی جدید).
 
-اجرا:  python -m kabir.web.server  [--port 8080]
+اجرا:  python main.py  [--port 8080]  [--no-browser]  [--version]
 """
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import json
 import mimetypes
 import os
 import re
+import socket
 import threading
 import traceback
 import webbrowser
 from datetime import datetime
+from email.utils import formatdate
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, unquote, urlparse
 
+from .. import __version__
 from .. import config
 from ..core import costing, invoice as inv, persian as fa
 from ..data import backup as bk
@@ -33,17 +37,19 @@ from ..data import dao
 from ..data.dao import InvoiceRepo, MaterialRepo, ProjectRepo, StyleRepo
 from ..data.db import Database
 
-APP_VERSION = "2.0"
+APP_VERSION = __version__
 WEBUI_DIR = Path(__file__).resolve().parents[2] / "webui"
 EXPORT_DIR = Path(getattr(config, "EXPORT_DIR", Path(config.data_dir()) / "exports"))
 
 _lock = threading.RLock()
+_START_TIME = datetime.now()
 
 MIME = {
     ".html": "text/html; charset=utf-8",
     ".css": "text/css; charset=utf-8",
     ".js": "application/javascript; charset=utf-8",
     ".json": "application/json; charset=utf-8",
+    ".webmanifest": "application/manifest+json; charset=utf-8",
     ".svg": "image/svg+xml",
     ".png": "image/png",
     ".jpg": "image/jpeg",
@@ -424,6 +430,23 @@ def api_bootstrap(db: Database, body: Dict[str, Any]) -> Dict[str, Any]:
         "max_styles": config.MAX_STYLES,
         "kind_labels": inv.KIND_LABELS,
         "data_dir": str(config.data_dir()),
+    }
+
+
+def api_health(db: Database, body: Dict[str, Any]) -> Dict[str, Any]:
+    """بررسی سلامت سرویس (برای پایش و تشخیص اتصال از سمت رابط وب)."""
+    ok_deps, missing = _preflight()
+    return {
+        "status": "ok",
+        "version": APP_VERSION,
+        "uptime_seconds": int((datetime.now() - _START_TIME).total_seconds()),
+        "server_time": fa.jdatetime_str(datetime.now()),
+        "database": str(getattr(db, "path", "")),
+        "exports": {
+            "pdf": "reportlab" not in missing,
+            "excel": "خروجی اکسل" not in missing,
+        },
+        "missing_deps": missing,
     }
 
 
@@ -936,6 +959,7 @@ def api_backup_import(db: Database, body: Dict[str, Any]) -> Dict[str, Any]:
 Route = Tuple[str, re.Pattern, Callable[..., Any]]
 
 ROUTES: List[Route] = [
+    ("GET", re.compile(r"^/api/health$"), lambda h, b, m: api_health(h.db, b)),
     ("GET", re.compile(r"^/api/bootstrap$"), lambda h, b, m: api_bootstrap(h.db, b)),
     ("GET", re.compile(r"^/api/settings$"), lambda h, b, m: api_settings_get(h.db, b)),
     ("PUT", re.compile(r"^/api/settings$"), lambda h, b, m: api_settings_save(h.db, b)),
@@ -1012,6 +1036,13 @@ class KabirHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
+    def _security(self) -> None:
+        """هدرهای امنیتی پایه (نرم‌افزار محلی، سخت‌گیری متعادل)."""
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "SAMEORIGIN")
+        self.send_header("Referrer-Policy", "same-origin")
+        self.send_header("X-XSS-Protection", "1; mode=block")
+
     def _json(self, obj: Any, status: int = 200) -> None:
         raw = json.dumps(obj, ensure_ascii=False, default=str).encode("utf-8")
         self.send_response(status)
@@ -1019,6 +1050,7 @@ class KabirHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(raw)))
         self.send_header("Cache-Control", "no-store")
         self._cors()
+        self._security()
         self.end_headers()
         self.wfile.write(raw)
 
@@ -1029,6 +1061,7 @@ class KabirHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(raw)))
         self.send_header("Content-Disposition", f"attachment; filename*=UTF-8''{quote(name)}")
         self._cors()
+        self._security()
         self.end_headers()
         self.wfile.write(raw)
 
@@ -1041,8 +1074,24 @@ class KabirHandler(BaseHTTPRequestHandler):
         if base not in target.parents and target != base:
             self._json({"ok": False, "error": "مسیر نامعتبر"}, 403)
             return
+        if target.is_dir():
+            target = target / "index.html"
         if not target.is_file():
-            self._json({"ok": False, "error": "یافت نشد"}, 404)
+            # مسیرهای کلاینت‌ساید (هش) به پوسته‌ی اصلی برمی‌گردند
+            if not rel.startswith(("api/", "assets/", "css/", "js/")):
+                target = base / "index.html"
+            if not target.is_file():
+                self._json({"ok": False, "error": "یافت نشد"}, 404)
+                return
+        st = target.stat()
+        etag = '"{:x}-{:x}"'.format(int(st.st_size), int(st.st_mtime))
+        if self.headers.get("If-None-Match") == etag:
+            self.send_response(304)
+            self.send_header("ETag", etag)
+            self.send_header("Content-Length", "0")
+            self._cors()
+            self._security()
+            self.end_headers()
             return
         raw = target.read_bytes()
         ctype = MIME.get(target.suffix.lower()) or mimetypes.guess_type(str(target))[0] \
@@ -1051,7 +1100,11 @@ class KabirHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(raw)))
         self.send_header("Cache-Control", "no-cache")
+        self.send_header("ETag", etag)
+        self.send_header("Last-Modified",
+                         formatdate(st.st_mtime, usegmt=True))
         self._cors()
+        self._security()
         self.end_headers()
         self.wfile.write(raw)
 
@@ -1125,7 +1178,9 @@ class KabirHandler(BaseHTTPRequestHandler):
         except BrokenPipeError:
             pass
         except Exception as exc:                                 # noqa: BLE001
-            traceback.print_exc()
+            msg = traceback.format_exc()
+            print(msg)
+            _log_error(f"{method} {path}\n{msg}")
             try:
                 self._json({"ok": False, "error": f"خطای سرور: {exc}"}, 500)
             except Exception:                                    # noqa: BLE001
@@ -1136,9 +1191,26 @@ class KabirHandler(BaseHTTPRequestHandler):
             super().log_message(fmt, *args)
 
 
+def _log_error(msg: str) -> None:
+    """افزودن خطا به فایل لاگ برنامه (kabir.log) برای گزارش‌گیری."""
+    try:
+        stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with open(config.LOG_PATH, "a", encoding="utf-8") as fh:
+            fh.write(f"\n===== [{stamp}] =====\n{msg}\n")
+    except OSError:
+        pass
+
+
 # ===========================================================================
 # راه‌اندازی
 # ===========================================================================
+
+BANNER = r"""
+   ╔═══════════════════════════════════════════════════════════╗
+   ║   🗄  کـبـیـر  —  قیمت تمام‌شده و فاکتور صنعت کابینت       ║
+   ╚═══════════════════════════════════════════════════════════╝
+"""
+
 
 def _preflight() -> Tuple[bool, List[str]]:
     """بررسی وابستگی‌های اختیاری برای گزارش به کاربر."""
@@ -1153,11 +1225,34 @@ def _preflight() -> Tuple[bool, List[str]]:
     return (not missing), missing
 
 
+def _port_in_use(host: str, port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.4)
+        return s.connect_ex((host if host != "0.0.0.0" else "127.0.0.1", port)) == 0
+
+
 def serve(host: str = "127.0.0.1", port: int = 8080,
           open_browser: bool = True, quiet: bool = False) -> ThreadingHTTPServer:
     """اجرای سرویس‌دهنده (مسدودکننده)."""
     if not WEBUI_DIR.is_dir():
         raise RuntimeError(f"پوشه‌ی رابط وب یافت نشد: {WEBUI_DIR}")
+
+    # اگر پورت اشغال بود و نرم‌افزار دیگری آن‌جا نیست، پورت آزاد بعدی انتخاب می‌شود
+    if _port_in_use(host, port):
+        if _is_kabir_running(host, port):
+            print(f"  ✔ کبیر از قبل روی {port} در حال اجراست — مرورگر باز می‌شود.")
+            if open_browser:
+                webbrowser.open(f"http://{host}:{port}/")
+            return None  # type: ignore[return-value]
+        original = port
+        for candidate in range(port + 1, port + 21):
+            if not _port_in_use(host, candidate):
+                port = candidate
+                if not quiet:
+                    print(f"  ⚠ پورت {original} اشغال بود — کبیر روی پورت {port} اجرا می‌شود.")
+                break
+        else:
+            raise RuntimeError(f"پورت آزاد در بازه‌ی {original}..{original + 20} یافت نشد.")
 
     db = Database.instance()
     dao.bootstrap(db)
@@ -1167,19 +1262,19 @@ def serve(host: str = "127.0.0.1", port: int = 8080,
     ok_deps, missing = _preflight()
     httpd = ThreadingHTTPServer((host, port), KabirHandler)
     httpd.daemon_threads = True
-    url = f"http://{host}:{port}/"
+    url = f"http://{'localhost' if host in ('127.0.0.1', '0.0.0.0') else host}:{port}/"
 
     if not quiet:
-        print("=" * 62)
-        print(f"  🗄  کبیر {fa.to_fa_digits(APP_VERSION)} — رابط وب")
+        print(BANNER)
+        print(f"  نسخه: {fa.to_fa_digits(APP_VERSION)}")
         print(f"  نشانی: {url}")
         print(f"  پایگاه‌داده: {db.path}")
-        print(f"  پوشه‌ی رابط: {WEBUI_DIR}")
+        print(f"  پوشه‌ی رابط وب: {WEBUI_DIR}")
         if not ok_deps:
             print(f"  ⚠ بدون این وابستگی‌ها برخی خروجی‌ها کار نمی‌کنند: {', '.join(missing)}")
-            print("    نصب:  pip install reportlab openpyxl arabic-reshaper python-bidi")
+            print("    نصب:  pip install -r requirements.txt")
         print("  برای توقف: Ctrl+C")
-        print("=" * 62)
+        print()
 
     if open_browser:
         threading.Timer(0.7, lambda: webbrowser.open(url)).start()
@@ -1188,19 +1283,39 @@ def serve(host: str = "127.0.0.1", port: int = 8080,
         httpd.serve_forever()
     except KeyboardInterrupt:
         if not quiet:
-            print("\nدر حال بستن سرویس‌دهنده…")
+            print("\nدر حال بستن سرویس‌دهنده… خدانگهدار 👋")
     finally:
         httpd.server_close()
     return httpd
 
 
+def _is_kabir_running(host: str, port: int) -> bool:
+    """آیا سرویس در حال اجرا روی این پورت، خودِ کبیر است؟"""
+    import urllib.error
+    import urllib.request
+    try:
+        url = f"http://{'127.0.0.1' if host == '0.0.0.0' else host}:{port}/api/health"
+        with urllib.request.urlopen(url, timeout=1.5) as r:
+            data = json.loads(r.read().decode("utf-8"))
+        return bool(data.get("ok")) and data.get("version") == APP_VERSION
+    except Exception:                          # noqa: BLE001
+        return False
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     import argparse
-    ap = argparse.ArgumentParser(description="رابط وب کبیر")
-    ap.add_argument("--host", default=os.environ.get("KABIR_WEB_HOST", "127.0.0.1"))
-    ap.add_argument("--port", type=int, default=int(os.environ.get("KABIR_WEB_PORT", "8080")))
+    ap = argparse.ArgumentParser(
+        prog="kabir",
+        description="کبیر — نرم‌افزار محاسبه‌ی قیمت تمام‌شده و صدور فاکتور کابینت (رابط وب)",
+    )
+    ap.add_argument("--host", default=os.environ.get("KABIR_WEB_HOST", "127.0.0.1"),
+                    help="نشانی میزبان (پیش‌فرض: 127.0.0.1)")
+    ap.add_argument("--port", type=int, default=int(os.environ.get("KABIR_WEB_PORT", "8080")),
+                    help="شماره‌ی پورت (پیش‌فرض: 8080)")
     ap.add_argument("--no-browser", action="store_true", help="مرورگر باز نشود")
-    ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--quiet", action="store_true", help="بدون پیام‌های راه‌اندازی")
+    ap.add_argument("--version", action="version",
+                    version=f"کبیر {APP_VERSION}")
     args = ap.parse_args(argv)
     serve(args.host, args.port, open_browser=not args.no_browser, quiet=args.quiet)
     return 0

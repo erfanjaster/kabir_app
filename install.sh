@@ -10,4 +10,4 @@ PY=$(command -v python3 || command -v python)
 "$PY" -m pip install --upgrade pip
 "$PY" -m pip install -r requirements.txt
 echo
-echo "نصب کامل شد. حالا ./run.sh را اجرا کنید."
+echo "نصب کامل شد. حالا ./run.sh را اجرا کنید تا کبیر در مرورگر باز شود."

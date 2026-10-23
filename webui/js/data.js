@@ -234,6 +234,7 @@ let BACKUPS = [];
 let SETTINGS = {};
 let DASH = null;                 /* داشبورد سرور (در حالت متصل) */
 let DATA_DIR = "";
+let KABIR_VERSION = "";          /* نسخه‌ی سرویس (از bootstrap) */
 let TODAY_FA = "۱۴۰۵/۰۸/۰۱";
 let SALES_DEMO = [
   { label: "اردیبهشت", amount: 310e6, count: 2 }, { label: "خرداد", amount: 425e6, count: 3 },
@@ -252,6 +253,11 @@ const state = {
   editingStyle: null,
   confirmCb: null,
   lastResult: null,
+  sort: {
+    materials: { key: "id", dir: 1 },
+    projects: { key: "id", dir: -1 },
+    archive: { key: "id", dir: -1 },
+  },
   inv: { kind: "quote", mode: "grouped", hidden: new Set(), showCost: false, showStats: true, number: "", payload: null, html: "", demoHtml: "" },
 };
 
@@ -409,6 +415,21 @@ const API = {
   },
 };
 
+/* بررسی سلامت سرویس — سبک و بی‌خطر (برای پایش اتصال) */
+async function healthPing(timeoutMs) {
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), timeoutMs || 2500);
+  try {
+    const r = await fetch(API.base + "/api/health", { signal: ctrl.signal });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (e) {
+    return null;
+  } finally {
+    clearTimeout(to);
+  }
+}
+
 function ingestBootstrap(b) {
   SETTINGS = b.settings || {};
   DIGITS_FA = String(SETTINGS.persian_digits ?? "1") === "1";
@@ -425,6 +446,7 @@ function ingestBootstrap(b) {
   if (DASH && DASH.monthly && DASH.monthly.length) SALES_DEMO = DASH.monthly;
   TODAY_FA = b.today || TODAY_FA;
   DATA_DIR = b.data_dir || "";
+  if (b.version) KABIR_VERSION = String(b.version);
 }
 
 async function tryConnect(silent) {
@@ -452,6 +474,11 @@ async function tryConnect(silent) {
 
 function setConnBadge() {
   const b = el("connBadge");
+  const banner = el("demoBanner");
+  const ver = el("appVer");
+  if (ver) ver.textContent = KABIR_VERSION
+    ? `کبیر ${fa(KABIR_VERSION)} — رابط وب` : "کبیر — رابط وب";
+  if (banner) banner.hidden = API.ok;
   if (!b) return;
   if (API.ok) {
     b.className = "conn ok";
@@ -461,13 +488,24 @@ function setConnBadge() {
     b.className = "conn demo";
     b.innerHTML = `<span class="dot"></span> حالت نمایشی (سرور در دسترس نیست) <button class="conn-retry" id="btnReconnect" type="button">اتصال</button>`;
     const r = el("btnReconnect");
-    if (r) r.addEventListener("click", async () => {
-      r.disabled = true; r.textContent = "…";
-      const ok = await tryConnect(true);
-      if (ok) { toast("به سرور کبیر متصل شد — داده‌ها واقعی هستند", "success"); renderAll(); }
-      else { r.disabled = false; r.textContent = "اتصال"; toast("سرور در دسترس نیست. `python web.py` را اجرا کنید.", "warn"); }
-    });
+    if (r) r.addEventListener("click", () => reconnectNow(r));
   }
+}
+
+/* تلاش مجدد برای اتصال (از نشانگر نوار کناری یا بنر بالای صفحه) */
+async function reconnectNow(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = "…"; }
+  const ok = await tryConnect(true);
+  if (ok) {
+    toast("به سرور کبیر متصل شد — داده‌ها واقعی هستند", "success");
+    if (typeof renderAll === "function") renderAll();
+  } else if (btn) {
+    btn.disabled = false;
+    btn.textContent = "اتصال";
+    toast("سرور در دسترس نیست. کبیر را اجرا کنید: python main.py", "warn");
+  }
+  setConnBadge();
+  return ok;
 }
 
 /* ------------------------------------------------------- داده‌ی نمایشی */

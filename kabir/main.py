@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""اجرا با:  python -m kabir.main"""
+"""اجرای کبیر با:  python -m kabir.main  (معادل python main.py — رابط وب)"""
 import sys
 from pathlib import Path
 

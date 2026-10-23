@@ -7,32 +7,165 @@
 "use strict";
 
 /* ------------------------------------------------------------- توست و مودال */
+const TOAST_LIFE = 3600;
 function toast(msg, type) {
   type = type || "info";
   const ic = type === "success" ? ICONS.check : type === "error" ? ICONS.x : type === "warn" ? ICONS.warn : ICONS.info;
+  const box = el("toasts");
+  /* حداکثر ۴ توست هم‌زمان — قدیمی‌ترین حذف می‌شود */
+  while (box.children.length >= 4) box.firstElementChild.remove();
   const t = document.createElement("div");
   t.className = "toast " + type;
-  t.innerHTML = `<span class="t-ic">${ic}</span><span>${msg}</span>`;
-  el("toasts").appendChild(t);
-  setTimeout(() => { t.classList.add("out"); setTimeout(() => t.remove(), 260); }, 3600);
+  t.setAttribute("role", type === "error" ? "alert" : "status");
+  t.innerHTML = `<span class="t-ic">${ic}</span><span>${msg}</span>` +
+    `<button class="t-close" type="button" aria-label="بستن پیام">${ICONS.x}</button>` +
+    `<span class="t-bar" aria-hidden="true"></span>`;
+  const kill = () => {
+    if (!t.isConnected) return;
+    t.classList.add("out");
+    setTimeout(() => t.remove(), 260);
+  };
+  t.querySelector(".t-close").addEventListener("click", kill);
+  box.appendChild(t);
+  setTimeout(kill, TOAST_LIFE);
 }
 
+/* اجرای یک کار ناهمزمان با نمایش اسپینر روی دکمه (حالت تجاری) */
+async function busy(btn, fn, opts) {
+  opts = opts || {};
+  if (!btn) return fn();
+  btn.classList.add("busy");
+  btn.disabled = true;
+  const old = btn.getAttribute("aria-busy");
+  btn.setAttribute("aria-busy", "true");
+  try {
+    return await fn();
+  } finally {
+    btn.classList.remove("busy");
+    btn.disabled = false;
+    if (old === null) btn.removeAttribute("aria-busy");
+    else btn.setAttribute("aria-busy", old);
+    if (opts.doneMsg) toast(opts.doneMsg, "success");
+  }
+}
+
+let _lastFocus = null;
 function openModal(id) {
+  _lastFocus = document.activeElement;
   el("modalBackdrop").hidden = false;
   $$(".modal").forEach((m) => m.classList.toggle("open", m.id === "modal-" + id));
   document.body.style.overflow = "hidden";
+  /* فوکوس روی اولین کنترل قابل‌تعامل — دسترس‌پذیری */
+  const m = el("modal-" + id);
+  const first = m && m.querySelector("input:not([type=hidden]), select, textarea, button:not([data-close])");
+  if (first) setTimeout(() => first.focus(), 60);
 }
 function closeModal() {
   el("modalBackdrop").hidden = true;
   $$(".modal").forEach((m) => m.classList.remove("open"));
   document.body.style.overflow = "";
+  if (_lastFocus && _lastFocus.focus) { _lastFocus.focus(); _lastFocus = null; }
 }
+/* به‌دام‌اندازی فوکوس داخل مودال باز (Tab چرخه‌ای) */
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Tab") return;
+  const back = el("modalBackdrop");
+  if (!back || back.hidden) return;
+  const m = back.querySelector(".modal.open");
+  if (!m) return;
+  const items = $$("button, input:not([type=hidden]), select, textarea, [tabindex]:not([tabindex='-1'])", m)
+    .filter((n) => !n.disabled && n.offsetParent !== null);
+  if (!items.length) return;
+  const first = items[0], last = items[items.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 function confirmAction(text, cb, title, okLabel) {
   el("confirmText").innerHTML = text;
   el("confirmTitle").textContent = title || "تأیید عملیات";
   el("btnConfirmOk").textContent = okLabel || "حذف";
   state.confirmCb = cb;
   openModal("confirm");
+}
+
+/* ------------------------------------------------------------------ مرتب‌سازی جدول‌ها */
+const SORT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m6 11 6-6 6 6"/></svg>`;
+
+function thSort(tableKey, key, label, extra) {
+  const st = state.sort[tableKey];
+  const cls = "sortable" + (st && st.key === key ? " sorted" + (st.dir < 0 ? " desc" : "") : "");
+  return `<th class="${cls}" data-sortkey="${key}" ${extra || ""} title="مرتب‌سازی بر اساس ${label}">${label}<span class="sort-ic">${SORT_ICON}</span></th>`;
+}
+
+function cmpVals(a, b) {
+  if (typeof a === "number" && typeof b === "number") return a - b;
+  return String(a).localeCompare(String(b), "fa");
+}
+
+function applySort(rows, tableKey, getters) {
+  const st = state.sort[tableKey];
+  if (!st || !getters[st.key]) return rows;
+  const g = getters[st.key];
+  return rows.slice().sort((x, y) => cmpVals(g(x), g(y)) * st.dir);
+}
+
+function wireTableSort(tableEl, tableKey, rerender) {
+  if (!tableEl) return;
+  tableEl.addEventListener("click", (e) => {
+    const th = e.target.closest("th.sortable");
+    if (!th || !tableEl.contains(th)) return;
+    const st = state.sort[tableKey];
+    const k = th.dataset.sortkey;
+    if (st.key === k) st.dir = -st.dir;
+    else { st.key = k; st.dir = 1; }
+    rerender();
+  });
+}
+
+const MAT_SORT = {
+  id: (m) => m.id, name: (m) => m.name, cat: (m) => catLabel(m.cat),
+  price: (m) => m.price, supplier: (m) => m.supplier || "",
+};
+const PROJ_SORT = {
+  id: (p) => p.id, code: (p) => p.code, title: (p) => p.title,
+  customer: (p) => p.customer || "", status: (p) => p.status,
+  date: (p) => p.date || "", final: (p) => p.final_price || 0,
+};
+const ARCH_SORT = {
+  id: (a) => a.id, number: (a) => a.number, kind: (a) => a.kind_label || "",
+  project: (a) => a.project || "", customer: (a) => a.customer || "",
+  date: (a) => a.date || "", amount: (a) => a.amount || 0,
+};
+
+/* ------------------------------------------------------------------ شمارنده‌ی متحرک */
+function countUp(node, target, fmtFn) {
+  if (!node) return;
+  const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const from = Number(node.dataset.v || 0);
+  node.dataset.v = String(target);
+  if (reduce || from === target) { node.innerHTML = fmtFn(target); return; }
+  const t0 = performance.now(), dur = 650;
+  const step = (t) => {
+    const k = Math.min(1, (t - t0) / dur);
+    const e = 1 - Math.pow(1 - k, 3);
+    node.innerHTML = fmtFn(from + (target - from) * e);
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+/* ------------------------------------------------------------------ ساعت نوار بالا */
+function startClock() {
+  const tick = () => {
+    const d = el("clockTime");
+    if (!d) return;
+    try { d.textContent = new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" }); }
+    catch (e) { d.textContent = ""; }
+    const dt = el("clockDate");
+    if (dt) dt.textContent = TODAY_FA || "";
+  };
+  tick();
+  setInterval(tick, 20000);
 }
 
 /* ------------------------------------------------------------------ پوسته */
@@ -109,14 +242,14 @@ function buildDash() {
 
 function renderDashboard() {
   const d = buildDash();
-  el("statProjects").innerHTML = fa(d.projects);
+  countUp(el("statProjects"), d.projects, (v) => fa(Math.round(v)));
   el("statProjectsSub").textContent = d.sub;
-  el("statSales").innerHTML = `${fmt(scaled(d.sales) / 1e6)} <small>میلیون ${CUR.name}</small>`;
+  countUp(el("statSales"), d.sales, (v) => `${fmt(scaled(v) / 1e6)} <small>میلیون ${CUR.name}</small>`);
   const tr = el("statSalesTrend");
   tr.className = "stat-trend " + (d.growth >= 0 ? "up" : "down");
   tr.textContent = (d.growth >= 0 ? "▲ +" : "▼ ") + fmt(Math.abs(d.growth), true) + "٪";
-  el("statProfit").innerHTML = `${fmt(scaled(d.profit) / 1e6)} <small>میلیون ${CUR.name}</small>`;
-  el("statMaterials").innerHTML = fa(d.materials);
+  countUp(el("statProfit"), d.profit, (v) => `${fmt(scaled(v) / 1e6)} <small>میلیون ${CUR.name}</small>`);
+  countUp(el("statMaterials"), d.materials, (v) => fa(Math.round(v)));
   const act = MATERIALS.filter((m) => m.active).length;
   el("statMaterialsSub").textContent = `در ${fa(CATS.length)} دسته‌بندی • ${fa(act)} قلم فعال`;
   el("chartUnit").textContent = `میلیون ${CUR.name}`;
@@ -183,14 +316,19 @@ function filteredMaterials() {
 
 function renderMaterials() {
   renderChips();
-  const rows = filteredMaterials();
+  const rows = applySort(filteredMaterials(), "materials", MAT_SORT);
   if (!rows.length) {
     el("matTable").innerHTML = `<tbody><tr><td><div class="empty">${ICONS.inbox}<div>موردی یافت نشد.</div></div></td></tr></tbody>`;
   } else {
     el("matTable").innerHTML = `
       <thead><tr>
-        <th>شناسه</th><th>نام</th><th>دسته‌بندی</th><th>مشخصات</th><th>واحد</th>
-        <th>قیمت (${CUR.name})</th><th>تأمین‌کننده</th><th>وضعیت</th><th>عملیات</th>
+        ${thSort("materials", "id", "شناسه")}
+        ${thSort("materials", "name", "نام")}
+        ${thSort("materials", "cat", "دسته‌بندی")}
+        <th>مشخصات</th><th>واحد</th>
+        ${thSort("materials", "price", `قیمت (${CUR.name})`)}
+        ${thSort("materials", "supplier", "تأمین‌کننده")}
+        <th>وضعیت</th><th>عملیات</th>
       </tr></thead>
       <tbody>${rows.map((m) => `
         <tr>
@@ -299,17 +437,24 @@ function renderStyles() {
 function renderProjects() {
   const q = el("projSearch").value.trim();
   const f = el("projFilter").value;
-  const rows = PROJECTS.filter((p) =>
+  const rows = applySort(PROJECTS.filter((p) =>
     (f === "all" || p.status === f) &&
-    (!q || p.title.includes(q) || (p.customer || "").includes(q) || p.code.includes(q)));
+    (!q || p.title.includes(q) || (p.customer || "").includes(q) || p.code.includes(q))),
+    "projects", PROJ_SORT);
   if (!rows.length) {
     el("projectsTable").innerHTML = `<tbody><tr><td><div class="empty">${ICONS.inbox}<div>پروژه‌ای یافت نشد.</div></div></td></tr></tbody>`;
     return;
   }
   el("projectsTable").innerHTML = `
     <thead><tr>
-      <th>کد</th><th>عنوان</th><th>مشتری</th><th>وضعیت</th><th>سبک</th>
-      <th>تاریخ</th><th>مبلغ نهایی (${CUR.name})</th><th>عملیات</th>
+      ${thSort("projects", "code", "کد")}
+      ${thSort("projects", "title", "عنوان")}
+      ${thSort("projects", "customer", "مشتری")}
+      ${thSort("projects", "status", "وضعیت")}
+      <th>سبک</th>
+      ${thSort("projects", "date", "تاریخ")}
+      ${thSort("projects", "final", `مبلغ نهایی (${CUR.name})`)}
+      <th>عملیات</th>
     </tr></thead>
     <tbody>${rows.map((p) => {
       const amt = p.final_price || (p.status !== "canceled" ? calcProjectLocal(p).final_price : 0);
@@ -893,9 +1038,18 @@ async function refreshInvoice(forceNumberReset) {
 }
 
 function renderArchive() {
-  el("archiveTable").innerHTML = ARCHIVE.length ? `
-    <thead><tr><th>شماره</th><th>نوع</th><th>پروژه</th><th>مشتری</th><th>تاریخ</th><th>مبلغ (${CUR.name})</th><th>عملیات</th></tr></thead>
-    <tbody>${ARCHIVE.map((a) => `
+  const rows = applySort(ARCHIVE, "archive", ARCH_SORT);
+  el("archiveTable").innerHTML = rows.length ? `
+    <thead><tr>
+      ${thSort("archive", "number", "شماره")}
+      ${thSort("archive", "kind", "نوع")}
+      ${thSort("archive", "project", "پروژه")}
+      ${thSort("archive", "customer", "مشتری")}
+      ${thSort("archive", "date", "تاریخ")}
+      ${thSort("archive", "amount", `مبلغ (${CUR.name})`)}
+      <th>عملیات</th>
+    </tr></thead>
+    <tbody>${rows.map((a) => `
       <tr>
         <td class="sub nowrap ltr">${esc(a.number)}</td>
         <td><span class="badge ${a.kind === "invoice" ? "b-done" : "b-final"}">${esc(a.kind_label || "پیش‌فاکتور")}</span></td>
@@ -1037,6 +1191,26 @@ function wire() {
   el("scrim").addEventListener("click", () => document.body.classList.remove("nav-open"));
   $$("[data-goto]").forEach((a) => a.addEventListener("click", () => navigate(a.dataset.goto)));
 
+  /* --- مرتب‌سازی جدول‌ها --- */
+  wireTableSort(el("matTable"), "materials", renderMaterials);
+  wireTableSort(el("projectsTable"), "projects", renderProjects);
+  wireTableSort(el("archiveTable"), "archive", renderArchive);
+
+  /* --- ساعت و به‌روزرسانی --- */
+  startClock();
+  el("btnRefresh").addEventListener("click", () => busy(el("btnRefresh"), async () => {
+    if (API.ok) {
+      const ok = await tryConnect(true);
+      if (ok) { setConnBadge(); renderAll(); toast("داده‌ها از پایگاه‌داده به‌روزرسانی شد", "success"); }
+      else { setConnBadge(); toast("اتصال به سرور قطع شد — حالت نمایشی فعال است", "warn"); }
+    } else {
+      await reconnectNow(null);
+      if (API.ok) renderAll();
+    }
+  }));
+  const br = el("btnBannerReconnect");
+  if (br) br.addEventListener("click", () => busy(br, () => reconnectNow(null)));
+
   /* --- پوسته و قلم --- */
   el("btnTheme").addEventListener("click", () =>
     applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
@@ -1131,7 +1305,7 @@ function wire() {
   });
   el("btnCloseHistory").addEventListener("click", () => (el("historyCard").hidden = true));
   el("btnMatExcel").addEventListener("click", async () => {
-    if (!API.ok) { toast("خروجی اکسل در حالت نمایشی فعال نیست — `python web.py` را اجرا کنید", "warn"); return; }
+    if (!API.ok) { toast("خروجی اکسل در حالت نمایشی فعال نیست — کبیر را اجرا کنید: python main.py", "warn"); return; }
     try {
       const f = await API.blob("GET", "/api/materials/export");
       downloadBlob(f.bytes, f.name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -1209,7 +1383,7 @@ function wire() {
     }
   });
 
-  el("btnSaveMaterial").addEventListener("click", async () => {
+  el("btnSaveMaterial").addEventListener("click", () => busy(el("btnSaveMaterial"), async () => {
     const payload = matPayload();
     if (!payload.name) { toast("نام قلم را وارد کنید", "error"); return; }
     if (payload.price <= 0) { toast("قیمت معتبر وارد کنید", "error"); return; }
@@ -1235,8 +1409,7 @@ function wire() {
     closeModal();
     afterMaterialsChanged();
     toast(state.editingMaterial ? "تغییرات قلم ذخیره شد" : "قلم جدید ذخیره شد", "success");
-  });
-
+  }));
   function afterMaterialsChanged() {
     renderMaterials();
     renderDashboard();
@@ -1256,7 +1429,7 @@ function wire() {
     chip.classList.add("active");
     el("bulkPct").value = fa(chip.dataset.pct);
   }));
-  el("btnApplyBulk").addEventListener("click", async () => {
+  el("btnApplyBulk").addEventListener("click", () => busy(el("btnApplyBulk"), async () => {
     const pct = parseNum(el("bulkPct").value);
     if (!pct) { toast("درصد تغییر را وارد کنید", "error"); return; }
     const scope = ($("input[name=bulkScope]:checked") || {}).value;
@@ -1289,8 +1462,7 @@ function wire() {
     afterMaterialsChanged();
     renderHistory();
     toast(`قیمت ${fa(count)} قلم به‌روز شد (${pct > 0 ? "+" : ""}${fmt(pct, true)}٪)`, "success");
-  });
-
+  }));
   /* ---------------- سبک‌ها ---------------- */
   function openStyleModal(st) {
     if (!st && STYLES.length >= 20) { toast("حداکثر ۲۰ سبک مجاز است", "warn"); return; }
@@ -1319,7 +1491,7 @@ function wire() {
     return { name: el("sfName").value.trim(), note: el("sfNote").value.trim(), data };
   }
 
-  el("btnSaveStyle").addEventListener("click", async () => {
+  el("btnSaveStyle").addEventListener("click", () => busy(el("btnSaveStyle"), async () => {
     const payload = stylePayload();
     if (!payload.name) { toast("نام سبک را وارد کنید", "error"); return; }
     if (API.ok) {
@@ -1338,8 +1510,7 @@ function wire() {
     renderStyles();
     if (state.editingProject) renderSectionBar();
     toast("سبک ذخیره شد", "success");
-  });
-
+  }));
   el("stylesGrid").addEventListener("click", async (e) => {
     const btn = e.target.closest("button[data-use-style],button[data-edit-style],button[data-copy-style],button[data-del-style],button[data-new-style]");
     if (!btn) return;
@@ -1393,7 +1564,7 @@ function wire() {
     openModal("project");
   }
 
-  el("btnCreateProject").addEventListener("click", async () => {
+  el("btnCreateProject").addEventListener("click", () => busy(el("btnCreateProject"), async () => {
     const title = el("pfTitle").value.trim();
     if (!title) { toast("عنوان پروژه را وارد کنید", "error"); return; }
     const styleId = Number(el("pfStyle").value) || 0;
@@ -1424,8 +1595,7 @@ function wire() {
     renderProjects(); renderDashboard(); fillInvoiceProjects();
     openProjectEditor(np.id);
     toast("پروژه‌ی جدید ایجاد شد — یونیت‌ها را وارد کنید", "success");
-  });
-
+  }));
   el("projectsTable").addEventListener("click", async (e) => {
     const open = e.target.closest("[data-open-project]");
     const inv = e.target.closest("[data-invoice-project]");
@@ -1454,8 +1624,8 @@ function wire() {
   });
 
   el("btnCloseEditor").addEventListener("click", closeProjectEditor);
-  el("btnSaveProject").addEventListener("click", () => saveProject());
-  el("btnDupProject").addEventListener("click", async () => {
+  el("btnSaveProject").addEventListener("click", () => busy(el("btnSaveProject"), () => saveProject()));
+  el("btnDupProject").addEventListener("click", () => busy(el("btnDupProject"), async () => {
     const p = state.editingProject;
     if (!p) return;
     let np;
@@ -1475,8 +1645,7 @@ function wire() {
     renderProjects(); fillInvoiceProjects(); renderDashboard();
     openProjectEditor(np.id);
     toast("کپی پروژه ایجاد شد", "success");
-  });
-
+  }));
   ["edTitle", "edStatus", "edCustomer", "edMobile", "edPhone", "edAddress", "edValid"].forEach((id) =>
     el(id).addEventListener("change", () => {
       const p = state.editingProject;
@@ -1786,11 +1955,11 @@ function wire() {
     $$("#invLevel button").forEach((x) => x.classList.toggle("active", x === b));
     await refreshInvoice();
   });
-  el("btnRefreshInv").addEventListener("click", async () => {
+  el("btnRefreshInv").addEventListener("click", () => busy(el("btnRefreshInv"), async () => {
     renderInvRowChecks();
     await refreshInvoice();
     toast("فاکتور به‌روزرسانی شد", "success");
-  });
+  }));
   el("btnPrintInv").addEventListener("click", () => {
     const f = el("invFrame");
     if (!f.classList.contains("hidden") && f.contentWindow) {
@@ -1798,8 +1967,8 @@ function wire() {
       f.contentWindow.print();
     } else window.print();
   });
-  el("btnPdfInv").addEventListener("click", async () => {
-    if (!API.ok) { toast("خروجی PDF در حالت نمایشی فعال نیست — `python web.py` را اجرا کنید", "warn"); return; }
+  el("btnPdfInv").addEventListener("click", () => busy(el("btnPdfInv"), async () => {
+    if (!API.ok) { toast("خروجی PDF در حالت نمایشی فعال نیست — کبیر را اجرا کنید: python main.py", "warn"); return; }
     if (!state.inv.payload) { await refreshInvoice(); }
     try {
       const body = Object.assign({}, state.inv.payload, { number: state.inv.number });
@@ -1807,9 +1976,9 @@ function wire() {
       downloadBlob(f.bytes, f.name, "application/pdf");
       toast(`PDF ذخیره شد: ${esc(f.name)}`, "success");
     } catch (e) { toast("خطا: " + esc(e.message), "error"); }
-  });
-  el("btnXlsInv").addEventListener("click", async () => {
-    if (!API.ok) { toast("خروجی اکسل در حالت نمایشی فعال نیست — `python web.py` را اجرا کنید", "warn"); return; }
+  }));
+  el("btnXlsInv").addEventListener("click", () => busy(el("btnXlsInv"), async () => {
+    if (!API.ok) { toast("خروجی اکسل در حالت نمایشی فعال نیست — کبیر را اجرا کنید: python main.py", "warn"); return; }
     if (!state.inv.payload) { await refreshInvoice(); }
     try {
       const body = Object.assign({}, state.inv.payload, { number: state.inv.number });
@@ -1817,8 +1986,8 @@ function wire() {
       downloadBlob(f.bytes, f.name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       toast(`اکسل ذخیره شد: ${esc(f.name)}`, "success");
     } catch (e) { toast("خطا: " + esc(e.message), "error"); }
-  });
-  el("btnSaveInv").addEventListener("click", async () => {
+  }));
+  el("btnSaveInv").addEventListener("click", () => busy(el("btnSaveInv"), async () => {
     const p = invProject();
     if (!p) { toast("پروژه‌ای انتخاب نشده است", "warn"); return; }
     if (API.ok) {
@@ -1842,8 +2011,7 @@ function wire() {
       renderArchive();
       toast(`فاکتور ${esc(number)} در بایگانی ثبت شد (نمایشی)`, "success");
     }
-  });
-
+  }));
   el("archiveTable").addEventListener("click", async (e) => {
     const v = e.target.closest("[data-view-arch]");
     const pdf = e.target.closest("[data-pdf-arch]");
@@ -1894,7 +2062,7 @@ function wire() {
   });
 
   /* ---------------- تنظیمات ---------------- */
-  el("btnSaveSettings").addEventListener("click", async () => {
+  el("btnSaveSettings").addEventListener("click", () => busy(el("btnSaveSettings"), async () => {
     const patch = collectSettings();
     if (API.ok) {
       try {
@@ -1907,7 +2075,7 @@ function wire() {
     applySettingsToUI();
     renderAll();
     toast("تنظیمات ذخیره شد", "success");
-  });
+  }));
   el("btnResetSettings").addEventListener("click", () =>
     confirmAction("پیش‌فرض‌های محاسبه به حالت اولیه برگردانده شود؟", () => {
       el("setProfitPct").value = "۳۰"; el("setOverhead").value = "۰"; el("setWaste").value = "۱۰";
@@ -1916,7 +2084,7 @@ function wire() {
       toast("پیش‌فرض‌ها بازنشانی شد — «ذخیره‌ی تنظیمات» را بزنید", "success");
     }, "بازنشانی", "بازنشانی"));
 
-  el("btnBackupNow").addEventListener("click", async () => {
+  el("btnBackupNow").addEventListener("click", () => busy(el("btnBackupNow"), async () => {
     if (!API.ok) { toast("پشتیبان‌گیری در حالت نمایشی فعال نیست", "warn"); return; }
     try {
       const resp = await API.req("POST", "/api/backups", { tag: "web" });
@@ -1924,15 +2092,15 @@ function wire() {
       renderBackups();
       toast("پشتیبان‌گیری انجام شد", "success");
     } catch (e) { toast("خطا: " + esc(e.message), "error"); }
-  });
-  el("btnExportJson").addEventListener("click", async () => {
+  }));
+  el("btnExportJson").addEventListener("click", () => busy(el("btnExportJson"), async () => {
     if (!API.ok) { toast("خروجی JSON در حالت نمایشی فعال نیست", "warn"); return; }
     try {
       const f = await API.blob("GET", "/api/backups/export");
       downloadBlob(f.bytes, f.name, "application/json");
       toast("خروجی JSON دانلود شد", "success");
     } catch (e) { toast("خطا: " + esc(e.message), "error"); }
-  });
+  }));
   el("btnImportJson").addEventListener("click", () => el("fileImportJson").click());
   el("fileImportJson").addEventListener("change", async () => {
     const f = el("fileImportJson").files[0];
@@ -1999,6 +2167,44 @@ function renderAll() {
   }
 }
 
+function splashMsg(txt) {
+  const m = el("splashMsg");
+  if (m) m.textContent = txt;
+}
+function hideSplash() {
+  const s = el("splash");
+  if (!s) return;
+  s.classList.add("done");
+  setTimeout(() => s.remove(), 700);
+}
+
+/* پایش سلامت اتصال: اگر سرور قطع شد بنر نمایشی، و اگر برگشت وصل می‌شود */
+function startConnWatchdog() {
+  let fails = 0;
+  setInterval(async () => {
+    if (document.hidden) return;
+    if (API.ok) {
+      const h = await healthPing(3000);
+      if (!h) {
+        fails++;
+        if (fails >= 2) {
+          API.ok = false;
+          fails = 0;
+          setConnBadge();
+          toast("اتصال به سرور کبیر قطع شد — حالت نمایشی فعال است", "warn");
+        }
+      } else fails = 0;
+    } else {
+      const ok = await tryConnect(true);
+      if (ok) {
+        setConnBadge();
+        renderAll();
+        toast("دوباره به سرور کبیر متصل شد", "success");
+      }
+    }
+  }, 20000);
+}
+
 async function init() {
   if (window.__kabirInit) return;      /* محافظ در برابر اجرای دوباره */
   window.__kabirInit = true;
@@ -2011,13 +2217,16 @@ async function init() {
 
   el("invDate").value = TODAY_FA;
 
+  splashMsg("اتصال به پایگاه‌داده‌ی محلی…");
   const ok = await tryConnect(true);
   setConnBadge();
+  splashMsg("آماده‌سازی رابط کاربری…");
   applyTheme(storeGet("kabir-theme", null) || SETTINGS.theme || "light", true);
   applySettingsToUI();
   fillStyleSelects();
   renderAll();
   wire();
+  startConnWatchdog();
 
   const route = () => {
     const h = (location.hash || "").replace(/^#\/?/, "").split("/");
@@ -2027,8 +2236,9 @@ async function init() {
   };
   window.addEventListener("hashchange", route);
   route();
+  hideSplash();
   if (!ok) {
-    setTimeout(() => toast("سرور کبیر در دسترس نیست — رابط در <b>حالت نمایشی</b> با داده‌های نمونه اجرا شد. برای اتصال واقعی <b class='ltr'>python web.py</b> را اجرا کنید.", "warn"), 600);
+    setTimeout(() => toast("سرور کبیر در دسترس نیست — رابط در <b>حالت نمایشی</b> با داده‌های نمونه اجرا شد. برای اتصال واقعی کبیر را اجرا کنید: <b class='ltr'>python main.py</b>", "warn"), 900);
   }
 }
 

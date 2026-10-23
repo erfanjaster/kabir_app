@@ -7,5 +7,5 @@ python --version >nul 2>&1 || (echo Python نصب نیست! از python.org نص
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 echo.
-echo نصب کامل شد. حالا run.bat را اجرا کنید.
+echo نصب کامل شد. حالا run.bat را اجرا کنید تا کبیر در مرورگر باز شود.
 pause

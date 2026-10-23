@@ -3,14 +3,42 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>کبیر ۲ — محاسبه‌گر قیمت تمام‌شده‌ی کابینت</title>
-<meta name="description" content="رابط کاربری وب نرم‌افزار کبیر: محاسبه‌ی قیمت تمام‌شده و صدور فاکتور کابینت">
+<title>کبیر — محاسبه‌گر قیمت تمام‌شده و فاکتور کابینت</title>
+<meta name="description" content="کبیر: نرم‌افزار تحت وب محاسبه‌ی قیمت تمام‌شده و صدور فاکتور حرفه‌ای برای کارگاه‌ها و فروشگاه‌های کابینت‌سازی — کاملاً فارسی و راست‌به‌چپ">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#0f766e" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d131d" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="css/styles.css">
 <script src="js/data.js" defer></script>
 <script src="js/engine.js" defer></script>
 <script src="js/ui.js" defer></script>
 </head>
 <body>
+
+<!-- ==================== اسپلش راه‌اندازی ==================== -->
+<div id="splash" role="status" aria-live="polite">
+  <div class="splash-box">
+    <div class="splash-logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="9.5" y1="7" x2="9.5" y2="8"/><line x1="14.5" y1="7" x2="14.5" y2="8"/>
+      </svg>
+    </div>
+    <div class="splash-title">کبیر</div>
+    <div class="splash-sub">محاسبه‌گر قیمت تمام‌شده و صدور فاکتور صنعت کابینت</div>
+    <div class="splash-bar" aria-hidden="true"><i></i></div>
+    <div class="splash-msg" id="splashMsg">در حال راه‌اندازی…</div>
+  </div>
+</div>
+
+<noscript>
+  <div style="padding:2rem;text-align:center;font-family:Tahoma,sans-serif">
+    کبیر برای اجرا به جاوااسکریپت نیاز دارد. لطفاً جاوااسکریپت مرورگر را فعال کنید.
+  </div>
+</noscript>
 
 <!-- ==================== نوار کناری ==================== -->
 <aside class="sidebar" id="sidebar" aria-label="ناوبری اصلی">
@@ -55,7 +83,7 @@
   </nav>
 
   <div class="sidebar-foot">
-    <div class="ver"><span class="dot"></span> نسخهٔ ۲٫۰ — رابط وب</div>
+    <div class="ver"><span class="dot"></span> <span id="appVer">کبیر — رابط وب</span></div>
     <div id="connBadge" class="conn demo"><span class="dot"></span> در حال اتصال…</div>
     <div class="tiny" style="opacity:.7">میان‌بر: <b>/</b> جست‌وجو • <b>Alt+۱..۶</b> صفحه‌ها</div>
   </div>
@@ -73,12 +101,19 @@
       <p id="pageSub">نمای کلی کارگاه و پروژه‌ها</p>
     </div>
     <div class="topbar-actions">
+      <div class="clock-chip" id="clockChip" title="تاریخ و ساعت امروز">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 13.8"/></svg>
+        <span id="clockDate">—</span><b id="clockTime">—</b>
+      </div>
       <div class="search-wrap">
         <svg class="search-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
         <input type="search" id="globalSearch" placeholder="جست‌وجوی متریال، پروژه…" autocomplete="off" aria-label="جست‌وجوی سراسری">
         <span class="search-kbd">/</span>
         <div class="search-drop" id="searchDrop" hidden></div>
       </div>
+      <button class="icon-btn" id="btnRefresh" type="button" aria-label="به‌روزرسانی داده‌ها" title="به‌روزرسانی داده‌ها از پایگاه‌داده">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+      </button>
       <button class="icon-btn" id="btnTheme" type="button" aria-label="تغییر پوسته" title="پوسته‌ی روشن/تاریک"></button>
       <button class="btn primary" id="btnQuickProject" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -86,6 +121,12 @@
       </button>
     </div>
   </header>
+
+  <div class="demo-banner" id="demoBanner" hidden role="status">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>
+    <span><b>حالت نمایشی:</b> سرور کبیر در دسترس نیست و داده‌ها فقط در مرورگر ذخیره می‌شوند. برای کار با پایگاه‌داده‌ی واقعی، کبیر را اجرا کنید: <b class="ltr">python main.py</b></span>
+    <button class="btn outline sm" id="btnBannerReconnect" type="button">اتصال به سرور</button>
+  </div>
 
   <div class="content">
 
@@ -189,7 +230,7 @@
       </div>
 
       <div class="card no-print">
-        <div class="table-wrap"><table class="data" id="projectsTable"></table></div>
+        <div class="table-wrap sticky-head"><table class="data" id="projectsTable" aria-label="فهرست پروژه‌ها"></table></div>
       </div>
 
       <!-- ویرایشگر پروژه -->
@@ -410,7 +451,7 @@
       <div class="chips no-print" id="matChips" role="tablist" aria-label="دسته‌بندی‌ها"></div>
 
       <div class="card no-print">
-        <div class="table-wrap"><table class="data" id="matTable"></table></div>
+        <div class="table-wrap sticky-head"><table class="data" id="matTable" aria-label="فهرست متریال و خدمات"></table></div>
         <div class="card-foot" id="matCount"></div>
       </div>
 
@@ -419,7 +460,7 @@
           <h3>تاریخچه‌ی تغییرات قیمت</h3>
           <div class="card-actions"><button class="btn ghost sm" id="btnCloseHistory" type="button">بستن</button></div>
         </div>
-        <div class="table-wrap"><table class="data" id="historyTable"></table></div>
+        <div class="table-wrap sticky-head"><table class="data" id="historyTable" aria-label="تاریخچه‌ی قیمت‌ها"></table></div>
       </div>
     </section>
 
@@ -503,7 +544,7 @@
           </div>
           <div class="card no-print" style="margin-top:1.2rem">
             <div class="card-head"><h3>بایگانی فاکتورهای صادرشده</h3></div>
-            <div class="table-wrap"><table class="data" id="archiveTable"></table></div>
+            <div class="table-wrap sticky-head"><table class="data" id="archiveTable" aria-label="بایگانی فاکتورها"></table></div>
           </div>
         </div>
       </div>
@@ -602,7 +643,7 @@
               <button class="btn ghost sm" id="btnImportJson" type="button">ورود JSON</button>
               <input type="file" id="fileImportJson" accept=".json,application/json" class="hidden">
             </div>
-            <div class="table-wrap"><table class="data" id="backupsTable"></table></div>
+            <div class="table-wrap sticky-head"><table class="data" id="backupsTable" aria-label="نسخه‌های پشتیبان"></table></div>
             <p class="tiny muted" id="dataDirNote" style="margin-top:.6rem"></p>
           </div>
         </div>

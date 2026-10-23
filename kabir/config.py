@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""پیکربندی مسیرها و تنظیمات سراسری — مستقل از سیستم‌عامل."""
+"""پیکربندی مسیرها و تنظیمات سراسری کبیر (رابط وب) — مستقل از سیستم‌عامل."""
 
 from __future__ import annotations
 
@@ -8,9 +8,10 @@ import platform
 import sys
 from pathlib import Path
 
+from . import __version__ as APP_VERSION
+
 APP_NAME = "کبیر"
 APP_NAME_EN = "KabirCabinet"
-APP_VERSION = "2.0.0"
 ORG_NAME = "Kabir"
 
 SYSTEM = platform.system()          # 'Windows' | 'Linux' | 'Darwin'
@@ -154,6 +155,7 @@ DEFAULT_SETTINGS = {
     # ظاهر
     "theme": "light",
     "font_size": "12",
+    "web_font_size": "14",
     "table_row_height": "34",
     "persian_digits": "1",
     "show_decimals": "0",
