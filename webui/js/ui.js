@@ -537,8 +537,15 @@ function unitArea(u) {
   return a;
 }
 
-function inp(scope, k, val, extra) {
-  return `<input class="cell-input" type="text" inputmode="numeric" data-scope="${scope}" data-k="${k}" value="${fa(val ?? 0)}" ${extra || ""}>`;
+/* واحد‌های اندازه‌گیری — برای برچسبِ داخل قابِ ورودی */
+const U_CM = "سم", U_QTY = "عدد", U_LEAF = "لنگه", U_M = "م", U_SQM = "م²";
+const uMoney = () => CUR.name;
+
+/* ورودی عددی استاندارد: قاب هم‌اندازه + برچسب واحد + عرض متناسب با نوع داده */
+function inp(scope, k, val, extra, unit, wcls) {
+  const cls = "cell-input" + (wcls ? " " + wcls : "") + (unit ? " has-u" : "");
+  const u = unit ? `<i class="cell-u" aria-hidden="true">${unit}</i>` : "";
+  return `<span class="cell-wrap"><input class="${cls}" type="text" inputmode="numeric" data-scope="${scope}" data-k="${k}" value="${fa(val ?? 0)}" ${extra || ""}>${u}</span>`;
 }
 function inpT(scope, k, val, extra) {
   return `<input class="cell-input w-label" type="text" data-scope="${scope}" data-k="${k}" value="${esc(val ?? "")}" ${extra || ""}>`;
@@ -569,13 +576,15 @@ function renderEditorTables() {
         <td><select class="cell-select" data-scope="unit" data-k="unit_type" data-ui="${i}">
           ${Object.entries(UNIT_TYPES).map(([k, l]) => `<option value="${k}"${u.unit_type === k ? " selected" : ""}>${l}</option>`).join("")}
         </select></td>
-        <td>${inp("unit", "length_cm", u.length_cm, `data-ui="${i}"`)}</td>
-        <td>${inp("unit", "height_cm", u.height_cm, `data-ui="${i}"`)}</td>
-        <td>${inp("unit", "depth_cm", u.depth_cm, `data-ui="${i}"`)}</td>
-        <td>${inp("unit", "qty", u.qty, `data-ui="${i}"`)}</td>
-        <td>${inp("unit", "shelves", u.shelves, `data-ui="${i}"`)}</td>
-        <td><span class="count-badge" title="لنگه در">${fa(u.doors.reduce((a, d) => a + (+d.qty || 0), 0) * (+u.qty || 1))}</span>
-            <span class="count-badge" title="کشو">${fa(u.drawers.reduce((a, d) => a + (+d.qty || 0), 0) * (+u.qty || 1))}</span></td>
+        <td>${inp("unit", "length_cm", u.length_cm, `data-ui="${i}"`, U_CM, "w-dim")}</td>
+        <td>${inp("unit", "height_cm", u.height_cm, `data-ui="${i}"`, U_CM, "w-dim")}</td>
+        <td>${inp("unit", "depth_cm", u.depth_cm, `data-ui="${i}"`, U_CM, "w-dim")}</td>
+        <td>${inp("unit", "qty", u.qty, `data-ui="${i}"`, U_QTY, "w-qty")}</td>
+        <td>${inp("unit", "shelves", u.shelves, `data-ui="${i}"`, U_QTY, "w-qty")}</td>
+        <td><span class="cell-badges">
+              <span class="count-badge" title="مجموع لنگه‌های در این یونیت">در ${fa(u.doors.reduce((a, d) => a + (+d.qty || 0), 0) * (+u.qty || 1))}</span>
+              <span class="count-badge" title="مجموع کشوهای این یونیت">کشو ${fa(u.drawers.reduce((a, d) => a + (+d.qty || 0), 0) * (+u.qty || 1))}</span>
+            </span></td>
         <td><button class="expander${open ? " open" : ""}" type="button" data-expand="${i}" title="متریال و یراق یونیت">${ICONS.chev}</button></td>
         <td>${del("unit", i)}</td>
       </tr>`;
@@ -587,8 +596,8 @@ function renderEditorTables() {
             <div class="field"><label>${label}</label>
               ${matSelect(cat, u[k], `data-scope="unit" data-k="${k}" data-ui="${i}"`)}
             </div>`).join("")}
-          <div class="field"><label>تعداد پایه در یونیت</label>${inp("unit", "legs_per_unit", u.legs_per_unit, `data-ui="${i}"`)}</div>
-          <div class="field"><label>خار در هر طبقه</label>${inp("unit", "pins_per_shelf", u.pins_per_shelf, `data-ui="${i}"`)}</div>
+          <div class="field"><label>تعداد پایه در یونیت</label>${inp("unit", "legs_per_unit", u.legs_per_unit, `data-ui="${i}"`, U_QTY, "w-qty")}</div>
+          <div class="field"><label>خار در هر طبقه</label>${inp("unit", "pins_per_shelf", u.pins_per_shelf, `data-ui="${i}"`, U_QTY, "w-qty")}</div>
           <div class="ud-checks">
             <label class="check"><input type="checkbox" data-scope="unit" data-k="has_top_panel" data-ui="${i}"${u.has_top_panel !== false ? " checked" : ""}> سقف یونیت</label>
             <label class="check"><input type="checkbox" data-scope="unit" data-k="has_bottom_panel" data-ui="${i}"${u.has_bottom_panel !== false ? " checked" : ""}> کف یونیت</label>
@@ -599,7 +608,7 @@ function renderEditorTables() {
     }
   });
   el("tblUnits").innerHTML = `
-    <thead><tr><th>برچسب</th><th>نوع</th><th>طول</th><th>ارتفاع</th><th>عمق</th><th>تعداد</th><th>طبقات</th><th>در/کشو</th><th>جزئیات</th><th></th></tr></thead>
+    <thead><tr><th>برچسب</th><th>نوع</th><th>طول (سم)</th><th>ارتفاع (سم)</th><th>عمق (سم)</th><th>تعداد (عدد)</th><th>طبقات (عدد)</th><th>در/کشو</th><th>جزئیات</th><th></th></tr></thead>
     <tbody>${uRows || `<tr><td colspan="10"><div class="empty">یونیتی تعریف نشده — «＋ افزودن یونیت» را بزنید.</div></td></tr>`}</tbody>`;
 
   /* --- درها (سطح بخش، وابسته به یونیت) --- */
@@ -611,9 +620,9 @@ function renderEditorTables() {
           ${pg.units.map((x, i2) => `<option value="${i2}"${i2 === ui ? " selected" : ""}>${esc(x.label || `یونیت ${i2 + 1}`)}</option>`).join("")}
         </select></td>
         <td>${inpT("door", "label", dr.label, `data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${inp("door", "qty", dr.qty, `data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${inp("door", "w_cm", dr.w_cm, `data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${inp("door", "h_cm", dr.h_cm, `data-ui="${ui}" data-di="${di}"`)}</td>
+        <td>${inp("door", "qty", dr.qty, `data-ui="${ui}" data-di="${di}"`, U_LEAF, "w-qty")}</td>
+        <td>${inp("door", "w_cm", dr.w_cm, `data-ui="${ui}" data-di="${di}"`, U_CM, "w-dim")}</td>
+        <td>${inp("door", "h_cm", dr.h_cm, `data-ui="${ui}" data-di="${di}"`, U_CM, "w-dim")}</td>
         <td>${matSelect("door_sheet", dr.material_id, `data-scope="door" data-k="material_id" data-ui="${ui}" data-di="${di}"`)}</td>
         <td>${matSelect("door_model", dr.door_model_id, `data-scope="door" data-k="door_model_id" data-ui="${ui}" data-di="${di}"`)}</td>
         <td>${matSelect("hinge", dr.hinge_id, `data-scope="door" data-k="hinge_id" data-ui="${ui}" data-di="${di}"`)}</td>
@@ -624,7 +633,7 @@ function renderEditorTables() {
       </tr>`;
   }));
   el("tblDoors").innerHTML = `
-    <thead><tr><th>یونیت</th><th>برچسب</th><th>لنگه</th><th>عرض</th><th>ارتفاع</th><th>ورق در</th><th>مدل/اجرت</th><th>لولا</th><th>دستگیره</th><th>مونتاژ</th><th>بسته‌بندی</th><th></th></tr></thead>
+    <thead><tr><th>یونیت</th><th>برچسب</th><th>لنگه (عدد)</th><th>عرض (سم)</th><th>ارتفاع (سم)</th><th>ورق در</th><th>مدل/اجرت</th><th>لولا</th><th>دستگیره</th><th>مونتاژ</th><th>بسته‌بندی</th><th></th></tr></thead>
     <tbody>${dRows || `<tr><td colspan="12"><div class="empty">دری تعریف نشده است.</div></td></tr>`}</tbody>`;
 
   /* --- کشوها --- */
@@ -636,10 +645,10 @@ function renderEditorTables() {
           ${pg.units.map((x, i2) => `<option value="${i2}"${i2 === ui ? " selected" : ""}>${esc(x.label || `یونیت ${i2 + 1}`)}</option>`).join("")}
         </select></td>
         <td>${inpT("drawer", "label", dw.label, `data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${inp("drawer", "qty", dw.qty, `data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${inp("drawer", "w_cm", dw.w_cm, `data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${inp("drawer", "h_cm", dw.h_cm, `data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${inp("drawer", "d_cm", dw.d_cm, `data-ui="${ui}" data-di="${di}"`)}</td>
+        <td>${inp("drawer", "qty", dw.qty, `data-ui="${ui}" data-di="${di}"`, U_QTY, "w-qty")}</td>
+        <td>${inp("drawer", "w_cm", dw.w_cm, `data-ui="${ui}" data-di="${di}"`, U_CM, "w-dim")}</td>
+        <td>${inp("drawer", "h_cm", dw.h_cm, `data-ui="${ui}" data-di="${di}"`, U_CM, "w-dim")}</td>
+        <td>${inp("drawer", "d_cm", dw.d_cm, `data-ui="${ui}" data-di="${di}"`, U_CM, "w-dim")}</td>
         <td>${matSelect("drawer_slide", dw.slide_id, `data-scope="drawer" data-k="slide_id" data-ui="${ui}" data-di="${di}"`)}</td>
         <td>${matSelect("drawer_sheet", dw.sheet_id, `data-scope="drawer" data-k="sheet_id" data-ui="${ui}" data-di="${di}"`)}</td>
         <td>${matSelect("door_sheet", dw.front_id, `data-scope="drawer" data-k="front_id" data-ui="${ui}" data-di="${di}"`)}</td>
@@ -648,21 +657,21 @@ function renderEditorTables() {
       </tr>`;
   }));
   el("tblDrawers").innerHTML = `
-    <thead><tr><th>یونیت</th><th>برچسب</th><th>تعداد</th><th>عرض</th><th>ارتفاع</th><th>عمق</th><th>ریل</th><th>ورق جعبه</th><th>تیره‌ی کشو</th><th>دستگیره</th><th></th></tr></thead>
+    <thead><tr><th>یونیت</th><th>برچسب</th><th>تعداد (عدد)</th><th>عرض (سم)</th><th>ارتفاع (سم)</th><th>عمق (سم)</th><th>ریل</th><th>ورق جعبه</th><th>تیره‌ی کشو</th><th>دستگیره</th><th></th></tr></thead>
     <tbody>${wRows || `<tr><td colspan="11"><div class="empty">کشویی تعریف نشده است.</div></td></tr>`}</tbody>`;
 
   /* --- درنما --- */
   if (pg.detail_mode === "detailed") {
     el("tblFacade").innerHTML = `
-      <thead><tr><th>عنوان</th><th>تعداد</th><th>عرض (cm)</th><th>ارتفاع (cm)</th><th>قیمت هر م²</th><th>مساحت (م²)</th><th>جمع</th><th></th></tr></thead>
+      <thead><tr><th>عنوان</th><th>تعداد (عدد)</th><th>عرض (سم)</th><th>ارتفاع (سم)</th><th>قیمت هر م² (${CUR.name})</th><th>مساحت (م²)</th><th>جمع (${CUR.name})</th><th></th></tr></thead>
       <tbody>${pg.detail_rows.map((r, i) => {
         const area = (+r.qty || 0) * ((+r.w_cm || 0) / 100) * ((+r.h_cm || 0) / 100);
         return `<tr>
           <td>${inpT("facade", "label", r.label, `data-ri="${i}"`)}</td>
-          <td>${inp("facade", "qty", r.qty, `data-ri="${i}"`)}</td>
-          <td>${inp("facade", "w_cm", r.w_cm, `data-ri="${i}"`)}</td>
-          <td>${inp("facade", "h_cm", r.h_cm, `data-ri="${i}"`)}</td>
-          <td>${inp("facade", "price_per_sqm", r.price_per_sqm, `data-ri="${i}"`)}</td>
+          <td>${inp("facade", "qty", r.qty, `data-ri="${i}"`, U_QTY, "w-qty")}</td>
+          <td>${inp("facade", "w_cm", r.w_cm, `data-ri="${i}"`, U_CM, "w-dim")}</td>
+          <td>${inp("facade", "h_cm", r.h_cm, `data-ri="${i}"`, U_CM, "w-dim")}</td>
+          <td>${inp("facade", "price_per_sqm", r.price_per_sqm, `data-ri="${i}"`, uMoney(), "w-money")}</td>
           <td class="num f-area" data-ri="${i}">${fmt(area, 1)}</td>
           <td class="num f-sum" data-ri="${i}">${fmt(scaled(area * (+r.price_per_sqm || 0)))}</td>
           <td>${del("facade", null, i)}</td>
@@ -675,15 +684,15 @@ function renderEditorTables() {
 
   /* --- اضافات --- */
   el("tblExtras").innerHTML = `
-    <thead><tr><th>عنوان</th><th>تعداد</th><th>واحد</th><th>فی (${CUR.name})</th><th>جمع</th><th>در فاکتور</th><th></th></tr></thead>
+    <thead><tr><th>عنوان</th><th>تعداد (عدد)</th><th>واحد</th><th>فی (${CUR.name})</th><th>جمع (${CUR.name})</th><th>در فاکتور</th><th></th></tr></thead>
     <tbody>${pg.extras.map((r, i) => `
       <tr>
         <td>${inpT("extra", "label", r.label, `data-ri="${i}" style="min-width:11rem"`)}</td>
-        <td>${inp("extra", "qty", r.qty, `data-ri="${i}"`)}</td>
+        <td>${inp("extra", "qty", r.qty, `data-ri="${i}"`, U_QTY, "w-qty")}</td>
         <td><select class="cell-select" data-scope="extra" data-k="unit" data-ri="${i}">
           ${Object.entries(UNITS).map(([k, l]) => `<option value="${k}"${r.unit === k ? " selected" : ""}>${l}</option>`).join("")}
         </select></td>
-        <td>${inp("extra", "price", r.price, `data-ri="${i}"`)}</td>
+        <td>${inp("extra", "price", r.price, `data-ri="${i}"`, uMoney(), "w-money")}</td>
         <td class="num x-sum" data-ri="${i}">${fmt(scaled((+r.qty || 0) * (+r.price || 0)))}</td>
         <td><label class="check" style="justify-content:center"><input type="checkbox" data-scope="extra" data-k="visible" data-ri="${i}"${r.visible !== false ? " checked" : ""}></label></td>
         <td>${del("extra", null, i)}</td>
@@ -701,7 +710,7 @@ function renderEditorTables() {
         <td><select class="cell-select" data-scope="service" data-k="basis" data-ri="${i}">
           ${Object.entries(SERVICE_BASIS).map(([k, l]) => `<option value="${k}"${s.basis === k ? " selected" : ""}>${l}</option>`).join("")}
         </select></td>
-        <td>${inp("service", "price", s.price, `data-ri="${i}"`)}</td>
+        <td>${inp("service", "price", s.price, `data-ri="${i}"`, uMoney(), "w-money")}</td>
         <td>${del("service", null, i)}</td>
       </tr>`).join("") || `<tr><td colspan="4"><div class="empty">خدمتی نیست — از کتابخانه اضافه کنید.</div></td></tr>`}
     </tbody>`;
@@ -732,6 +741,38 @@ function updateComputedCells() {
     const r = pg.extras[+td.dataset.ri];
     if (r) td.textContent = fmt(scaled((+r.qty || 0) * (+r.price || 0)));
   });
+}
+
+/* ---------------------------------------------------------- واحدهای نوار جمع */
+/* برچسب واحدِ فیلدهای نوار جمع را با حالت/واحد پول همگام می‌کند */
+function refreshTbUnits() {
+  const set = (id, txt) => {
+    const n = el(id);
+    if (!n) return;
+    n.textContent = txt || "";
+    n.style.display = txt ? "" : "none";
+  };
+  const mode = el("tbInstallMode") ? el("tbInstallMode").value : "none";
+  set("uProfitPct", "٪");
+  set("uInstallVal", mode === "percent" ? "٪" : mode === "per_meter" ? CUR.name + "/متر" : mode === "fixed" ? CUR.name : "");
+  set("uDiscPct", "٪");
+  set("uDiscAmt", CUR.name);
+  set("uVatPct", "٪");
+  set("uExtraFixed", CUR.name);
+  /* کلاس has-u فقط وقتی واحد نمایشی وجود دارد */
+  [["tbInstallVal", "uInstallVal"], ["tbDiscAmt", "uDiscAmt"], ["tbExtraFixed", "uExtraFixed"]].forEach(([i, u]) => {
+    const inEl = el(i), uEl = el(u);
+    if (inEl && uEl) inEl.classList.toggle("has-u", !!uEl.textContent);
+  });
+}
+
+/* راهنمای واحدِ قیمت در مودال متریال */
+function setMfPriceHint() {
+  const h = el("mfPriceHint");
+  if (!h) return;
+  const uSel = el("mfUnit");
+  const uLbl = uSel && uSel.selectedOptions[0] ? uSel.selectedOptions[0].textContent : "";
+  h.textContent = `قیمت به «${CUR.name}» به ازای هر «${uLbl}»`;
 }
 
 /* ---------------------------------------------------------- محاسبه‌ی زنده */
@@ -860,6 +901,7 @@ function openProjectEditor(id) {
   renderSectionBar();
   renderEditorTables();
   recalcTotals();
+  refreshTbUnits();
   el("projectEditor").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -1126,6 +1168,8 @@ function applySettingsToUI() {
   if (fs) {
     document.documentElement.style.setProperty("--app-fs", fs + "px");
   }
+  refreshTbUnits();
+  setMfPriceHint();
 }
 
 function renderBackups() {
@@ -1320,6 +1364,7 @@ function wire() {
     el("mfCat").value = state.matCat !== "all" ? state.matCat : "body_sheet";
     el("mfUnit").value = "sheet";
     el("mfStatus").checked = true;
+    setMfPriceHint();
     openModal("material");
   });
 
@@ -1358,6 +1403,7 @@ function wire() {
       el("mfSupplier").value = m.supplier || "";
       el("mfNote").value = m.note || "";
       el("mfStatus").checked = !!m.active;
+      setMfPriceHint();
       openModal("material");
     } else if (del) {
       const m = MATERIALS.find((x) => x.id === +del.dataset.delMat);
@@ -1383,6 +1429,7 @@ function wire() {
     }
   });
 
+  el("mfUnit").addEventListener("change", setMfPriceHint);
   el("btnSaveMaterial").addEventListener("click", () => busy(el("btnSaveMaterial"), async () => {
     const payload = matPayload();
     if (!payload.name) { toast("نام قلم را وارد کنید", "error"); return; }
@@ -1908,8 +1955,8 @@ function wire() {
   /* --- نوار جمع --- */
   ["tbProfitMode", "tbProfitPct", "tbInstallMode", "tbInstallVal",
     "tbDiscPct", "tbDiscAmt", "tbVat", "tbVatPct", "tbExtraFixed"].forEach((id) => {
-    el(id).addEventListener("input", () => { markDirty(); scheduleRecalc(); });
-    el(id).addEventListener("change", () => { markDirty(); scheduleRecalc(); });
+    el(id).addEventListener("input", () => { markDirty(); scheduleRecalc(); refreshTbUnits(); });
+    el(id).addEventListener("change", () => { markDirty(); scheduleRecalc(); refreshTbUnits(); });
   });
   el("btnBreakdown").addEventListener("click", async () => {
     if (!state.editingProject) return;

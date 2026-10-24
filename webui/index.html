@@ -6,8 +6,8 @@
 <title>کبیر — محاسبه‌گر قیمت تمام‌شده و فاکتور کابینت</title>
 <meta name="description" content="کبیر: نرم‌افزار تحت وب محاسبه‌ی قیمت تمام‌شده و صدور فاکتور حرفه‌ای برای کارگاه‌ها و فروشگاه‌های کابینت‌سازی — کاملاً فارسی و راست‌به‌چپ">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#0f766e" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0d131d" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0c3b36" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1a18" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -56,6 +56,7 @@
   </div>
 
   <nav class="nav" id="nav">
+    <div class="nav-sec">کارگاه و فروش</div>
     <button class="nav-btn active" data-page="dashboard" type="button">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/></svg>
       داشبورد<span class="nav-kbd">۱</span>
@@ -64,6 +65,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4.5l2 2.5H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
       پروژه‌ها<span class="nav-kbd">۲</span>
     </button>
+    <div class="nav-sec">تعریف‌ها و پایه‌ها</div>
     <button class="nav-btn" data-page="materials" type="button">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 10 5.5-10 5.5L2 7.5z"/><path d="m2 12.5 10 5.5 10-5.5"/><path d="m2 17 10 5.5L22 17"/></svg>
       متریال و خدمات<span class="nav-kbd">۳</span>
@@ -72,6 +74,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.9 5.6 5.6 1.9-5.6 1.9L12 18l-1.9-5.6-5.6-1.9 5.6-1.9z"/><path d="M19 15.5 19.8 18l2.2.8-2.2.8L19 22l-.8-2.4-2.2-.8 2.2-.8z"/></svg>
       سبک‌ها<span class="nav-kbd">۴</span>
     </button>
+    <div class="nav-sec">اسناد و سیستم</div>
     <button class="nav-btn" data-page="invoice" type="button">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18l-2.4-1.6L14 21l-2-1.6L10 21l-2.6-1.6L5 21z"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12.5" y2="16"/></svg>
       فاکتور<span class="nav-kbd">۵</span>
@@ -133,7 +136,7 @@
     <!-- ================= صفحه‌ی داشبورد ================= -->
     <section class="page active" id="page-dashboard">
       <div class="stats-grid">
-        <div class="stat-card" style="--stat-c:#2563eb">
+        <div class="stat-card" style="--stat-c:var(--info)">
           <div class="stat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4.5l2 2.5H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
           <div class="stat-info">
             <div class="stat-label">پروژه‌ها</div>
@@ -141,7 +144,7 @@
             <div class="stat-sub" id="statProjectsSub"></div>
           </div>
         </div>
-        <div class="stat-card" style="--stat-c:#0f766e">
+        <div class="stat-card" style="--stat-c:var(--accent)">
           <div class="stat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
           <div class="stat-info">
             <div class="stat-label">فروش ماه اخیر</div>
@@ -149,7 +152,7 @@
             <div class="stat-sub">جمع پروژه‌های ثبت‌شده</div>
           </div>
         </div>
-        <div class="stat-card" style="--stat-c:#16a34a">
+        <div class="stat-card" style="--stat-c:var(--success)">
           <div class="stat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div>
           <div class="stat-info">
             <div class="stat-label">سود تقریبی</div>
@@ -157,7 +160,7 @@
             <div class="stat-sub">اختلاف قیمت فروش و هزینه‌ی ثبت‌شده</div>
           </div>
         </div>
-        <div class="stat-card" style="--stat-c:#d97706">
+        <div class="stat-card" style="--stat-c:var(--warning)">
           <div class="stat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 10 5.5-10 5.5L2 7.5z"/><path d="m2 12.5 10 5.5 10-5.5"/><path d="m2 17 10 5.5L22 17"/></svg></div>
           <div class="stat-info">
             <div class="stat-label">اقلام متریال</div>
@@ -368,7 +371,7 @@
                     <option value="markup">مارکاپ</option>
                     <option value="margin">مارجین</option>
                   </select>
-                  <input type="text" id="tbProfitPct" inputmode="numeric" aria-label="درصد سود">
+                  <span class="cell-wrap"><input type="text" id="tbProfitPct" inputmode="numeric" aria-label="درصد سود" class="has-u"><i class="cell-u" id="uProfitPct">٪</i></span>
                 </div>
               </div>
               <div class="tb-field">
@@ -380,14 +383,14 @@
                     <option value="per_meter">متری</option>
                     <option value="percent">درصدی</option>
                   </select>
-                  <input type="text" id="tbInstallVal" inputmode="numeric">
+                  <span class="cell-wrap"><input type="text" id="tbInstallVal" inputmode="numeric"><i class="cell-u" id="uInstallVal" style="display:none"></i></span>
                 </div>
               </div>
               <div class="tb-field">
                 <span>تخفیف</span>
                 <div class="pair">
-                  <input type="text" id="tbDiscPct" inputmode="numeric" placeholder="٪" aria-label="درصد تخفیف">
-                  <input type="text" id="tbDiscAmt" inputmode="numeric" placeholder="مبلغ" aria-label="مبلغ تخفیف">
+                  <span class="cell-wrap"><input type="text" id="tbDiscPct" inputmode="numeric" aria-label="درصد تخفیف" class="has-u"><i class="cell-u" id="uDiscPct">٪</i></span>
+                  <span class="cell-wrap"><input type="text" id="tbDiscAmt" inputmode="numeric" placeholder="مبلغ" aria-label="مبلغ تخفیف" class="has-u"><i class="cell-u" id="uDiscAmt">تومان</i></span>
                 </div>
               </div>
               <div class="tb-field">
@@ -396,10 +399,10 @@
                   <label class="switch" title="فعال/غیرفعال">
                     <input type="checkbox" id="tbVat"><span class="track"></span>
                   </label>
-                  <input type="text" id="tbVatPct" inputmode="numeric" aria-label="درصد مالیات" style="min-width:3.6rem">
+                  <span class="cell-wrap"><input type="text" id="tbVatPct" inputmode="numeric" aria-label="درصد مالیات" style="min-width:3.6rem" class="has-u"><i class="cell-u" id="uVatPct">٪</i></span>
                 </div>
               </div>
-              <div class="tb-field"><span>مبلغ ثابت اضافه</span><input type="text" id="tbExtraFixed" inputmode="numeric" title="بابت تفاوت نوع درِ بخش‌ها یا اقلام کلی"></div>
+              <div class="tb-field"><span>مبلغ ثابت اضافه</span><span class="cell-wrap"><input type="text" id="tbExtraFixed" inputmode="numeric" title="بابت تفاوت نوع درِ بخش‌ها یا اقلام کلی" class="has-u"><i class="cell-u" id="uExtraFixed">تومان</i></span></div>
             </div>
             <div class="tb-figures">
               <div class="tb-fig"><span>جمع هزینه‌ی تمام‌شده</span><b id="tbCost">—</b></div>
@@ -680,7 +683,7 @@
             <option value="piece">عدد</option><option value="set">ست</option><option value="kg">کیلوگرم</option><option value="job">موردی</option>
           </select>
         </div>
-        <div class="field"><label for="mfPrice">قیمت</label><input type="text" id="mfPrice" inputmode="numeric" placeholder="۰"></div>
+        <div class="field"><label for="mfPrice">قیمت</label><input type="text" id="mfPrice" inputmode="numeric" placeholder="۰"><span class="hint" id="mfPriceHint"></span></div>
         <div class="field"><label for="mfThick">ضخامت (میل)</label><input type="text" id="mfThick" inputmode="numeric" placeholder="۱۶"></div>
         <div class="field"><label for="mfSheetW">عرض ورق (سانتی‌متر)</label><input type="text" id="mfSheetW" inputmode="numeric" placeholder="۱۸۳"></div>
         <div class="field"><label for="mfSheetH">ارتفاع ورق (سانتی‌متر)</label><input type="text" id="mfSheetH" inputmode="numeric" placeholder="۳۶۶"></div>
