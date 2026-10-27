@@ -79,9 +79,17 @@ page = costing.Page(
               costing.ServiceRow(label="نصب درصدی", basis="percent", qty=1, price=2)],
 )
 
+# بخش دوم: همان یونیت‌ها ولی با تیکِ «در از ورق بدنه» — تا مسیرِ تجمیعِ لنگه
+# با ورقِ بدنه هم در هر دو موتور سنجیده شود.
+page2 = costing.Page.from_dict(page.to_dict())
+page2.name = "بخش ۲ (در از ورق بدنه)"
+for u in page2.units:
+    for d in u.doors:
+        d.from_body = True
+
 engine = costing.CostingEngine(mats, db.all_settings())
 py = engine.calc_project(
-    [page], install_mode="per_meter", install_value=350000,
+    [page, page2], install_mode="per_meter", install_value=350000,
     profit_mode="markup", profit_percent=25,
     discount_percent=3, discount_amount=0,
     vat_enabled=True, vat_percent=10, extra_fixed_amount=500000)
@@ -101,7 +109,7 @@ payload = {
                 "profit_mode": "markup", "profit_percent": 25,
                 "discount_percent": 3, "discount_amount": 0,
                 "vat_enabled": True, "vat_percent": 10, "extra_fixed_amount": 500000},
-    "pages": [json.loads(json.dumps(page.to_dict(), default=str))],
+    "pages": [json.loads(json.dumps(pg.to_dict(), default=str)) for pg in (page, page2)],
 }
 Path("/tmp/parity-project.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
 

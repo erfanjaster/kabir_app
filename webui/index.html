@@ -226,6 +226,10 @@
           <option value="canceled">لغوشده</option>
         </select>
         <div class="spacer"></div>
+        <button class="btn outline" id="btnQuickQuote" type="button" title="ساخت یک پروژه‌ی کامل فقط با واردکردن متراژ — برای جواب‌دادن به تماس مشتری">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          قیمت‌گیری سریع
+        </button>
         <button class="btn primary" id="btnNewProject" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           پروژه‌ی جدید
@@ -250,6 +254,10 @@
             <div class="card-actions">
               <button class="btn ghost sm" id="btnCloseEditor" type="button">بستن</button>
               <button class="btn ghost sm" id="btnDupProject" type="button">کپی پروژه</button>
+              <button class="btn outline sm" id="btnWorkshop" type="button" title="فهرست قطعات با ابعاد دقیق + آنچه باید بخرید">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.1-.6-.6-2.1z"/></svg>
+                برش‌نامه و لیست خرید
+              </button>
               <button class="btn primary sm" id="btnSaveProject" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 ذخیره‌ی تغییرات
@@ -307,7 +315,13 @@
               <label>متر طول صفحه:
                 <input type="text" id="secCounterLm" class="narrow" inputmode="decimal">
               </label>
+              <label title="طول دیواری که اندازه گرفته‌اید — فقط برای اینکه ببینید چقدرش پر شده و چقدر مانده">طول دیوار (م):
+                <input type="text" id="secWallLen" class="narrow" inputmode="decimal" data-no-sep placeholder="۴٫۲">
+              </label>
             </div>
+
+            <!-- نوار زنده‌ی متراژ: هنگام تایپ ابعاد پر می‌شود -->
+            <div class="dim-ribbon" id="dimRibbon" role="status" aria-live="polite"></div>
 
             <div class="tabs" id="secTabs" role="tablist">
               <button class="tab active" data-tab="units" type="button" role="tab">یونیت‌ها <span class="cnt" id="cntUnits"></span></button>
@@ -319,6 +333,23 @@
             </div>
 
             <div class="tab-panel active" id="tab-units" role="tabpanel">
+              <div class="unit-tools">
+                <button class="btn outline sm" id="btnAutoDoors" type="button" title="برای یونیت‌هایی که در ندارند، از روی طول و ارتفاعشان درِ هم‌اندازه می‌سازد">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M18 17.5 18.8 20l2.2.8-2.2.8-.8 2.4-.8-2.4-2.2-.8 2.2-.8z"/></svg>
+                  ساخت خودکار درها
+                </button>
+                <button class="btn outline sm" id="btnFitDoors" type="button" title="اگر طول یونیت را عوض کرده‌اید، عرض لنگه‌های در را دوباره با یونیت اندازه می‌کند">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+                  هم‌اندازه‌سازی درها
+                </button>
+                <span class="ut-sep"></span>
+                <label class="ut-label">الگوی یونیت:
+                  <select id="tplSelect" aria-label="الگوی یونیت"></select>
+                </label>
+                <button class="btn ghost sm" id="btnUseTpl" type="button" title="الگوی انتخاب‌شده را به این بخش اضافه می‌کند">＋ از الگو</button>
+                <button class="btn ghost sm" id="btnManageTpl" type="button" title="دیدن، ویرایش و حذف الگوهای ذخیره‌شده">مدیریت الگوها</button>
+                <span class="tiny muted ut-hint">برای ذخیره‌ی یک یونیت به‌عنوان الگو، از دکمه‌ی «الگو» در همان ردیف استفاده کنید.</span>
+              </div>
               <div class="table-wrap"><table class="data center" id="tblUnits"></table></div>
               <div class="add-unit-row">
                 <button class="btn ghost sm add-row" data-add="unit:ground" type="button" title="یونیت زمینی با ابعاد پیش‌فرض (قابل تغییر در تنظیمات)">＋ یونیت زمینی</button>
@@ -413,11 +444,33 @@
                 </div>
               </div>
               <div class="tb-field"><span>مبلغ ثابت اضافه</span><span class="cell-wrap"><input type="text" id="tbExtraFixed" inputmode="numeric" title="بابت تفاوت نوع درِ بخش‌ها یا اقلام کلی" class="has-u"><i class="cell-u" id="uExtraFixed">تومان</i></span></div>
+              <div class="tb-field">
+                <span title="بیعانه‌ای که از مشتری گرفته‌اید — روی فاکتور چاپ می‌شود">پیش‌پرداخت</span>
+                <div class="pair">
+                  <span class="cell-wrap"><input type="text" id="tbDepositPct" inputmode="numeric" aria-label="درصد پیش‌پرداخت" class="has-u" data-no-sep><i class="cell-u" id="uDepositPct">٪</i></span>
+                  <span class="cell-wrap"><input type="text" id="tbDepositAmt" inputmode="numeric" placeholder="مبلغ" aria-label="مبلغ پیش‌پرداخت" class="has-u"><i class="cell-u" id="uDepositAmt">تومان</i></span>
+                </div>
+              </div>
+            </div>
+            <div class="tb-round">
+              <span>رند کردن مبلغ نهایی</span>
+              <div class="pair">
+                <select id="tbRoundStep" aria-label="گام رندکردن">
+                  <option value="0">خاموش</option>
+                  <option value="10000000">۱ میلیون تومان</option>
+                  <option value="1000000">۱۰۰ هزار تومان</option>
+                  <option value="100000">۱۰ هزار تومان</option>
+                  <option value="100000000">۱۰ میلیون تومان</option>
+                </select>
+                <button class="btn outline sm" id="btnRoundPrice" type="button" title="تخفیف را طوری تنظیم می‌کند که مبلغ قابل پرداخت رُند شود">رند کن</button>
+              </div>
             </div>
             <div class="tb-figures">
               <div class="tb-fig"><span>جمع هزینه‌ی تمام‌شده</span><b id="tbCost">—</b></div>
               <div class="tb-fig"><span>قیمت ناخالص</span><b id="tbGross">—</b></div>
+              <div class="tb-fig" title="همان چیزی که مشتری می‌پرسد: متری چند؟"><span>قیمت هر متر طول</span><b id="tbPerMeter">—</b></div>
               <div class="tb-final"><span>مبلغ قابل پرداخت</span><b id="tbFinal">—</b></div>
+              <div class="tb-fig tb-due" id="tbDueWrap" hidden><span>باقی‌مانده پس از پیش‌پرداخت</span><b id="tbDue">—</b></div>
             </div>
             <div class="tb-actions">
               <button class="btn outline" id="btnBreakdown" type="button">
@@ -854,6 +907,117 @@
       <button class="btn success" id="btnBreakdownInvoice" type="button">صدور فاکتور از این محاسبه</button>
       <div class="spacer"></div>
       <button class="btn ghost" data-close type="button">بستن</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ بسته‌ی کارگاهی: برش‌نامه + لیست خرید ═══════════ -->
+  <div class="modal wide" id="modal-workshop" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3>🪚 بسته‌ی کارگاهی <span class="sub" id="wsProjectName"></span></h3>
+      <button class="icon-btn" data-close type="button" aria-label="بستن">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="ws-stats" id="wsStats"></div>
+      <div class="tabs" id="wsTabs" role="tablist">
+        <button class="tab active" data-wstab="cut" type="button" role="tab">برش‌نامه <span class="cnt" id="wsCntCut"></span></button>
+        <button class="tab" data-wstab="sheets" type="button" role="tab">خلاصه‌ی ورق <span class="cnt" id="wsCntSheets"></span></button>
+        <button class="tab" data-wstab="shop" type="button" role="tab">لیست خرید <span class="cnt" id="wsCntShop"></span></button>
+      </div>
+      <div class="ws-panel active" id="ws-cut"></div>
+      <div class="ws-panel" id="ws-sheets"></div>
+      <div class="ws-panel" id="ws-shop"></div>
+      <p class="tiny muted" style="margin-top:.7rem">
+        ابعاد برش‌نامه بر حسب <b>میلی‌متر</b> است و «طول» همیشه بُعد بزرگ‌تر نوشته می‌شود —
+        همان قراردادی که اپراتور ارّه‌ی پنل‌بر و دستگاه CNC انتظار دارد.
+        این اعداد از همان محاسبه‌ای می‌آیند که فاکتور از آن ساخته می‌شود.
+      </p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn outline" id="btnWsPrint" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        چاپ
+      </button>
+      <button class="btn primary" id="btnWsExcel" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        خروجی اکسل
+      </button>
+      <div class="spacer"></div>
+      <button class="btn ghost" data-close type="button">بستن</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ قیمت‌گیری سریع ═══════════ -->
+  <div class="modal" id="modal-quick" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3>⚡ قیمت‌گیری سریع</h3>
+      <button class="icon-btn" data-close type="button" aria-label="بستن">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="tiny muted" style="margin-bottom:.9rem">
+        مشتری زنگ زده و قیمت می‌خواهد؟ فقط متراژ و سبک را بدهید؛ کبیر یک پروژه‌ی
+        <b>واقعی</b> با یونیت‌های استاندارد و درهای هم‌اندازه می‌سازد که بعداً
+        می‌توانید دقیقش کنید. دیگر لازم نیست حدس بزنید.
+      </p>
+      <div class="grid2">
+        <div class="field" style="grid-column:1/-1"><label for="qkTitle">عنوان</label>
+          <input type="text" id="qkTitle" placeholder="مثلاً آشپزخانه ۴ متری هایگلاس"></div>
+        <div class="field"><label for="qkCustomer">نام مشتری</label><input type="text" id="qkCustomer"></div>
+        <div class="field"><label for="qkMobile">همراه</label><input type="tel" id="qkMobile" placeholder="۰۹۱۲…"></div>
+        <div class="field"><label for="qkGround">متراژ زمینی (متر طول)</label>
+          <input type="text" id="qkGround" inputmode="decimal" data-no-sep placeholder="۳٫۶"></div>
+        <div class="field"><label for="qkWall">متراژ دیواری (متر طول)</label>
+          <input type="text" id="qkWall" inputmode="decimal" data-no-sep placeholder="۳٫۰"></div>
+        <div class="field"><label for="qkStyle">سبک</label><select id="qkStyle"></select></div>
+        <div class="field"><label for="qkCounter">صفحه‌ی کابینت</label><select id="qkCounter"></select></div>
+        <div class="field"><label for="qkCounterLm">متر طول صفحه</label>
+          <input type="text" id="qkCounterLm" inputmode="decimal" data-no-sep placeholder="خالی = همان متراژ زمینی"></div>
+        <div class="field"><label for="qkDrawers">تعداد کشو</label>
+          <input type="text" id="qkDrawers" inputmode="numeric" value="۳" data-no-sep></div>
+        <div class="field"><label for="qkTall">کمد ایستاده</label>
+          <input type="text" id="qkTall" inputmode="numeric" value="۰" data-no-sep></div>
+      </div>
+      <div class="quick-preview" id="qkPreview" hidden></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn primary" id="btnQuickBuild" type="button">ساخت پروژه و مشاهده‌ی قیمت</button>
+      <div class="spacer"></div>
+      <button class="btn ghost" data-close type="button">انصراف</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ مدیریت الگوهای یونیت ═══════════ -->
+  <div class="modal" id="modal-templates" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3>📐 الگوهای یونیت</h3>
+      <button class="icon-btn" data-close type="button" aria-label="بستن">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="tiny muted" style="margin-bottom:.8rem">
+        یونیت‌های تکراری‌تان (یونیت سینک، یونیت گاز، کمد ایستاده و …) را یک‌بار
+        کامل بسازید و این‌جا ذخیره کنید؛ در هر پروژه‌ی بعدی با یک کلیک می‌آیند —
+        با همان متریال، درها و کشوها.
+      </p>
+      <div class="table-wrap"><table class="data" id="tplTable"></table></div>
+    </div>
+    <div class="modal-foot">
+      <div class="spacer"></div>
+      <button class="btn ghost" data-close type="button">بستن</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ ذخیره‌ی یونیت به‌عنوان الگو ═══════════ -->
+  <div class="modal" id="modal-tpl-save" role="dialog" aria-modal="true" style="width:min(28rem,100%)">
+    <div class="modal-head"><h3>ذخیره‌ی یونیت به‌عنوان الگو</h3>
+      <button class="icon-btn" data-close type="button" aria-label="بستن">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label for="tplName">نام الگو</label><input type="text" id="tplName" placeholder="مثلاً یونیت سینک ۹۰"></div>
+      <div class="field"><label for="tplNote">یادداشت (اختیاری)</label><input type="text" id="tplNote"></div>
+      <p class="tiny muted" id="tplSummary"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn primary" id="btnTplSave" type="button">ذخیره‌ی الگو</button>
+      <div class="spacer"></div>
+      <button class="btn ghost" data-close type="button">انصراف</button>
     </div>
   </div>
 

@@ -143,6 +143,12 @@ const ICONS = {
   download: svg('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>'),
   table: svg('<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>'),
   chev: svg('<polyline points="9 6 15 12 9 18"/>'),
+  tpl: svg('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>'),
+  bolt: svg('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'),
+  saw: svg('<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.1-.6-.6-2.1z"/>'),
+  cart: svg('<circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.6 12.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 7H6"/>'),
+  ruler: svg('<path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><line x1="3" y1="12" x2="21" y2="12"/>'),
+  spark: svg('<path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/>'),
 };
 
 function iconBtn(cls, icon, title, attrs) {
@@ -414,6 +420,7 @@ function defaultDoor() {
     material_id: 0, door_model_id: 0, hinge_id: 0, hinges_per_leaf: 2,
     gas_spring_id: 0, gas_springs_per_leaf: 0, handle_id: 0, handles_per_leaf: 1,
     banding_id: 0, assembly_id: 0, packaging_id: 0, glass: false, note: "",
+    from_body: false,      /* ★ در از ورق بدنه‌ی همان یونیت برش بخورد */
   };
 }
 function defaultDrawer() {
@@ -435,7 +442,10 @@ function defaultPage(styleId, name) {
     banding_body_factor: n(SETTINGS.banding_body_factor || 2.2),
     banding_door_factor: n(SETTINGS.banding_door_factor || 1),
     banding_waste_percent: n(SETTINGS.banding_waste_percent || 8),
-    countertop_lm: 0, note: "",
+    countertop_lm: 0,
+    /* طول اندازه‌گیری‌شده‌ی دیوار — فقط برای کنترل خطا در ویرایشگر */
+    wall_length_cm: 0,
+    note: "",
   };
 }
 
@@ -494,12 +504,16 @@ function normalizeProject(p) {
     final_price: 0, total_cost: 0, rates_rev: 0, stale: false,
     profit_mode: "markup", profit_percent: 25, install_mode: "none", install_value: 0,
     discount_percent: 0, discount_amount: 0, vat_enabled: false, vat_percent: 10,
-    extra_fixed_amount: 0, style: "", pages: [],
+    extra_fixed_amount: 0, deposit_percent: 0, deposit_amount: 0,
+    style: "", pages: [],
   }, p);
   proj.pages = (p.pages || []).map(normalizePage);
   if (!proj.pages.length) proj.pages = [defaultPage(0)];
   return proj;
 }
+
+/* ------------------------------------------------- الگوهای یونیت (دمو) */
+let UNIT_TEMPLATES = [];
 
 /* --------------------------------------------------------- لایه‌ی اتصال */
 const API = {
@@ -558,6 +572,7 @@ function ingestBootstrap(b) {
   if (b.categories && b.categories.length) CATS = b.categories.map((c) => [c.key, c.label]);
   MATERIALS = b.materials || [];
   STYLES = b.styles || [];
+  UNIT_TEMPLATES = b.unit_templates || [];
   PROJECTS = (b.projects || []).map(normalizeProject);
   ARCHIVE = b.invoices || [];
   BACKUPS = b.backups || [];
@@ -855,6 +870,7 @@ function loadDemoData() {
       if (saved.projects && saved.projects.length) PROJECTS = saved.projects.map(normalizeProject);
       if (saved.history) HISTORY = saved.history;
       if (saved.archive) ARCHIVE = saved.archive;
+      if (saved.unit_templates) UNIT_TEMPLATES = saved.unit_templates;
       if (saved.settings) {
         SETTINGS = Object.assign({}, DEMO_SETTINGS, saved.settings);
         DIGITS_FA = String(SETTINGS.persian_digits) === "1";

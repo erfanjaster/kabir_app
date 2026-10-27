@@ -31,11 +31,13 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from .. import __version__
 from .. import config
-from ..core import costing, invoice as inv, persian as fa
+from ..core import costing, invoice as inv, persian as fa, workshop as ws
+from ..core import exporters
 from ..data import backup as bk
 from ..data import dao
 from ..data import recalc as rc
-from ..data.dao import InvoiceRepo, MaterialRepo, ProjectRepo, StyleRepo
+from ..data.dao import (InvoiceRepo, MaterialRepo, ProjectRepo, StyleRepo,
+                        UnitTemplateRepo)
 from ..data.db import Database
 
 APP_VERSION = __version__
@@ -216,6 +218,8 @@ def _project_json(db: Database, p: Dict[str, Any], with_pages: bool = True) -> D
         "vat_enabled": _bool(p.get("vat_enabled")),
         "vat_percent": _num(p.get("vat_percent")),
         "extra_fixed_amount": _round2(p.get("extra_fixed_amount")),
+        "deposit_percent": _num(p.get("deposit_percent")),
+        "deposit_amount": _round2(p.get("deposit_amount")),
         "style": "",
         "pages": [],
     }
@@ -254,8 +258,16 @@ def _result_json(res: costing.ProjectResult) -> Dict[str, Any]:
         "vat_amount": _round2(res.vat_amount),
         "final_price": _round2(res.final_price),
         "total_profit": _round2(res.total_profit),
+        "deposit_percent": _num(res.deposit_percent),
+        "deposit_amount": _round2(res.deposit_amount),
+        "remaining_amount": _round2(res.remaining_amount),
+        "price_per_ground_lm": _round2(res.price_per_ground_lm),
+        "price_per_total_lm": _round2(res.price_per_total_lm),
+        "cost_per_ground_lm": _round2(res.cost_per_ground_lm),
         "stats": {k: _round2(v) for k, v in (res.stats or {}).items()},
         "items": [it.to_dict() for it in res.items],
+        #: هشدارهای محاسباتی (مثلاً «تیکِ در از ورق بدنه نادیده گرفته شد»)
+        "warnings": [str(w) for w in (getattr(res, "warnings", None) or [])],
     }
 
 
@@ -284,6 +296,8 @@ def _calc(db: Database, project: Dict[str, Any],
         vat_enabled=_bool(project.get("vat_enabled")),
         vat_percent=_num(project.get("vat_percent")),
         extra_fixed_amount=_num(project.get("extra_fixed_amount")),
+        deposit_percent=_num(project.get("deposit_percent")),
+        deposit_amount=_num(project.get("deposit_amount")),
     )
 
 
@@ -296,7 +310,7 @@ def _calc_payload(db: Database, body: Dict[str, Any]) -> Tuple[costing.ProjectRe
         if row:
             for k in ("install_mode", "install_value", "profit_mode", "profit_percent",
                       "discount_percent", "discount_amount", "vat_enabled", "vat_percent",
-                      "extra_fixed_amount"):
+                      "extra_fixed_amount", "deposit_percent", "deposit_amount"):
                 project.setdefault(k, row.get(k))
     return _calc(db, project, pages), project
 
@@ -427,6 +441,7 @@ def api_bootstrap(db: Database, body: Dict[str, Any]) -> Dict[str, Any]:
         "categories": _category_list(db),
         "materials": _materials_with_active(db),
         "styles": [_style_json(s) for s in StyleRepo(db).all()],
+        "unit_templates": [_unit_template_json(t) for t in UnitTemplateRepo(db).all()],
         "projects": _projects_json(db),
         "invoices": _invoice_list(db),
         "backups": _backup_list(),
@@ -666,7 +681,8 @@ def _project_or_404(db: Database, pid: int) -> Dict[str, Any]:
 PROJECT_IN_FIELDS = ("title", "customer", "mobile", "phone", "address", "status",
                      "valid_until", "note", "profit_mode", "profit_percent",
                      "install_mode", "install_value", "discount_percent", "discount_amount",
-                     "vat_enabled", "vat_percent", "extra_fixed_amount")
+                     "vat_enabled", "vat_percent", "extra_fixed_amount",
+                     "deposit_percent", "deposit_amount")
 
 
 def _project_to_row(body: Dict[str, Any]) -> Dict[str, Any]:
@@ -688,6 +704,8 @@ def _project_to_row(body: Dict[str, Any]) -> Dict[str, Any]:
         "vat_enabled": 1 if _bool(body.get("vat_enabled")) else 0,
         "vat_percent": _num(body.get("vat_percent"), 10),
         "extra_fixed_amount": _round2(body.get("extra_fixed_amount")),
+        "deposit_percent": _num(body.get("deposit_percent")),
+        "deposit_amount": _round2(body.get("deposit_amount")),
     }
 
 
@@ -745,7 +763,8 @@ def api_project_update(db: Database, body: Dict[str, Any], pid: int) -> Dict[str
                "profit_percent": "profit_percent", "install_mode": "install_mode",
                "install_value": "install_value", "discount_percent": "discount_percent",
                "discount_amount": "discount_amount", "vat_enabled": "vat_enabled",
-               "vat_percent": "vat_percent", "extra_fixed_amount": "extra_fixed_amount"}
+               "vat_percent": "vat_percent", "extra_fixed_amount": "extra_fixed_amount",
+               "deposit_percent": "deposit_percent", "deposit_amount": "deposit_amount"}
     patch: Dict[str, Any] = {}
     for src, dst in mapping.items():
         if src in body:
@@ -817,6 +836,295 @@ def api_projects_recalc_all(db: Database, body: Dict[str, Any]) -> Dict[str, Any
         "projects": rc.light_projects(db),
         "dashboard": _dashboard(db),
     }
+
+
+# --------------------------- برش‌نامه و لیست خرید ---------------------------
+
+def _engine_of(db: Database) -> costing.CostingEngine:
+    """موتور محاسبه با متریال‌ها و تنظیمات جاری پایگاه‌داده."""
+    return costing.CostingEngine(MaterialRepo(db).all(), db.all_settings())
+
+
+def api_workshop(db: Database, body: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    ★ بسته‌ی کارگاهی: برش‌نامه (فهرست قطعات با ابعاد) + خلاصه‌ی ورق + لیست خرید.
+
+    همان داده‌ای که موتور محاسبه برای فاکتور استفاده می‌کند، پس اعداد با هم
+    یکی‌اند؛ فقط نمای آن‌ها برای کارگاه و انبار است.
+    """
+    result, project = _calc_payload(db, body)
+    pages = _pages_from_payload(body.get("pages"))
+    if not pages and project.get("id"):
+        pages = ProjectRepo(db).load_pages(int(project["id"]))
+    engine = _engine_of(db)
+    pack = ws.build_workshop_pack(engine, pages, result, db.all_settings())
+    pack["project"] = {
+        "id": _int(project.get("id")),
+        "title": _str(project.get("title")),
+        "code": _str(project.get("code")),
+        "customer": _str(project.get("customer") or project.get("customer_name")),
+    }
+    return pack
+
+
+def api_workshop_xlsx(db: Database, body: Dict[str, Any]) -> Dict[str, Any]:
+    """خروجی اکسلِ برش‌نامه + لیست خرید (برای چاپ و چسباندن به دیوار کارگاه)."""
+    result, project = _calc_payload(db, body)
+    pages = _pages_from_payload(body.get("pages"))
+    if not pages and project.get("id"):
+        pages = ProjectRepo(db).load_pages(int(project["id"]))
+    engine = _engine_of(db)
+    pack = ws.build_workshop_pack(engine, pages, result, db.all_settings())
+    stamp = datetime.now().strftime("%Y%m%d-%H%M")
+    code = _str(project.get("code")) or f"project-{_int(project.get('id'))}"
+    EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+    path = EXPORT_DIR / f"boresh-nameh-{code}-{stamp}.xlsx"
+    # توجه: اگر openpyxl نصب نباشد، خروجی به CSV می‌افتد و مسیر برگشتی فرق می‌کند
+    written = exporters.export_workshop_xlsx(pack, path, project, db.all_settings())
+    written = Path(written or path)
+    is_csv = written.suffix.lower() == ".csv"
+    db.log("export", f"خروجی برش‌نامه و لیست خرید: {written.name}")
+    return {"__file__": (
+        written.read_bytes(), written.name,
+        "text/csv; charset=utf-8" if is_csv else
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+
+
+# ------------------------------ الگوی یونیت ------------------------------
+
+def _unit_template_json(t: Dict[str, Any]) -> Dict[str, Any]:
+    return {"id": int(t["id"]), "name": t.get("name") or "", "note": t.get("note") or "",
+            "data": t.get("data") or {}, "sort_order": _int(t.get("sort_order"))}
+
+
+def api_unit_templates_list(db: Database, body: Dict[str, Any]) -> Dict[str, Any]:
+    return {"templates": [_unit_template_json(t) for t in UnitTemplateRepo(db).all()]}
+
+
+def api_unit_template_create(db: Database, body: Dict[str, Any]) -> Dict[str, Any]:
+    repo = UnitTemplateRepo(db)
+    name = _str(body.get("name")).strip()
+    if not name:
+        raise ApiError("نام الگو را وارد کنید.")
+    data = body.get("data")
+    if not isinstance(data, dict) or not data:
+        raise ApiError("داده‌ی یونیت برای ذخیره‌ی الگو ارسال نشد.")
+    tid = repo.add(name, data, _str(body.get("note")))
+    db.log("template", f"ذخیره‌ی الگوی یونیت: {name}")
+    return {"id": int(tid), "templates": [_unit_template_json(t) for t in repo.all()]}
+
+
+def api_unit_template_update(db: Database, body: Dict[str, Any], tid: int) -> Dict[str, Any]:
+    repo = UnitTemplateRepo(db)
+    t = repo.get(tid)
+    if not t:
+        raise ApiError("الگو یافت نشد.", 404)
+    repo.update(tid, _str(body.get("name"), t["name"]).strip() or t["name"],
+                body.get("data") if isinstance(body.get("data"), dict) else t["data"],
+                _str(body.get("note"), t.get("note", "")))
+    return {"templates": [_unit_template_json(x) for x in repo.all()]}
+
+
+def api_unit_template_delete(db: Database, body: Dict[str, Any], tid: int) -> Dict[str, Any]:
+    repo = UnitTemplateRepo(db)
+    if not repo.get(tid):
+        raise ApiError("الگو یافت نشد.", 404)
+    repo.delete(tid)
+    db.log("template", f"حذف الگوی یونیت #{tid}")
+    return {"id": tid, "templates": [_unit_template_json(t) for t in repo.all()]}
+
+
+# ---------------------------- قیمت‌گیری سریع ----------------------------
+
+def api_quick_project(db: Database, body: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    ★ ساخت یک پروژه‌ی کامل از چند عددِ ساده — برای جواب‌دادن به تماس مشتری.
+
+    ورودی: متراژ زمینی، متراژ دیواری، سبک، نوع/متراژ صفحه، تعداد کشو و کمد.
+    خروجی: یک پروژه‌ی واقعی با یونیت‌های استاندارد ۶۰ سانتی که بعداً قابل
+    ویرایش دقیق است (به‌جای حدسِ ذهنی، یک پیش‌فاکتور قابل دفاع).
+    """
+    settings = db.all_settings()
+    ground_m = _num(body.get("ground_lm"))
+    wall_m = _num(body.get("wall_lm"))
+    if ground_m <= 0 and wall_m <= 0:
+        raise ApiError("حداقل یکی از متراژهای زمینی یا دیواری را وارد کنید.")
+    style_id = _int(body.get("style_id"))
+    style = StyleRepo(db).get(style_id) if style_id else None
+    if style is None:
+        # ★ بدون سبک، هیچ متریالی به یونیت‌ها نمی‌چسبد و قیمتِ کلِ آشپزخانه
+        #   به «فقط اجرت نصب» سقوط می‌کند — یعنی یک پیش‌فاکتورِ غلطِ فاحش.
+        #   پس به اولین سبکِ موجود برمی‌گردیم تا عدد همیشه قابل دفاع باشد.
+        styles = StyleRepo(db).all()
+        if styles:
+            style = styles[0]
+            style_id = int(style["id"])
+    style_data = (style or {}).get("data") or {}
+
+    def _mid(cat: str, role: str) -> int:
+        name = style_data.get(role)
+        if not name:
+            return 0
+        row = db.one("SELECT id FROM materials WHERE name=? AND active=1", (name,))
+        return int(row["id"]) if row else 0
+
+    def _dims(kind: str) -> Dict[str, float]:
+        return {
+            "length_cm": _num(settings.get(f"unit_{kind}_length_cm"), 60),
+            "height_cm": _num(settings.get(f"unit_{kind}_height_cm"), 72),
+            "depth_cm": _num(settings.get(f"unit_{kind}_depth_cm"), 55),
+            "shelves": _num(settings.get(f"unit_{kind}_shelves"), 1),
+        }
+
+    base_mats = {
+        "body_id": _mid("body_sheet", "body"),
+        "back_id": _mid("back_sheet", "back"),
+        "banding_id": _mid("banding", "banding"),
+        "kickboard_id": _mid("kickboard", "kickboard"),
+        "leg_id": _mid("leg", "leg"),
+        "shelf_pin_id": _mid("shelf_pin", "shelf_pin"),
+    }
+    door_mats = {
+        "material_id": _mid("door_sheet", "door"),
+        "door_model_id": _mid("door_model", "door_model"),
+        "hinge_id": _mid("hinge", "hinge"),
+        "handle_id": _mid("handle", "handle"),
+        "banding_id": _mid("banding", "banding"),
+        "assembly_id": _mid("service", "assembly_door"),
+        "packaging_id": _mid("service", "packaging_door"),
+    }
+    counter_id = _int(body.get("countertop_id")) or _mid("countertop", "countertop")
+    counter_lm = _num(body.get("countertop_lm"), ground_m)
+    drawers = int(_num(body.get("drawers")))
+    tall = int(_num(body.get("tall")))
+
+    units: List[Dict[str, Any]] = []
+
+    def make_units(kind: str, total_m: float, label: str) -> None:
+        """تبدیل متراژ به یونیت‌های استاندارد؛ باقیمانده یک یونیت کوچک‌تر می‌شود."""
+        if total_m <= 0:
+            return
+        d = _dims(kind)
+        std_len = max(20.0, float(d["length_cm"]))
+        remaining_cm = total_m * 100.0
+        idx = 1
+        while remaining_cm > 15.0:                       # کمتر از ۱۵ سم نادیده
+            ln = min(std_len, remaining_cm)
+            u: Dict[str, Any] = {
+                "label": f"{label} {ln:.0f}", "unit_type": kind, "qty": 1,
+                "length_cm": ln, "height_cm": d["height_cm"], "depth_cm": d["depth_cm"],
+                "shelves": int(d["shelves"]) if kind != "ground" else 1,
+                "legs_per_unit": 4, "pins_per_shelf": 4,
+                "has_top_panel": True, "has_bottom_panel": True,
+                "note": "", "doors": [], "drawers": [],
+            }
+            u.update(base_mats)
+            # درها: دو لنگه برای عرض ≥ ۷۰ سم، وگرنه یک لنگه
+            leaves = 2 if ln >= 70 else 1
+            gap = 0.3                                        # درز ۳ میلی‌متر
+            leaf_w = (ln - gap * (leaves + 1)) / leaves
+            leaf_h = float(d["height_cm"]) - 0.3 if kind == "wall" else min(
+                float(d["height_cm"]) - 0.3, 71.7)
+            dr = {"label": "در", "qty": leaves, "w_cm": round(leaf_w, 1),
+                  "h_cm": round(leaf_h, 1), "model": "single",
+                  "hinges_per_leaf": 2, "gas_springs_per_leaf": 0,
+                  "handles_per_leaf": 1, "glass": False, "note": ""}
+            dr.update(door_mats)
+            u["doors"] = [dr]
+            if counter_id and kind == "ground":
+                u["countertop_id"] = counter_id
+            units.append(u)
+            remaining_cm -= std_len
+            idx += 1
+
+    make_units("ground", ground_m, "یونیت زمینی")
+    make_units("wall", wall_m, "یونیت دیواری")
+
+    # کشوها داخل اولین یونیت زمینی
+    if drawers > 0 and units:
+        target = next((u for u in units if u["unit_type"] == "ground"), units[0])
+        d = _dims("ground")
+        for i in range(drawers):
+            dw = {"label": f"کشو {i + 1}", "qty": 1,
+                  "w_cm": round(float(target["length_cm"]) - 4, 1),
+                  "h_cm": 18 if i == 0 else 22,
+                  "d_cm": round(float(d["depth_cm"]) - 10, 1),
+                  "slide_id": _mid("drawer_slide", "slide"),
+                  "sheet_id": _mid("drawer_sheet", "drawer_sheet") or base_mats["body_id"],
+                  "front_id": door_mats["material_id"],
+                  "handle_id": door_mats["handle_id"],
+                  "banding_id": door_mats["banding_id"],
+                  "assembly_id": door_mats["assembly_id"], "note": ""}
+            target["drawers"].append(dw)
+        target["doors"] = []
+        target["shelves"] = 0
+
+    # کمد ایستاده
+    for i in range(max(0, tall)):
+        d = _dims("tall")
+        u = {"label": f"کمد ایستاده {i + 1}", "unit_type": "tall", "qty": 1,
+             "length_cm": d["length_cm"], "height_cm": d["height_cm"],
+             "depth_cm": d["depth_cm"], "shelves": int(d["shelves"]),
+             "legs_per_unit": 4, "pins_per_shelf": 4,
+             "has_top_panel": True, "has_bottom_panel": True,
+             "note": "", "drawers": [], "doors": []}
+        u.update(base_mats)
+        dr = {"label": "در کمد", "qty": 2,
+              "w_cm": round((float(d["length_cm"]) - 0.9) / 2, 1),
+              "h_cm": round(float(d["height_cm"]) - 2, 1), "model": "single",
+              "hinges_per_leaf": 4, "gas_springs_per_leaf": 0,
+              "handles_per_leaf": 1, "glass": False, "note": ""}
+        dr.update(door_mats)
+        u["doors"] = [dr]
+        units.append(u)
+
+    page = costing.Page(name=_str(body.get("section_name"), "بخش ۱"),
+                        style_id=style_id,
+                        style_name=(style or {}).get("name", ""))
+    page.waste_percent = _num(style_data.get("waste_percent"),
+                              _num(settings.get("default_waste_percent", 10), 10))
+    page.overhead_percent = _num(style_data.get("overhead_percent"),
+                                 _num(settings.get("default_overhead_percent", 0), 0))
+    for k in ("banding_body_factor", "banding_door_factor", "banding_waste_percent"):
+        setattr(page, k, _num(settings.get(k), getattr(page, k)))
+    page.countertop_lm = counter_lm if counter_id else 0.0
+    page.wall_length_cm = (ground_m * 100.0)
+    page.units = [costing.UnitRow.from_dict(u) for u in units]
+
+    title = _str(body.get("title")).strip() or "قیمت‌گیری سریع"
+    payload = {
+        "title": title,
+        "customer": _str(body.get("customer")),
+        "mobile": _str(body.get("mobile")),
+        "status": "draft",
+        "note": _str(body.get("note"), "ساخته‌شده با «قیمت‌گیری سریع» — ابعاد را با اندازه‌ی واقعی چک کنید."),
+        "style_id": style_id,
+        "profit_mode": _str(style_data.get("profit_mode"),
+                            settings.get("default_profit_mode", "markup")),
+        "profit_percent": _num(style_data.get("profit_percent"),
+                               _num(settings.get("default_profit_percent", 30), 30)),
+        "install_mode": _str(body.get("install_mode"),
+                             settings.get("default_install_mode", "none")),
+        "install_value": _num(body.get("install_value"),
+                              _num(settings.get("default_install_value"))),
+    }
+    created = api_project_create(db, payload)
+    proj = created["project"]
+    pid = int(proj["id"])
+    pg_data = page.to_dict()
+    existing = ProjectRepo(db).pages_of(pid)
+    if existing:
+        ProjectRepo(db).save_page(int(existing[0]["id"]), page.name, page.style_id, pg_data)
+    else:
+        ProjectRepo(db).add_page(pid, page.name, page.style_id, pg_data, 0)
+    db.log("project", f"قیمت‌گیری سریع: {title} ({ground_m:g} م زمینی، {wall_m:g} م دیواری)")
+    proj = _project_json(db, _project_or_404(db, pid))
+    result = _calc(db, proj, [page])
+    ProjectRepo(db).update(pid, {"final_price": _round2(result.final_price),
+                                  "total_cost": _round2(result.total_cost),
+                                  "rates_rev": rc.current_prices_rev(db)})
+    return {"project": _project_json(db, _project_or_404(db, pid)),
+            "calc": _result_json(result)}
 
 
 # -------------------------------- فاکتور --------------------------------
@@ -1069,6 +1377,19 @@ ROUTES: List[Route] = [
      lambda h, b, m: api_project_duplicate(h.db, b, int(m["pid"]))),
     ("DELETE", re.compile(r"^/api/projects/(?P<pid>\d+)$"),
      lambda h, b, m: api_project_delete(h.db, b, int(m["pid"]))),
+
+    ("POST", re.compile(r"^/api/workshop$"), lambda h, b, m: api_workshop(h.db, b)),
+    ("POST", re.compile(r"^/api/workshop/xlsx$"), lambda h, b, m: api_workshop_xlsx(h.db, b)),
+    ("POST", re.compile(r"^/api/quick-project$"), lambda h, b, m: api_quick_project(h.db, b)),
+
+    ("GET", re.compile(r"^/api/unit-templates$"),
+     lambda h, b, m: api_unit_templates_list(h.db, b)),
+    ("POST", re.compile(r"^/api/unit-templates$"),
+     lambda h, b, m: api_unit_template_create(h.db, b)),
+    ("PUT", re.compile(r"^/api/unit-templates/(?P<tid>\d+)$"),
+     lambda h, b, m: api_unit_template_update(h.db, b, int(m["tid"]))),
+    ("DELETE", re.compile(r"^/api/unit-templates/(?P<tid>\d+)$"),
+     lambda h, b, m: api_unit_template_delete(h.db, b, int(m["tid"]))),
 
     ("POST", re.compile(r"^/api/invoice/preview$"), lambda h, b, m: api_invoice_preview(h.db, b)),
     ("POST", re.compile(r"^/api/invoice/html$"), lambda h, b, m: api_invoice_html(h.db, b)),

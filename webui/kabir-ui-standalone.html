@@ -1918,6 +1918,197 @@ table.data th.sorted.desc .sort-ic { transform: scaleY(-1); }
   #splash, .demo-banner, .clock-chip, .skeleton { display: none !important; }
 }
 
+/* ==========================================================================
+   ۲۶) قابلیت‌های کارگاهی — نوار متراژ، برش‌نامه، لیست خرید، الگوها
+   (افزوده‌شده بر پایه‌ی همان توکن‌های سیستم طراحی ۳٫۰)
+   ========================================================================== */
+
+/* --- گروه دکمه‌های داخل هر ردیف (کپی / الگو / حذف) --- */
+.row-btns { display: inline-flex; gap: .2rem; align-items: center; justify-content: center; }
+.row-btns .row-actions { padding: .22rem; }
+
+/* --- نوار زنده‌ی متراژ --- */
+.dim-ribbon {
+  display: flex; flex-wrap: wrap; gap: .45rem; align-items: center;
+  margin: .2rem 0 .85rem; padding: .5rem .7rem;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--r-sm, 10px);
+}
+.dim-ribbon:empty { display: none; }
+.dim-cell {
+  display: inline-flex; flex-direction: column; align-items: flex-start;
+  gap: .05rem; padding: .18rem .6rem;
+  border-inline-end: 1px solid var(--border);
+  font-size: .72rem; color: var(--text-3); line-height: 1.5; white-space: nowrap;
+}
+.dim-cell:last-child { border-inline-end: 0; }
+.dim-cell b { font-size: .95rem; color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+.dim-cell.accent b { color: var(--accent-text); }
+.dim-cell.ok b { color: var(--success); }
+.dim-cell.over b { color: var(--danger); }
+.dim-cell.under b { color: var(--warning); }
+
+/* سنجه‌ی پرشدن دیوار */
+.dim-gauge { min-width: 11rem; }
+.dim-gauge .gauge {
+  display: block; width: 100%; height: 5px; border-radius: 99px;
+  background: var(--surface-3); overflow: hidden; margin-bottom: .18rem;
+}
+.dim-gauge .gauge i { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .25s ease; }
+.dim-gauge.ok .gauge i { background: var(--success); }
+.dim-gauge.over .gauge i { background: var(--danger); }
+.dim-gauge.under .gauge i { background: var(--warning); }
+
+/* --- نوار ابزار تب یونیت‌ها --- */
+.unit-tools {
+  display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;
+  padding: .55rem .7rem; margin-bottom: .7rem;
+  background: var(--surface-2); border: 1px dashed var(--border-strong);
+  border-radius: var(--r-sm, 10px);
+}
+.unit-tools .ut-sep { width: 1px; height: 1.5rem; background: var(--border-strong); }
+.unit-tools .ut-label { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; color: var(--text-2); }
+.unit-tools .ut-label select { min-width: 11rem; }
+.unit-tools .ut-hint { flex-basis: 100%; margin: 0; }
+.unit-tools .btn svg { width: 1rem; height: 1rem; }
+
+/* --- نوار جمع: بلوک رندکردن و باقی‌مانده --- */
+.tb-round {
+  display: flex; flex-direction: column; gap: .25rem;
+  padding: .35rem .7rem; border-inline-start: 1px solid var(--ink-line);
+}
+.tb-round > span { font-size: .72rem; color: var(--ink-muted); }
+.tb-round .pair { display: flex; gap: .35rem; align-items: center; }
+.tb-round select { min-width: 9.5rem; }
+.tb-round .btn { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.22); color: #fff; }
+.tb-round .btn:hover { background: rgba(255,255,255,.2); }
+.tb-due b { color: #ffd9a8; }
+.tb-fig small, .tb-final small { font-size: .68rem; opacity: .7; font-weight: 400; }
+
+/* --- «متری چند؟» در محاسبه‌ی دقیق --- */
+.per-meter {
+  display: flex; flex-wrap: wrap; gap: .45rem; align-items: center;
+  margin-top: .7rem; padding: .6rem .8rem;
+  background: var(--accent-soft); border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--accent);
+  border-radius: var(--r-sm, 10px); font-size: .84rem; color: var(--text-2);
+}
+.per-meter b { color: var(--accent-text); font-size: .95rem; }
+.per-meter .sep { opacity: .4; }
+
+/* --- بسته‌ی کارگاهی (مودال برش‌نامه) --- */
+.ws-stats { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .8rem;
+  padding: .5rem .7rem; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: var(--r-sm, 10px); }
+.ws-panel { display: none; }
+.ws-panel.active { display: block; }
+.sheet-badge {
+  display: inline-block; min-width: 1.9rem; padding: .05rem .35rem;
+  background: var(--accent-soft); color: var(--accent-text);
+  border-radius: 6px; font-weight: 700;
+}
+table.cut-table td, table.cut-table th { padding: .28rem .45rem; font-size: .8rem; }
+table.cut-table tr.cut-group td {
+  background: var(--surface-3); font-size: .78rem; color: var(--text-2);
+  padding: .3rem .6rem; border-top: 2px solid var(--border-strong);
+}
+.chip-ok {
+  display: inline-block; padding: .04rem .4rem; border-radius: 99px;
+  background: var(--success-soft); color: var(--success); font-size: .7rem; white-space: nowrap;
+}
+
+/* لیست خرید */
+.shop-group { margin-bottom: 1.1rem; }
+.shop-head {
+  display: flex; align-items: center; justify-content: space-between; gap: .6rem;
+  padding: .45rem .7rem; margin-bottom: .3rem;
+  background: var(--accent-soft); border-radius: var(--r-sm, 10px);
+}
+.shop-head h4 { margin: 0; font-size: .92rem; color: var(--accent-text); }
+.shop-sum { font-weight: 700; color: var(--accent-text); font-variant-numeric: tabular-nums; }
+.chk-col { width: 4.2rem; text-align: center; }
+.shop-check { width: 1.05rem; height: 1.05rem; accent-color: var(--accent); }
+tr:has(.shop-check:checked) td { opacity: .45; text-decoration: line-through; }
+tr:has(.shop-check:checked) td:last-child { text-decoration: none; opacity: 1; }
+
+/* --- قیمت‌گیری سریع --- */
+.quick-preview { margin-top: .9rem; padding: .7rem .85rem;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm, 10px); }
+
+/* --- چاپ برش‌نامه / لیست خرید --- */
+@media print {
+  body.printing-ws .sidebar, body.printing-ws .topbar,
+  body.printing-ws .modal-head .icon-btn, body.printing-ws .modal-foot,
+  body.printing-ws #wsTabs, body.printing-ws .chk-col,
+  body.printing-ws .toasts { display: none !important; }
+  body.printing-ws .modal-backdrop { position: static; background: none; padding: 0; overflow: visible; }
+  body.printing-ws .modal { position: static; width: auto !important; max-width: none !important;
+    max-height: none !important; box-shadow: none; border: 0; overflow: visible; }
+  body.printing-ws .modal-body { max-height: none !important; overflow: visible !important; padding: 0; }
+  body.printing-ws .table-wrap { max-height: none !important; overflow: visible !important; }
+  body.printing-ws .ws-panel { display: block !important; page-break-after: always; }
+  body.printing-ws .ws-panel:empty { display: none !important; }
+  body.printing-ws table.cut-table td, body.printing-ws table.cut-table th { font-size: 9pt; }
+}
+
+/* --- واکنش‌گرا --- */
+@media (max-width: 720px) {
+  .unit-tools { gap: .4rem; }
+  .unit-tools .ut-sep { display: none; }
+  .unit-tools .ut-label select { min-width: 8rem; }
+  .dim-cell { border-inline-end: 0; padding: .15rem .4rem; }
+  .dim-gauge { min-width: 100%; }
+  .tb-round { border-inline-start: 0; width: 100%; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ۲۷) «در از ورق بدنه» + هشدارهای محاسبه
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* سلول «ورق در»: تیک + یادداشت + (در صورت لزوم) انتخاب متریال */
+.fb-wrap { display: flex; flex-direction: column; gap: .25rem; min-width: 11rem; }
+
+.fb-check {
+  display: inline-flex; align-items: center; gap: .35rem;
+  font-size: .8rem; font-weight: 600; color: var(--text);
+  cursor: pointer; user-select: none; white-space: nowrap;
+}
+.fb-check input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+.fb-check.bad { color: var(--danger); }
+.fb-check:has(input:disabled) { cursor: not-allowed; opacity: .72; }
+
+/* یادداشتِ زیر تیک */
+.fb-note {
+  font-size: .74rem; line-height: 1.5; padding: .2rem .45rem;
+  border-radius: var(--radius-sm, 6px); border-inline-start: 3px solid transparent;
+}
+.fb-note.ok   { background: var(--success-soft, #e8f4ec); color: var(--success);
+                border-inline-start-color: var(--success); }
+.fb-note.bad  { background: var(--danger-soft, #fbeae9); color: var(--danger);
+                border-inline-start-color: var(--danger); }
+.fb-note.hint { background: var(--surface-2); color: var(--muted);
+                border-inline-start-color: var(--border); }
+
+/* جعبه‌ی هشدارهای موتور محاسبه (بالای جدول تجزیه‌ی مبلغ) */
+.warn-box {
+  margin-bottom: .7rem; padding: .6rem .8rem;
+  background: var(--warning-soft); color: var(--warning);
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+  border-inline-start: 4px solid var(--warning);
+  border-radius: var(--radius, 10px); font-size: .85rem;
+}
+.warn-box b { display: block; margin-bottom: .25rem; }
+.warn-box ul { margin: 0; padding-inline-start: 1.1rem; }
+.warn-box li { margin: .15rem 0; line-height: 1.6; }
+
+@media (max-width: 720px) {
+  .fb-wrap { min-width: 9rem; }
+}
+
+@media print {
+  .warn-box { break-inside: avoid; }
+}
+
 </style>
 <script>
 /* ==========================================================================
@@ -2065,6 +2256,12 @@ const ICONS = {
   download: svg('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>'),
   table: svg('<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>'),
   chev: svg('<polyline points="9 6 15 12 9 18"/>'),
+  tpl: svg('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>'),
+  bolt: svg('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'),
+  saw: svg('<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.1-.6-.6-2.1z"/>'),
+  cart: svg('<circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.6 12.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 7H6"/>'),
+  ruler: svg('<path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><line x1="3" y1="12" x2="21" y2="12"/>'),
+  spark: svg('<path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/>'),
 };
 
 function iconBtn(cls, icon, title, attrs) {
@@ -2336,6 +2533,7 @@ function defaultDoor() {
     material_id: 0, door_model_id: 0, hinge_id: 0, hinges_per_leaf: 2,
     gas_spring_id: 0, gas_springs_per_leaf: 0, handle_id: 0, handles_per_leaf: 1,
     banding_id: 0, assembly_id: 0, packaging_id: 0, glass: false, note: "",
+    from_body: false,      /* ★ در از ورق بدنه‌ی همان یونیت برش بخورد */
   };
 }
 function defaultDrawer() {
@@ -2357,7 +2555,10 @@ function defaultPage(styleId, name) {
     banding_body_factor: n(SETTINGS.banding_body_factor || 2.2),
     banding_door_factor: n(SETTINGS.banding_door_factor || 1),
     banding_waste_percent: n(SETTINGS.banding_waste_percent || 8),
-    countertop_lm: 0, note: "",
+    countertop_lm: 0,
+    /* طول اندازه‌گیری‌شده‌ی دیوار — فقط برای کنترل خطا در ویرایشگر */
+    wall_length_cm: 0,
+    note: "",
   };
 }
 
@@ -2416,12 +2617,16 @@ function normalizeProject(p) {
     final_price: 0, total_cost: 0, rates_rev: 0, stale: false,
     profit_mode: "markup", profit_percent: 25, install_mode: "none", install_value: 0,
     discount_percent: 0, discount_amount: 0, vat_enabled: false, vat_percent: 10,
-    extra_fixed_amount: 0, style: "", pages: [],
+    extra_fixed_amount: 0, deposit_percent: 0, deposit_amount: 0,
+    style: "", pages: [],
   }, p);
   proj.pages = (p.pages || []).map(normalizePage);
   if (!proj.pages.length) proj.pages = [defaultPage(0)];
   return proj;
 }
+
+/* ------------------------------------------------- الگوهای یونیت (دمو) */
+let UNIT_TEMPLATES = [];
 
 /* --------------------------------------------------------- لایه‌ی اتصال */
 const API = {
@@ -2480,6 +2685,7 @@ function ingestBootstrap(b) {
   if (b.categories && b.categories.length) CATS = b.categories.map((c) => [c.key, c.label]);
   MATERIALS = b.materials || [];
   STYLES = b.styles || [];
+  UNIT_TEMPLATES = b.unit_templates || [];
   PROJECTS = (b.projects || []).map(normalizeProject);
   ARCHIVE = b.invoices || [];
   BACKUPS = b.backups || [];
@@ -2777,6 +2983,7 @@ function loadDemoData() {
       if (saved.projects && saved.projects.length) PROJECTS = saved.projects.map(normalizeProject);
       if (saved.history) HISTORY = saved.history;
       if (saved.archive) ARCHIVE = saved.archive;
+      if (saved.unit_templates) UNIT_TEMPLATES = saved.unit_templates;
       if (saved.settings) {
         SETTINGS = Object.assign({}, DEMO_SETTINGS, saved.settings);
         DIGITS_FA = String(SETTINGS.persian_digits) === "1";
@@ -2806,9 +3013,65 @@ function loadDemoData() {
 
 function _n(v, d) { const x = parseFloat(v); return isFinite(x) ? x : (d || 0); }
 
-function engineItem(key, group, title, detail, qty, unit_label, unit_price, amount, visible) {
-  return { key, group, title, detail: detail || "", qty: _n(qty), unit_label: unit_label || "",
-           unit_price: _n(unit_price), amount: _n(amount), visible: visible !== false };
+function engineItem(key, group, title, detail, qty, unit_label, unit_price, amount, visible, extra) {
+  return Object.assign({
+    key, group, title, detail: detail || "", qty: _n(qty), unit_label: unit_label || "",
+    unit_price: _n(unit_price), amount: _n(amount), visible: visible !== false,
+    mat_id: 0, mat_cat: "", area_sqm: 0, sheet_area_sqm: 0, sheets: 0,
+  }, extra || {});
+}
+
+/* ---------------------------------------------------------------------------
+   تجمیع ورق‌ها — آینه‌ی CostingEngine.batch_sheets در kabir/core/costing.py
+   همه‌ی قطعات هم‌جنسِ یک بخش روی ورق‌های مشترک برش می‌خورند، پس تعداد ورق
+   یک‌بار گرد می‌شود (نه برای هر یونیت). دورریزِ یک یونیت تکه‌ی یونیت بعدی است.
+   --------------------------------------------------------------------------- */
+const SHEET_ITEM_KEYS = ["body_sheet", "back_sheet", "door_sheet", "drawer_front", "drawer_box"];
+
+function batchSheetsLocal(pItems) {
+  const groups = new Map();
+  for (const it of pItems) {
+    if (SHEET_ITEM_KEYS.includes(it.key) && it.mat_id && it.sheet_area_sqm > 0) {
+      if (!groups.has(it.mat_id)) groups.set(it.mat_id, []);
+      groups.get(it.mat_id).push(it);
+    }
+  }
+  let total = 0;
+  for (const [mid, its] of groups) {
+    const m = matById(mid);
+    const gross = its.reduce((a, i) => a + _n(i.area_sqm), 0);
+    const net = its.reduce((a, i) => a + _n(i.qty), 0);
+    const sa = _n(its[0].sheet_area_sqm);
+    if (gross <= 0 || sa <= 0) continue;
+    const sheets = Math.ceil(Math.round((gross / sa) * 1e6) / 1e6);
+    const price = m ? _n(m.price) : 0;
+    const cost = sheets * price;
+    const eff = net > 0 ? cost / net : 0;
+    const size = m ? `${m.sheet_width_cm}×${m.sheet_height_cm}` : "";
+    for (const i of its) {
+      const share = gross ? _n(i.area_sqm) / gross : 0;
+      i.sheets = sheets * share;
+      i.unit_label = "م²";
+      i.unit_price = eff;
+      i.amount = cost * share;
+      i.detail = (i.detail || "") + ` — از ${fa(sheets)} ورق ${size}ِ این بخش`;
+    }
+    total += sheets;
+  }
+  return total;
+}
+
+/* ★ آیا یک لنگه‌ی در روی این ورق جا می‌شود؟ (شرطِ لازم برای «در از ورق بدنه»)
+   هم‌راستا با costing.door_leaf_fits_sheet در موتور پایتون.                     */
+function doorLeafFitsSheet(dr, mat) {
+  if (!mat) return { ok: false, why: "ورق بدنه‌ی یونیت انتخاب نشده است." };
+  if (mat.unit !== "sheet") return { ok: false, why: `«${mat.name}» ورق نیست.` };
+  const sw = _n(mat.sheet_width_cm), sh = _n(mat.sheet_height_cm);
+  if (sw <= 0 || sh <= 0) return { ok: false, why: `ابعاد ورقِ «${mat.name}» ثبت نشده است.` };
+  const w = _n(dr.w_cm), h = _n(dr.h_cm);
+  if (w <= 0 || h <= 0) return { ok: false, why: "ابعاد لنگه‌ی در وارد نشده است." };
+  if ((w <= sw && h <= sh) || (w <= sh && h <= sw)) return { ok: true, why: "" };
+  return { ok: false, why: `لنگه‌ی ${fmt(w)}×${fmt(h)} سانت روی ورق ${fmt(sw)}×${fmt(sh)} سانت جا نمی‌شود.` };
 }
 
 function calcProjectLocal(project) {
@@ -2819,6 +3082,7 @@ function calcProjectLocal(project) {
                   total_wall_lm: 0, total_body_area: 0, total_door_area: 0, total_back_area: 0,
                   total_banding_m: 0, total_sheets: 0 };
   const pageResults = [];
+  const warnings = [];
   let pagesCost = 0;
 
   for (const page of project.pages || []) {
@@ -2847,16 +3111,20 @@ function calcProjectLocal(project) {
       if (_n(u.shelves) > 0) bodyArea += _n(u.shelves) * ((L - 2 * t) / 100) * (D / 100);
       if (u.back_id) backArea += (L / 100) * (H / 100);
 
-      /* ورق بدنه */
+      /* ورق بدنه — تعداد ورق در batchSheetsLocal و در سطح کل بخش گرد می‌شود */
       if (bodyArea > 0 && bodyM) {
         const per = bodyArea * (1 + waste / 100);
         const sheetArea = (bodyM.sheet_width_cm * bodyM.sheet_height_cm) / 10000;
+        const net = bodyArea * n, pp = pricePerSqm(bodyM);
         if (sheetArea > 0) {
-          const sheets = Math.ceil((per * n) / sheetArea);
           pItems.push(engineItem("body_sheet", "ورق بدنه", bodyM.name,
-            `${fmt(sheets)} ورق — مساحت خالص ${fmt(bodyArea * n, 1)} م² (با ${fmt(waste)}٪ پرت)`,
-            sheets, "ورق", bodyM.price, sheets * bodyM.price));
-          pr.total_sheets += sheets;
+            `${fmt(net, 1)} م² (با ${fmt(waste)}٪ پرت)`,
+            net, "م²", pp, net * pp, true,
+            { mat_id: bodyM.id, mat_cat: "body_sheet", area_sqm: per * n, sheet_area_sqm: sheetArea }));
+        } else {
+          pItems.push(engineItem("body_sheet", "ورق بدنه", bodyM.name,
+            `${fmt(net, 1)} م² با احتساب ${fmt(waste)}٪ پرت`, net, "م²", pp, net * pp, true,
+            { mat_id: bodyM.id, mat_cat: "body_sheet", area_sqm: per * n }));
         }
       }
       pr.total_body_area += bodyArea * n;
@@ -2865,16 +3133,12 @@ function calcProjectLocal(project) {
       if (backArea > 0 && backM) {
         const per = backArea * (1 + waste / 100);
         const sheetArea = (backM.sheet_width_cm * backM.sheet_height_cm) / 10000;
-        const sheets = sheetArea > 0 ? Math.ceil((per * n) / sheetArea) : 0;
-        if (sheets) {
-          pItems.push(engineItem("back_sheet", "فیبر پشت", backM.name,
-            `${fmt(sheets)} ورق — ${fmt(backArea * n, 1)} م²`, sheets, "ورق", backM.price, sheets * backM.price));
-          pr.total_sheets += sheets;
-        } else if (sheetArea <= 0) {
-          const amt = per * n * pricePerSqm(backM);
-          pItems.push(engineItem("back_sheet", "فیبر پشت", backM.name, "", per * n, "م²", pricePerSqm(backM), amt));
-        }
-        pr.total_back_area += backArea * n;
+        const net = backArea * n, pp = pricePerSqm(backM);
+        pItems.push(engineItem("back_sheet", "فیبر پشت", backM.name,
+          `${fmt(net, 1)} م² (با ${fmt(waste)}٪ پرت)`, net, "م²", pp, net * pp, true,
+          { mat_id: backM.id, mat_cat: "back_sheet", area_sqm: per * n,
+            sheet_area_sqm: sheetArea > 0 ? sheetArea : 0 }));
+        pr.total_back_area += net;
       }
 
       /* نوار PVC بدنه */
@@ -2895,17 +3159,41 @@ function calcProjectLocal(project) {
         if (leaves <= 0) continue;
         const area = leaves * (_n(dr.w_cm) / 100) * (_n(dr.h_cm) / 100);
         pr.total_door_area += area;
-        const dmat = matById(dr.material_id);
-        if (dmat) {
-          const sa = (dmat.sheet_width_cm * dmat.sheet_height_cm) / 10000;
-          if (dmat.unit === "sheet" && sa > 0) {
-            const sheets = Math.ceil((area * 1.08) / sa);
-            pItems.push(engineItem("door_sheet", "ورق در", dmat.name,
-              `${fmt(leaves)} لنگه — ${fmt(area, 1)} م² — ${fmt(sheets)} ورق`, sheets, "ورق", dmat.price, sheets * dmat.price));
-            pr.total_sheets += sheets;
+        /* ★ «در از ورق بدنه»: مساحت لنگه‌ها به دسته‌ی ورق بدنه می‌رود تا با
+           بقیه‌ی قطعات یک‌جا گرد شود (ورق کم‌تر = قیمت کم‌تر). اگر لنگه روی ورق
+           جا نشود، تیک نادیده گرفته می‌شود و هشدار می‌دهیم.                     */
+        let dmat = matById(dr.material_id);
+        let useBody = false;
+        if (dr.from_body) {
+          const fit = doorLeafFitsSheet(dr, bodyM);
+          if (fit.ok) { useBody = true; dmat = bodyM; }
+          else warnings.push(`«${dr.label || "در"}»: تیکِ «در از ورق بدنه» نادیده گرفته شد — ${fit.why}`);
+        }
+        if (useBody && dmat) {
+          const sa = (_n(dmat.sheet_width_cm) * _n(dmat.sheet_height_cm)) / 10000;
+          const pp = pricePerSqm(dmat);
+          if (sa > 0) {
+            pItems.push(engineItem("body_sheet", "ورق بدنه", dmat.name,
+              `در از ورق بدنه — ${fmt(leaves)} لنگه، ${fmt(area, 1)} م² (با ${fmt(waste)}٪ پرت)`,
+              area, "م²", pp, area * pp, true,
+              { mat_id: dmat.id, mat_cat: "body_sheet", area_sqm: area * (1 + waste / 100), sheet_area_sqm: sa }));
           } else {
-            const pp = pricePerSqm(dmat);
-            pItems.push(engineItem("door_sheet", "ورق در", dmat.name, `${fmt(leaves)} لنگه — ${fmt(area, 1)} م²`, area, "م²", pp, area * pp));
+            pItems.push(engineItem("body_sheet", "ورق بدنه", dmat.name,
+              `در از ورق بدنه — ${fmt(leaves)} لنگه، ${fmt(area, 1)} م²`,
+              area, "م²", pp, area * pp, true,
+              { mat_id: dmat.id, mat_cat: "body_sheet", area_sqm: area }));
+          }
+        } else if (dmat) {
+          const sa = (dmat.sheet_width_cm * dmat.sheet_height_cm) / 10000;
+          const pp = pricePerSqm(dmat);
+          if (dmat.unit === "sheet" && sa > 0) {
+            pItems.push(engineItem("door_sheet", "ورق در", dmat.name,
+              `${fmt(leaves)} لنگه — ${fmt(area, 1)} م² (با ${fmt(waste)}٪ پرت)`,
+              area, "م²", pp, area * pp, true,
+              { mat_id: dmat.id, mat_cat: "door_sheet", area_sqm: area * (1 + waste / 100), sheet_area_sqm: sa }));
+          } else {
+            pItems.push(engineItem("door_sheet", "ورق در", dmat.name, `${fmt(leaves)} لنگه — ${fmt(area, 1)} م²`, area, "م²", pp, area * pp, true,
+              { mat_id: dmat.id, mat_cat: "door_sheet", area_sqm: area }));
           }
         }
         const dmodel = matById(dr.door_model_id);
@@ -2916,7 +3204,7 @@ function calcProjectLocal(project) {
         if (dr.banding_id) {
           const bm = matById(dr.banding_id);
           const per = 2 * ((_n(dr.w_cm) + _n(dr.h_cm)) / 100);
-          const meters = per * leaves;
+          const meters = per * leaves * (1 + BAND_WASTE / 100);
           if (bm) {
             pItems.push(engineItem("banding_door", "نوار PVC در", bm.name,
               `محیط ${fmt(per, 1)} متر × ${fmt(leaves)} لنگه`, meters, "متر", bm.price, meters * bm.price));
@@ -2954,14 +3242,20 @@ function calcProjectLocal(project) {
         if (sheetM) {
           const boxArea = (2 * d * h) + (w * d) + (w * h);
           const pp = pricePerSqm(sheetM);
+          const sa = (sheetM.sheet_width_cm * sheetM.sheet_height_cm) / 10000;
           pItems.push(engineItem("drawer_box", "جعبه‌ی کشو", sheetM.name,
-            `${fmt(count)} عدد × ${fmt(boxArea, 1)} م²`, boxArea * count, "م²", pp, boxArea * count * pp));
+            `${fmt(count)} عدد × ${fmt(boxArea, 1)} م²`, boxArea * count, "م²", pp, boxArea * count * pp, true,
+            { mat_id: sheetM.id, mat_cat: "drawer_sheet", area_sqm: boxArea * count * (1 + waste / 100),
+              sheet_area_sqm: sa > 0 ? sa : 0 }));
         }
         const frontM = matById(dw.front_id);
         if (frontM) {
           const fa2 = w * h;
           const pp = pricePerSqm(frontM);
-          pItems.push(engineItem("drawer_front", "تیره‌ی کشو", frontM.name, `${fmt(count)} عدد × ${fmt(fa2, 1)} م²`, fa2 * count, "م²", pp, fa2 * count * pp));
+          const sa = (frontM.sheet_width_cm * frontM.sheet_height_cm) / 10000;
+          pItems.push(engineItem("drawer_front", "تیره‌ی کشو", frontM.name, `${fmt(count)} عدد × ${fmt(fa2, 1)} م²`, fa2 * count, "م²", pp, fa2 * count * pp, true,
+            { mat_id: frontM.id, mat_cat: "door_sheet", area_sqm: fa2 * count * (1 + waste / 100),
+              sheet_area_sqm: sa > 0 ? sa : 0 }));
           pr.total_door_area += fa2 * count;
         }
         const slide = matById(dw.slide_id);
@@ -2981,8 +3275,10 @@ function calcProjectLocal(project) {
         pr.total_drawers += count;
       }
 
-      /* --- صفحه / تاج / زیرچراغ / پاخور / پایه / خار / مونتاژ --- */
-      if (u.countertop_id) {
+      /* --- صفحه / تاج / زیرچراغ / پاخور / پایه / خار / مونتاژ ---
+         اگر «متر طول صفحه» در سطح بخش وارد شده باشد، همان ملاک است و برای
+         هر یونیت جداگانه صفحه حساب نمی‌شود (جلوگیری از دوباره‌شماری). */
+      if (u.countertop_id && _n(page.countertop_lm) <= 0) {
         const cm = matById(u.countertop_id);
         if (cm) {
           const lm = (L / 100) * n;
@@ -3018,6 +3314,9 @@ function calcProjectLocal(project) {
       if (u.unit_type === "wall") pr.total_wall_lm += (L / 100) * n;
       else pr.total_ground_lm += (L / 100) * n;
     }
+
+    /* ★ تجمیع ورق‌ها در سطح بخش */
+    pr.total_sheets = batchSheetsLocal(pItems);
 
     /* صفحه‌ی کابینت کلی بخش */
     if (_n(page.countertop_lm) > 0) {
@@ -3135,6 +3434,14 @@ function calcProjectLocal(project) {
   const vat = net * vatPct / 100;
   const final = net + vat;
 
+  /* پیش‌پرداخت (بیعانه) و باقی‌مانده */
+  const depPct = _n(project.deposit_percent);
+  const deposit = Math.max(0, Math.min(final * depPct / 100 + _n(project.deposit_amount), final));
+
+  /* قیمت هر متر طول — «متری چند؟» */
+  const glm = stats.total_ground_lm || 0;
+  const tlm = glm + (stats.total_wall_lm || 0);
+
   return {
     pages: pageResults,
     pages_cost: pagesCost, installation_cost: install, total_cost: totalCost,
@@ -3142,7 +3449,11 @@ function calcProjectLocal(project) {
     gross_price: gross, discount_percent: _n(project.discount_percent), discount_amount: discount,
     net_price: net, vat_percent: vatPct, vat_amount: vat, final_price: final,
     total_profit: final - totalCost - vat,
-    stats, items,
+    deposit_percent: depPct, deposit_amount: deposit, remaining_amount: final - deposit,
+    price_per_ground_lm: glm > 0 ? final / glm : 0,
+    price_per_total_lm: tlm > 0 ? final / tlm : 0,
+    cost_per_ground_lm: glm > 0 ? totalCost / glm : 0,
+    stats, items, warnings,
   };
 }
 
@@ -3211,7 +3522,11 @@ function buildInvoiceDataDemo(result, project, opts) {
       profit_mode: result.profit_mode, profit_percent: result.profit_percent, profit_amount: result.profit_amount,
       gross_price: result.gross_price, discount_percent: result.discount_percent, discount_amount: result.discount_amount,
       net_price: result.net_price, vat_percent: result.vat_percent, vat_amount: result.vat_amount,
-      final_price: result.final_price, stats: result.stats,
+      final_price: result.final_price,
+      deposit_percent: result.deposit_percent, deposit_amount: result.deposit_amount,
+      remaining_amount: result.remaining_amount,
+      price_per_ground_lm: result.price_per_ground_lm, price_per_total_lm: result.price_per_total_lm,
+      stats: result.stats,
     },
     footer_note: SETTINGS.invoice_footer_note || "",
   };
@@ -3291,6 +3606,328 @@ function renderInvoiceSheet(data) {
       <span style="max-width:70%">${esc(data.footer_note)}</span>
       <span>این سند توسط نرم‌افزار <b>کبیر</b> تولید شده است.</span>
     </div>`;
+}
+
+/* ==========================================================================
+   بسته‌ی کارگاهی محلی — آینه‌ی kabir/core/workshop.py
+   (برای حالت نمایشی و بازخورد فوری؛ وقتی سرور در دسترس باشد همان پاسخ
+    سرور نشان داده می‌شود)
+   ========================================================================== */
+
+const SHOP_GROUPS_LOCAL = [
+  ["sheet", "ورق و پنل"], ["banding", "نوار لبه (PVC)"],
+  ["profile", "صفحه، تاج، زیرچراغ و پاخور"], ["hardware", "یراق‌آلات"],
+  ["service", "خدمات و اجرت"], ["other", "سایر"],
+];
+
+const KEY_TO_SHOP_GROUP = {
+  body_sheet: "sheet", back_sheet: "sheet", door_sheet: "sheet",
+  drawer_box: "sheet", drawer_front: "sheet",
+  banding_body: "banding", banding_door: "banding", banding_drawer: "banding",
+  countertop: "profile", crown: "profile", underlight: "profile", kickboard: "profile",
+  hinge: "hardware", gas_spring: "hardware", handle: "hardware", leg: "hardware",
+  shelf_pin: "hardware", drawer_slide: "hardware", accessory: "hardware",
+  door_model: "service", assembly_unit: "service", assembly_door: "service",
+  assembly_drawer: "service", packaging_door: "service", service: "service",
+  extra: "other", extra_fixed: "other", installation: "other", darna: "other",
+};
+
+const CAT_ORDER_LOCAL = ["body_sheet", "door_sheet", "back_sheet", "drawer_sheet", "door_model",
+  "countertop", "crown", "underlight", "kickboard", "banding", "hinge", "gas_spring",
+  "shelf_pin", "handle", "leg", "drawer_slide", "accessory", "service"];
+
+/* پنل‌های استاندارد بدنه — آینه‌ی CostingEngine.default_panels */
+function panelsOfUnit(u) {
+  const bm = matById(u.body_id);
+  const t = bm && bm.thickness_mm ? bm.thickness_mm / 10 : 0;   // cm
+  const L = _n(u.length_cm), H = _n(u.height_cm), D = _n(u.depth_cm);
+  const rows = [{ label: "بدنه کناری (چپ و راست)", qty: 2, w: D, h: H, mk: "body", banding: true }];
+  if (u.has_bottom_panel !== false) rows.push({ label: "کف یونیت", qty: 1, w: L - 2 * t, h: D, mk: "body", banding: true });
+  if (u.has_top_panel !== false && u.unit_type !== "ground") rows.push({ label: "سقف یونیت", qty: 1, w: L - 2 * t, h: D, mk: "body", banding: true });
+  if (u.unit_type === "tall") rows.push({ label: "طبقه‌ی ثابت وسط", qty: 1, w: L - 2 * t, h: D, mk: "body", banding: true });
+  if (_n(u.shelves) > 0) rows.push({ label: `طبقه‌ی داخلی (${fa(u.shelves)} عدد)`, qty: _n(u.shelves), w: L - 2 * t, h: D, mk: "body", banding: true });
+  if (u.back_id) rows.push({ label: "فیبر پشت", qty: 1, w: L, h: H, mk: "back", banding: false });
+  return rows;
+}
+
+function _ord(w, h) {
+  const a = _n(w) * 10, b = _n(h) * 10;
+  return [Math.max(a, b), Math.min(a, b)];
+}
+
+function _bandSides(label) {
+  if (label.includes("کناری")) return "۱ طول (لبه‌ی جلو)";
+  if (label.includes("کف") || label.includes("سقف") || label.includes("طبقه")) return "۲ طول + ۱ عرض";
+  if (label.includes("فیبر")) return "—";
+  if (label.includes("تیره") || label.includes("در")) return "دور تا دور";
+  return "لبه‌های نمایان";
+}
+
+function _isGrain(m) {
+  if (!m) return false;
+  const hay = `${m.name} ${m.note || ""}`;
+  return ["طرح چوب", "راه‌راه", "راشه", "گردو", "طرح‌دار"].some((k) => hay.includes(k));
+}
+
+function buildCutListLocal(project) {
+  const out = [];
+  const thOf = (mid, dflt) => { const m = matById(mid); return m && m.thickness_mm ? m.thickness_mm : (dflt || 16); };
+  const nmOf = (mid, fb) => { const m = matById(mid); return m ? m.name : (fb || "—"); };
+
+  for (const page of project.pages || []) {
+    const sec = page.name || "بخش";
+    for (const u of page.units || []) {
+      const n = Math.max(1, Math.round(_n(u.qty, 1)));
+      const uLabel = u.label || "یونیت";
+
+      for (const pn of panelsOfUnit(u)) {
+        const isBack = pn.mk === "back";
+        const mid = isBack ? u.back_id : u.body_id;
+        // متریال انتخاب‌نشده قطعه را حذف نمی‌کند (هم‌راستا با موتور پایتون)
+        const [ln, wd] = _ord(pn.w, pn.h);
+        const qty = Math.round(pn.qty * n);
+        out.push({
+          section: sec, unit: uLabel, part: pn.label, qty,
+          length_mm: ln, width_mm: wd,
+          thickness_mm: thOf(mid, isBack ? 3 : 16),
+          material: nmOf(mid), mat_cat: isBack ? "back_sheet" : "body_sheet",
+          banding: pn.banding && !isBack, banding_sides: _bandSides(pn.label),
+          area_sqm: (pn.qty * (pn.w / 100) * (pn.h / 100)) * n,
+          grain: _isGrain(matById(mid)),
+        });
+      }
+
+      for (const dr of u.doors || []) {
+        const leaves = Math.round(_n(dr.qty) * n);
+        if (leaves <= 0) continue;
+        /* ★ «در از ورق بدنه»: همان ورقِ بدنه، همان دسته — تا خلاصه‌ی ورق و
+           برش‌نامه با فاکتور یکی بماند (هم‌راستا با موتور پایتون).            */
+        const fromBody = !!dr.from_body && !!u.body_id
+          && doorLeafFitsSheet(dr, matById(u.body_id)).ok;
+        const mid = fromBody ? u.body_id : (dr.material_id || u.body_id);
+        const [ln, wd] = _ord(dr.w_cm, dr.h_cm);
+        out.push({
+          section: sec, unit: uLabel,
+          part: `${dr.label || "در"} (لنگه)` + (fromBody ? " — از ورق بدنه" : ""),
+          qty: leaves,
+          length_mm: ln, width_mm: wd, thickness_mm: thOf(mid),
+          material: nmOf(mid, dr.material_name),
+          mat_cat: fromBody ? "body_sheet" : "door_sheet",
+          banding: true, banding_sides: "دور تا دور",
+          /* مساحتِ کلِ این ردیف = مساحت یک لنگه × تعداد لنگه (پیش‌تر تعداد
+             لنگه جا افتاده بود و مساحت در در برش‌نامه کم‌تر از واقع می‌آمد) */
+          area_sqm: (_n(dr.w_cm) / 100) * (_n(dr.h_cm) / 100) * leaves,
+          grain: _isGrain(matById(mid)),
+        });
+      }
+
+      for (const dw of u.drawers || []) {
+        const cnt = Math.round(_n(dw.qty) * n);
+        if (cnt <= 0) continue;
+        const w = _n(dw.w_cm), h = _n(dw.h_cm), d = _n(dw.d_cm);
+        const lbl = dw.label || "کشو";
+        const fmid = dw.front_id || dw.sheet_id;
+        const push = (part, q, W, H, mid, cat, band, sides, thick) => {
+          const [ln, wd] = _ord(W, H);
+          out.push({ section: sec, unit: uLabel, part, qty: q, length_mm: ln, width_mm: wd,
+            thickness_mm: thick || thOf(mid), material: nmOf(mid), mat_cat: cat,
+            banding: band, banding_sides: sides, area_sqm: (W / 100) * (H / 100) * q, grain: false });
+        };
+        push(`تیره‌ی ${lbl}`, cnt, w, h, fmid, "door_sheet", true, "دور تا دور");
+        push(`بغل ${lbl}`, cnt * 2, d, h, dw.sheet_id, "drawer_sheet", true, "۱ طول (لبه‌ی بالا)");
+        push(`پشت ${lbl}`, cnt, w - 3.2, h, dw.sheet_id, "drawer_sheet", false, "—");
+        push(`کف ${lbl}`, cnt, w - 3.2, d, dw.sheet_id, "back_sheet", false, "—", 3);
+      }
+    }
+  }
+  out.sort((a, b) => (a.section === b.section ? 0 : a.section < b.section ? -1 : 1)
+    || (a.unit === b.unit ? 0 : a.unit < b.unit ? -1 : 1)
+    || (b.length_mm - a.length_mm) || (b.width_mm - a.width_mm));
+  return out;
+}
+
+function summarizeSheetsLocal(parts) {
+  const agg = new Map();
+  for (const p of parts) {
+    const k = `${p.material}|${p.mat_cat}`;
+    if (!agg.has(k)) agg.set(k, { material: p.material, cat: p.mat_cat, area_sqm: 0,
+      thickness_mm: p.thickness_mm, parts: 0, pieces: 0, sheets: 0, sheet_size: "", price: 0, cost: 0 });
+    const a = agg.get(k);
+    a.area_sqm += p.area_sqm; a.parts += 1; a.pieces += p.qty;
+  }
+  const fb = { body_sheet: [_n(SETTINGS.sheet_width_cm, 183), _n(SETTINGS.sheet_height_cm, 366)],
+    door_sheet: [_n(SETTINGS.sheet_width_cm, 183), _n(SETTINGS.sheet_height_cm, 366)],
+    drawer_sheet: [_n(SETTINGS.sheet_width_cm, 183), _n(SETTINGS.sheet_height_cm, 366)],
+    back_sheet: [_n(SETTINGS.fiber_sheet_width_cm, 122), _n(SETTINGS.fiber_sheet_height_cm, 244)] };
+  const rows = [];
+  for (const a of agg.values()) {
+    a.area_sqm = Math.round(a.area_sqm * 1000) / 1000;
+    const m = MATERIALS.find((x) => x.name === a.material);
+    let sa = 0, size = "", price = 0;
+    if (m && m.sheet_width_cm && m.sheet_height_cm) {
+      sa = (m.sheet_width_cm * m.sheet_height_cm) / 10000;
+      size = `${m.sheet_width_cm}×${m.sheet_height_cm}`; price = _n(m.price);
+    } else if (fb[a.cat]) {
+      const [fw, fh] = fb[a.cat]; sa = (fw * fh) / 10000; size = `${fw}×${fh}`; price = 0;
+    }
+    a.sheet_size = size; a.price = price;
+    a.sheets = sa > 0 ? Math.ceil(Math.round((a.area_sqm / sa) * 1e6) / 1e6) : 0;
+    a.cost = a.sheets * price;
+    rows.push(a);
+  }
+  rows.sort((x, y) => {
+    const ix = CAT_ORDER_LOCAL.indexOf(x.cat), iy = CAT_ORDER_LOCAL.indexOf(y.cat);
+    return ((ix < 0 ? 99 : ix) - (iy < 0 ? 99 : iy)) || (y.area_sqm - x.area_sqm);
+  });
+  return rows;
+}
+
+function buildShoppingLocal(result) {
+  const agg = new Map();
+  for (const it of result.items || []) {
+    if (it.visible === false) continue;
+    if (it.key === "installation" || it.key === "extra_fixed") continue;
+    const group = KEY_TO_SHOP_GROUP[it.key] || "other";
+    const k = `${it.mat_id || 0}|${it.title}|${group}`;
+    if (!agg.has(k)) {
+      const m = it.mat_id ? matById(it.mat_id) : null;
+      agg.set(k, { name: it.title, cat: it.mat_cat || "", group,
+        unit: m ? m.unit : "", unit_label: it.unit_label || "",
+        qty: 0, amount: 0, sheets: 0, note: "" });
+    }
+    const ln = agg.get(k);
+    ln.qty += _n(it.qty); ln.amount += _n(it.amount); ln.sheets += _n(it.sheets);
+    if (!ln.unit_label && it.unit_label) ln.unit_label = it.unit_label;
+  }
+  const lines = [];
+  for (const ln of agg.values()) {
+    if (ln.group === "sheet" && ln.sheets > 0) {
+      ln.qty = Math.round(ln.sheets * 1000) / 1000; ln.unit_label = "ورق"; ln.unit = "sheet";
+      ln.note = "تعداد ورق کاملِ خریدنی (تجمیع‌شده در سطح بخش)";
+    }
+    lines.push(ln);
+  }
+  const order = {}; SHOP_GROUPS_LOCAL.forEach(([g], i) => (order[g] = i));
+  lines.sort((a, b) => ((order[a.group] ?? 99) - (order[b.group] ?? 99))
+    || ((CAT_ORDER_LOCAL.indexOf(a.cat) < 0 ? 99 : CAT_ORDER_LOCAL.indexOf(a.cat))
+      - (CAT_ORDER_LOCAL.indexOf(b.cat) < 0 ? 99 : CAT_ORDER_LOCAL.indexOf(b.cat)))
+    || (b.amount - a.amount));
+  return lines;
+}
+
+function shoppingGroupsLocal(lines) {
+  const out = [];
+  for (const [g, label] of SHOP_GROUPS_LOCAL) {
+    const rows = lines.filter((r) => r.group === g);
+    if (!rows.length) continue;
+    out.push({ key: g, label, total: rows.reduce((a, r) => a + r.amount, 0),
+      count: rows.length, rows });
+  }
+  return out;
+}
+
+function buildWorkshopLocal(project) {
+  const result = calcProjectLocal(project);
+  const parts = buildCutListLocal(project);
+  const sheets = summarizeSheetsLocal(parts);
+  const lines = buildShoppingLocal(result);
+  const byCat = {};
+  for (const p of parts) {
+    const c = byCat[p.mat_cat] || (byCat[p.mat_cat] = { parts: 0, pieces: 0, area_sqm: 0 });
+    c.parts += 1; c.pieces += p.qty; c.area_sqm += p.area_sqm;
+  }
+  return {
+    cut_parts: parts, sheet_summary: sheets, shopping: lines,
+    shopping_groups: shoppingGroupsLocal(lines), by_category: byCat,
+    stats: {
+      part_kinds: parts.length,
+      total_pieces: parts.reduce((a, p) => a + p.qty, 0),
+      total_area_sqm: Math.round(parts.reduce((a, p) => a + p.area_sqm, 0) * 1000) / 1000,
+      banding_pieces: parts.filter((p) => p.banding).reduce((a, p) => a + p.qty, 0),
+      banding_perimeter_m: Math.round(parts.filter((p) => p.banding)
+        .reduce((a, p) => a + (2 * (p.length_mm + p.width_mm) / 1000) * p.qty, 0) * 100) / 100,
+      total_sheets: sheets.reduce((a, s) => a + (s.sheets || 0), 0),
+      shopping_total: lines.reduce((a, l) => a + l.amount, 0),
+    },
+    calc: result,
+  };
+}
+
+/* ------------------------------------------------- قیمت‌گیری سریع (محلی) */
+function quickUnitsLocal(opts) {
+  // اگر سبک انتخاب نشده/یافت نشد، به اولین سبک برمی‌گردیم؛ وگرنه هیچ متریالی
+  // به یونیت‌ها نمی‌چسبد و قیمتِ کلِ کار به «فقط اجرت» سقوط می‌کند.
+  let st = STYLES.find((s) => s.id === Number(opts.style_id));
+  if (!st) st = STYLES[0] || {};
+  const d = st.data || {};
+  const idOf = (name) => { const m = MATERIALS.find((x) => x.name === name && x.active !== false); return m ? m.id : 0; };
+  const dims = (k) => ({
+    length_cm: _n(SETTINGS[`unit_${k}_length_cm`], 60),
+    height_cm: _n(SETTINGS[`unit_${k}_height_cm`], 72),
+    depth_cm: _n(SETTINGS[`unit_${k}_depth_cm`], 55),
+    shelves: _n(SETTINGS[`unit_${k}_shelves`], 1),
+  });
+  const base = { body_id: idOf(d.body), back_id: idOf(d.back), banding_id: idOf(d.banding),
+    kickboard_id: idOf(d.kickboard), leg_id: idOf(d.leg), shelf_pin_id: idOf(d.shelf_pin) };
+  const doorM = { material_id: idOf(d.door), door_model_id: idOf(d.door_model), hinge_id: idOf(d.hinge),
+    handle_id: idOf(d.handle), banding_id: idOf(d.banding), assembly_id: idOf(d.assembly_door),
+    packaging_id: idOf(d.packaging_door) };
+  const units = [];
+  const gap = 0.3;
+  const make = (kind, totalM, label) => {
+    if (totalM <= 0) return;
+    const dd = dims(kind);
+    const std = Math.max(20, dd.length_cm);
+    let rem = totalM * 100;
+    while (rem > 15) {
+      const ln = Math.min(std, rem);
+      const u = Object.assign(defaultUnit(kind), {
+        label: `${label} ${Math.round(ln)}`, length_cm: Math.round(ln * 10) / 10,
+        height_cm: dd.height_cm, depth_cm: dd.depth_cm,
+        shelves: kind === "ground" ? 1 : dd.shelves, legs_per_unit: 4, pins_per_shelf: 4,
+      }, base);
+      const leaves = ln >= 70 ? 2 : 1;
+      const w = (ln - gap * (leaves + 1)) / leaves;
+      const h = dd.height_cm - gap;
+      u.doors = [Object.assign(defaultDoor(), { qty: leaves,
+        w_cm: Math.round(w * 10) / 10, h_cm: Math.round(h * 10) / 10 }, doorM)];
+      if (opts.countertop_id && kind === "ground") u.countertop_id = Number(opts.countertop_id);
+      units.push(u);
+      rem -= std;
+    }
+  };
+  make("ground", _n(opts.ground_lm), "یونیت زمینی");
+  make("wall", _n(opts.wall_lm), "یونیت دیواری");
+
+  const nd = Math.max(0, Math.round(_n(opts.drawers)));
+  if (nd && units.length) {
+    const tgt = units.find((u) => u.unit_type === "ground") || units[0];
+    tgt.doors = []; tgt.shelves = 0;
+    const dd = dims("ground");
+    for (let i = 0; i < nd; i++) {
+      tgt.drawers.push(Object.assign(defaultDrawer(), {
+        label: `کشو ${fa(i + 1)}`, qty: 1,
+        w_cm: Math.round((_n(tgt.length_cm) - 4) * 10) / 10,
+        h_cm: i === 0 ? 15 : 22, d_cm: Math.round((dd.depth_cm - 10) * 10) / 10,
+        slide_id: idOf(d.slide), sheet_id: idOf(d.drawer_sheet) || base.body_id,
+        front_id: doorM.material_id, handle_id: doorM.handle_id,
+        banding_id: doorM.banding_id, assembly_id: doorM.assembly_id,
+      }));
+    }
+  }
+  for (let i = 0; i < Math.max(0, Math.round(_n(opts.tall))); i++) {
+    const dd = dims("tall");
+    const u = Object.assign(defaultUnit("tall"), {
+      label: `کمد ایستاده ${fa(i + 1)}`, length_cm: dd.length_cm,
+      height_cm: dd.height_cm, depth_cm: dd.depth_cm, shelves: dd.shelves,
+      legs_per_unit: 4, pins_per_shelf: 4,
+    }, base);
+    u.doors = [Object.assign(defaultDoor(), { label: "در کمد", qty: 2,
+      w_cm: Math.round(((dd.length_cm - 0.9) / 2) * 10) / 10,
+      h_cm: Math.round((dd.height_cm - 2) * 10) / 10, hinges_per_leaf: 4 }, doorM)];
+    units.push(u);
+  }
+  return units;
 }
 
 /* ==========================================================================
@@ -3858,6 +4495,7 @@ function renderSectionBar() {
     MATERIALS.filter((m) => m.cat === "countertop").map((m) =>
       `<option value="${m.id}"${Number(firstCounter) === m.id ? " selected" : ""}>${esc(m.name)}</option>`).join("");
   el("secCounterLm").value = pg.countertop_lm ? fa(pg.countertop_lm) : "";
+  if (el("secWallLen")) el("secWallLen").value = pg.wall_length_cm ? fa(Math.round((+pg.wall_length_cm / 100) * 100) / 100) : "";
   el("facadeMode").value = pg.detail_mode || "none";
   el("facadeTotalWrap").classList.toggle("hidden", pg.detail_mode !== "total");
   el("facadeRowsWrap").classList.toggle("hidden", pg.detail_mode !== "detailed");
@@ -3875,6 +4513,141 @@ function unitArea(u) {
   if (u.unit_type === "tall") a += ((L - 2 * tc) / 100) * (D / 100);
   if (+u.shelves > 0) a += (+u.shelves) * ((L - 2 * tc) / 100) * (D / 100);
   return a;
+}
+
+/* ================================================================ نوار متراژ
+   کابینت‌کار دیوار را اندازه گرفته (مثلاً ۴٫۲۰ متر) و می‌خواهد همان‌طور که
+   یونیت‌ها را وارد می‌کند ببیند چقدرش پر شده و چقدر مانده — بدون ماشین‌حساب. */
+function renderDimRibbon() {
+  const host = el("dimRibbon");
+  if (!host) return;
+  const pg = curPage();
+  if (!pg) { host.innerHTML = ""; return; }
+
+  let ground = 0, wall = 0, tall = 0, leaves = 0, drawers = 0;
+  for (const u of pg.units || []) {
+    const n = Math.max(1, Math.round(+u.qty || 1));
+    const L = (+u.length_cm || 0) * n / 100;
+    if (u.unit_type === "wall") wall += L;
+    else if (u.unit_type === "tall") tall += L;
+    else ground += L;
+    leaves += (u.doors || []).reduce((a, d) => a + (+d.qty || 0), 0) * n;
+    drawers += (u.drawers || []).reduce((a, d) => a + (+d.qty || 0), 0) * n;
+  }
+  const r = state.lastResult;
+  const sheets = r && r.stats ? Math.round(r.stats.total_sheets || 0) : 0;
+
+  const cell = (label, value, cls, title) =>
+    `<span class="dim-cell${cls ? " " + cls : ""}"${title ? ` title="${title}"` : ""}>` +
+    `<b>${value}</b>${label}</span>`;
+
+  /* مقایسه با طول دیواری که اندازه گرفته شده */
+  const wallCm = +pg.wall_length_cm || 0;
+  let diffCell = "";
+  if (wallCm > 0) {
+    const filled = ground * 100;
+    const diff = wallCm - filled;                      /* مثبت = جا مانده */
+    const pct = Math.min(100, Math.round((filled / wallCm) * 100));
+    const cls = Math.abs(diff) < 1 ? "ok" : (diff < 0 ? "over" : "under");
+    const txt = Math.abs(diff) < 0.5
+      ? "کامل پر شد"
+      : (diff > 0 ? `${fmt(diff / 100, true)} متر جا مانده` : `${fmt(-diff / 100, true)} متر اضافه است!`);
+    diffCell = `<span class="dim-cell dim-gauge ${cls}" title="مقایسه‌ی جمع طول یونیت‌های زمینی با طول دیواری که وارد کرده‌اید">
+        <span class="gauge"><i style="width:${Math.max(0, Math.min(100, pct))}%"></i></span>
+        <b>${txt}</b>دیوار ${fmt(wallCm / 100, true)} م</span>`;
+  }
+
+  host.innerHTML =
+    cell("متر طول زمینی", fmt(ground, true), "", "جمع طول یونیت‌های زمینی و کمد ایستاده") +
+    cell("متر طول دیواری", fmt(wall, true)) +
+    (tall ? cell("کمد ایستاده", fmt(tall, true)) : "") +
+    cell("لنگه در", fa(leaves)) +
+    cell("کشو", fa(drawers)) +
+    (sheets ? cell("ورق لازم", fa(sheets), "accent", "تعداد ورق کاملی که باید بخرید — با تجمیع قطعات هم‌جنس محاسبه شده") : "") +
+    diffCell;
+}
+
+/* ============================================== ساخت/هم‌اندازه‌سازی خودکار در
+   وقتی یونیت ۹۰ سانتی می‌سازم، خودم می‌دانم دو لنگه‌ی ۴۴٫۵ در ۶۹٫۷ می‌خواهد
+   (با درز ۳ میلی‌متر). نرم‌افزار باید این حساب را خودش انجام بدهد. */
+const DOOR_REVEAL_CM = 0.3;      /* درز ۳ میلی‌متر بین لنگه‌ها و لبه‌ها */
+
+function r1(x) { return Math.round((+x || 0) * 10) / 10; }
+
+/* عرض هر لنگه از روی طول یونیت و تعداد لنگه‌ها */
+function leafWidth(lengthCm, leaves) {
+  const n = Math.max(1, Math.round(+leaves || 1));
+  return r1(((+lengthCm || 0) - DOOR_REVEAL_CM * (n + 1)) / n);
+}
+
+/* تعداد لنگه‌ی مناسب برای یک عرض یونیت */
+function leavesForLength(lengthCm) { return (+lengthCm || 0) >= 70 ? 2 : 1; }
+
+/* عرض لنگه‌های موجود را با طول فعلی یونیت دوباره اندازه می‌کند */
+function fitDoorsToUnit(u) {
+  const doors = u.doors || [];
+  const leaves = doors.reduce((a, d) => a + (+d.qty || 0), 0);
+  if (!leaves) return false;
+  const totalW = doors.reduce((a, d) => a + (+d.qty || 0) * (+d.w_cm || 0), 0);
+  const avail = (+u.length_cm || 0) - DOOR_REVEAL_CM * (leaves + 1);
+  const h = r1((+u.height_cm || 0) - DOOR_REVEAL_CM);
+  doors.forEach((d) => {
+    const share = totalW > 0 ? ((+d.qty || 0) * (+d.w_cm || 0)) / totalW : 1 / doors.length;
+    d.w_cm = r1((avail * share) / Math.max(1, +d.qty || 1));
+    if (!(+d.h_cm) || d.h_cm > h + 5) d.h_cm = h; else d.h_cm = h;
+  });
+  return true;
+}
+
+/* ★ سلول «ورق در» با تیکِ «در از ورق بدنه»
+   اگر لنگه روی ورقِ بدنه جا شود، کاربر می‌تواند تیک بزند تا لنگه‌ها از همان
+   ورقِ بدنه برش بخورند: ورقِ جداگانه خریداری نمی‌شود و مساحتِ در با مساحتِ
+   بدنه یک‌جا گرد می‌شود (پس تعداد ورق و قیمت کم‌تر می‌شود).                  */
+function doorSheetCell(u, dr, ui, di) {
+  const bodyM = matById(u.body_id);
+  const fit = doorLeafFitsSheet(dr, bodyM);
+  const on = !!dr.from_body;
+  const attrs = `data-scope="door" data-k="from_body" data-ui="${ui}" data-di="${di}"`;
+  const tip = fit.ok
+    ? "لنگه‌ها از همان ورقِ بدنه‌ی یونیت برش می‌خورند — ورقِ جداگانه خریداری نمی‌شود"
+    : fit.why;
+  let html = `<label class="check fb-check${fit.ok ? "" : " bad"}" title="${esc(tip)}">
+      <input type="checkbox" ${attrs}${on ? " checked" : ""}${fit.ok ? "" : " disabled"}>
+      <span>از ورق بدنه</span></label>`;
+  if (on && fit.ok) {
+    html += `<div class="fb-note ok">🪵 ${esc(bodyM ? bodyM.name : "ورق بدنه")} — ورقِ جدا نمی‌خرد</div>`;
+  } else if (on && !fit.ok) {
+    html += `<div class="fb-note bad">⚠ ${esc(fit.why)} — تیک نادیده گرفته شد</div>`;
+  } else if (!on && fit.ok && bodyM && +dr.material_id === +u.body_id) {
+    html += `<div class="fb-note hint">💡 جنسِ در با ورق بدنه یکی است؛ تیک بزنید تا ورق کم‌تری بخرید</div>`;
+  }
+  if (!(on && fit.ok)) {
+    html += matSelect("door_sheet", dr.material_id,
+      `data-scope="door" data-k="material_id" data-ui="${ui}" data-di="${di}"`);
+  }
+  return `<div class="fb-wrap">${html}</div>`;
+}
+
+/* برای یونیت‌هایی که در ندارند، درِ هم‌اندازه می‌سازد (متریال از سبک بخش) */
+function autoDoorsForUnit(u, styleData) {
+  const d = styleData || {};
+  const leaves = leavesForLength(u.length_cm);
+  const dr = defaultDoor();
+  dr.label = "در";
+  dr.qty = leaves;
+  dr.w_cm = leafWidth(u.length_cm, leaves);
+  dr.h_cm = r1((+u.height_cm || 0) - DOOR_REVEAL_CM);
+  dr.hinges_per_leaf = (+u.height_cm || 0) >= 150 ? 4 : 2;
+  if (d.door) dr.material_id = midByName(d.door);
+  if (d.door_model) dr.door_model_id = midByName(d.door_model);
+  if (d.hinge) dr.hinge_id = midByName(d.hinge);
+  if (d.handle) dr.handle_id = midByName(d.handle);
+  if (d.banding) dr.banding_id = midByName(d.banding);
+  if (d.assembly_door) dr.assembly_id = midByName(d.assembly_door);
+  if (d.packaging_door) dr.packaging_id = midByName(d.packaging_door);
+  u.doors = u.doors || [];
+  u.doors.push(dr);
+  return dr;
 }
 
 /* واحد‌های اندازه‌گیری — برای برچسبِ داخل قابِ ورودی */
@@ -3906,6 +4679,13 @@ function renderEditorTables() {
   if (!p || !pg) return;
   const del = (kind, ui, di) =>
     iconBtn("del", "trash", "حذف", `data-del-row="${kind}" data-ui="${ui ?? ""}" data-di="${di ?? ""}"`);
+  /* کپی ردیف — برای وقتی که چند یونیت شبیه هم داریم و نمی‌خواهیم همه‌ی
+     فیلدهای متریال را از اول انتخاب کنیم. */
+  const dup = (kind, ui, di, ri) =>
+    iconBtn("", "copy", "کپی ردیف", `data-copy-row="${kind}" data-ui="${ui ?? ""}" data-di="${di ?? ""}" data-ri="${ri ?? ""}"`);
+  /* ذخیره‌ی یونیت به‌عنوان الگوی قابل استفاده‌ی مجدد */
+  const tplBtn = (ui) =>
+    iconBtn("", "tpl", "ذخیره به‌عنوان الگو", `data-tpl-save="${ui}"`);
 
   /* --- یونیت‌ها --- */
   let uRows = "";
@@ -3927,7 +4707,7 @@ function renderEditorTables() {
               <span class="count-badge" title="مجموع کشوهای این یونیت">کشو ${fa(u.drawers.reduce((a, d) => a + (+d.qty || 0), 0) * (+u.qty || 1))}</span>
             </span></td>
         <td><button class="expander${open ? " open" : ""}" type="button" data-expand="${i}" title="متریال و یراق یونیت">${ICONS.chev}</button></td>
-        <td>${del("unit", i)}</td>
+        <td><div class="row-btns">${tplBtn(i)}${dup("unit", i)}${del("unit", i)}</div></td>
       </tr>`;
     if (open) {
       uRows += `
@@ -3964,13 +4744,13 @@ function renderEditorTables() {
         <td>${inp("door", "qty", dr.qty, `data-ui="${ui}" data-di="${di}"`, U_LEAF, "w-qty")}</td>
         <td>${inp("door", "w_cm", dr.w_cm, `data-ui="${ui}" data-di="${di}"`, U_CM, "w-dim")}</td>
         <td>${inp("door", "h_cm", dr.h_cm, `data-ui="${ui}" data-di="${di}"`, U_CM, "w-dim")}</td>
-        <td>${matSelect("door_sheet", dr.material_id, `data-scope="door" data-k="material_id" data-ui="${ui}" data-di="${di}"`)}</td>
+        <td>${doorSheetCell(u, dr, ui, di)}</td>
         <td>${matSelect("door_model", dr.door_model_id, `data-scope="door" data-k="door_model_id" data-ui="${ui}" data-di="${di}"`)}</td>
         <td>${matSelect("hinge", dr.hinge_id, `data-scope="door" data-k="hinge_id" data-ui="${ui}" data-di="${di}"`)}</td>
         <td>${matSelect("handle", dr.handle_id, `data-scope="door" data-k="handle_id" data-ui="${ui}" data-di="${di}"`)}</td>
         <td>${matSelect("service", dr.assembly_id, `data-scope="door" data-k="assembly_id" data-ui="${ui}" data-di="${di}"`)}</td>
         <td>${matSelect("service", dr.packaging_id, `data-scope="door" data-k="packaging_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${del("door", ui, di)}</td>
+        <td><div class="row-btns">${dup("door", ui, di)}${del("door", ui, di)}</div></td>
       </tr>`;
   }));
   el("tblDoors").innerHTML = `
@@ -3994,7 +4774,7 @@ function renderEditorTables() {
         <td>${matSelect("drawer_sheet", dw.sheet_id, `data-scope="drawer" data-k="sheet_id" data-ui="${ui}" data-di="${di}"`)}</td>
         <td>${matSelect("door_sheet", dw.front_id, `data-scope="drawer" data-k="front_id" data-ui="${ui}" data-di="${di}"`)}</td>
         <td>${matSelect("handle", dw.handle_id, `data-scope="drawer" data-k="handle_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${del("drawer", ui, di)}</td>
+        <td><div class="row-btns">${dup("drawer", ui, di)}${del("drawer", ui, di)}</div></td>
       </tr>`;
   }));
   el("tblDrawers").innerHTML = `
@@ -4015,7 +4795,7 @@ function renderEditorTables() {
           <td>${inp("facade", "price_per_sqm", r.price_per_sqm, `data-ri="${i}"`, uMoney(), "w-money")}</td>
           <td class="num f-area" data-ri="${i}">${fmt(area, 1)}</td>
           <td class="num f-sum" data-ri="${i}">${fmt(scaled(area * (+r.price_per_sqm || 0)))}</td>
-          <td>${del("facade", null, i)}</td>
+          <td><div class="row-btns">${dup("facade", null, null, i)}${del("facade", null, i)}</div></td>
         </tr>`;
       }).join("") || `<tr><td colspan="8"><div class="empty">ردیفی نیست — «＋ افزودن ردیف درنما» را بزنید.</div></td></tr>`}
       </tbody>`;
@@ -4036,7 +4816,7 @@ function renderEditorTables() {
         <td>${inp("extra", "price", r.price, `data-ri="${i}"`, uMoney(), "w-money")}</td>
         <td class="num x-sum" data-ri="${i}">${fmt(scaled((+r.qty || 0) * (+r.price || 0)))}</td>
         <td><label class="check" style="justify-content:center"><input type="checkbox" data-scope="extra" data-k="visible" data-ri="${i}"${r.visible !== false ? " checked" : ""}></label></td>
-        <td>${del("extra", null, i)}</td>
+        <td><div class="row-btns">${dup("extra", null, null, i)}${del("extra", null, i)}</div></td>
       </tr>`).join("") || `<tr><td colspan="7"><div class="empty">قلمی نیست.</div></td></tr>`}
     </tbody>`;
 
@@ -4055,7 +4835,7 @@ function renderEditorTables() {
           ${Object.entries(SERVICE_BASIS).map(([k, l]) => `<option value="${k}"${s.basis === k ? " selected" : ""}>${l}</option>`).join("")}
         </select></td>
         <td>${inp("service", "price", s.price, `data-ri="${i}"`, uMoney(), "w-money")}</td>
-        <td>${del("service", null, i)}</td>
+        <td><div class="row-btns">${dup("service", null, null, i)}${del("service", null, i)}</div></td>
       </tr>`).join("") || `<tr><td colspan="4"><div class="empty">خدمتی نیست — از کتابخانه اضافه کنید.</div></td></tr>`}
     </tbody>`;
 
@@ -4068,6 +4848,7 @@ function renderEditorTables() {
   el("cntFacade").textContent = fa(pg.detail_mode === "detailed" ? pg.detail_rows.length : pg.detail_mode === "total" ? 1 : 0);
   el("cntExtras").textContent = fa(pg.extras.length);
   el("cntServices").textContent = fa(pg.services.length);
+  renderDimRibbon();
 }
 
 function updateComputedCells() {
@@ -4103,8 +4884,11 @@ function refreshTbUnits() {
   set("uDiscAmt", CUR.name);
   set("uVatPct", "٪");
   set("uExtraFixed", CUR.name);
+  set("uDepositPct", "٪");
+  set("uDepositAmt", CUR.name);
   /* کلاس has-u فقط وقتی واحد نمایشی وجود دارد */
-  [["tbInstallVal", "uInstallVal"], ["tbDiscAmt", "uDiscAmt"], ["tbExtraFixed", "uExtraFixed"]].forEach(([i, u]) => {
+  [["tbInstallVal", "uInstallVal"], ["tbDiscAmt", "uDiscAmt"], ["tbExtraFixed", "uExtraFixed"],
+   ["tbDepositAmt", "uDepositAmt"]].forEach(([i, u]) => {
     const inEl = el(i), uEl = el(u);
     if (inEl && uEl) inEl.classList.toggle("has-u", !!uEl.textContent);
   });
@@ -4127,6 +4911,7 @@ function calcFields(p) {
     discount_percent: +p.discount_percent || 0, discount_amount: +p.discount_amount || 0,
     vat_enabled: p.vat_enabled ? 1 : 0, vat_percent: +p.vat_percent || 0,
     extra_fixed_amount: +p.extra_fixed_amount || 0,
+    deposit_percent: +p.deposit_percent || 0, deposit_amount: +p.deposit_amount || 0,
   };
 }
 function invPayload(p) {
@@ -4175,6 +4960,26 @@ async function recalcTotals() {
   el("tbCost").innerHTML = money(r.total_cost);
   el("tbGross").innerHTML = money(r.gross_price);
   el("tbFinal").innerHTML = fmt(scaled(r.final_price));
+
+  /* «متری چند؟» — زبان رایج بازار کابینت */
+  const ppm = el("tbPerMeter");
+  if (ppm) {
+    ppm.innerHTML = r.price_per_ground_lm
+      ? `${fmt(scaled(r.price_per_ground_lm))} <small>${CUR.name}/متر</small>`
+      : "—";
+    ppm.title = r.price_per_ground_lm
+      ? `مبلغ نهایی ÷ ${fmt((r.stats || {}).total_ground_lm || 0, true)} متر طول زمینی`
+        + (r.price_per_total_lm ? ` • هر متر طول کل (زمینی+دیواری): ${fmt(scaled(r.price_per_total_lm))}` : "")
+      : "";
+  }
+  /* باقی‌مانده پس از پیش‌پرداخت */
+  const dueWrap = el("tbDueWrap");
+  if (dueWrap) {
+    const has = (r.deposit_amount || 0) > 0;
+    dueWrap.hidden = !has;
+    if (has) el("tbDue").innerHTML = fmt(scaled(r.remaining_amount));
+  }
+  renderDimRibbon();
   updateComputedCells();
 }
 
@@ -4188,6 +4993,8 @@ function readTotalbarInto(p) {
   p.vat_enabled = el("tbVat").checked;
   p.vat_percent = parseNum(el("tbVatPct").value);
   p.extra_fixed_amount = parseNum(el("tbExtraFixed").value);
+  p.deposit_percent = parseNum(el("tbDepositPct").value);
+  p.deposit_amount = parseNum(el("tbDepositAmt").value);
 }
 
 function readSectionBarInto() {
@@ -4197,6 +5004,7 @@ function readSectionBarInto() {
   pg.waste_percent = parseNum(el("secWaste").value);
   pg.overhead_percent = parseNum(el("secOverhead").value);
   pg.countertop_lm = parseNum(el("secCounterLm").value);
+  if (el("secWallLen")) pg.wall_length_cm = parseNum(el("secWallLen").value) * 100;
   pg.detail_mode = el("facadeMode").value;
   pg.detail_total_sqm = parseNum(el("facadeTotalSqm").value);
   pg.detail_price_per_sqm = parseNum(el("facadeTotalPrice").value);
@@ -4240,12 +5048,16 @@ function openProjectEditor(id) {
   el("tbVat").checked = !!p.vat_enabled;
   el("tbVatPct").value = fa(p.vat_percent ?? 10);
   el("tbExtraFixed").value = p.extra_fixed_amount ? fmtInp(p.extra_fixed_amount) : "";
+  if (el("tbDepositPct")) el("tbDepositPct").value = p.deposit_percent ? fa(p.deposit_percent) : "";
+  if (el("tbDepositAmt")) el("tbDepositAmt").value = p.deposit_amount ? fmtInp(p.deposit_amount) : "";
+  if (el("tbRoundStep")) el("tbRoundStep").value = "0";
   clearDirty();
   renderSectionPills();
   renderSectionBar();
+  renderTemplateSelect();
   renderEditorTables();
-  recalcTotals();
   refreshTbUnits();
+  recalcTotals();
   if (p.stale && API.ok) {
     toast("این پروژه با نرخ‌های قدیمی متریال ذخیره شده بود — مبالغ زیر با نرخ روز بازمحاسبه شد. برای قطعی‌شدن، پروژه را ذخیره کنید.", "warn");
   }
@@ -4311,7 +5123,15 @@ function renderBreakdown() {
     return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
   });
   const overheadSum = (r.pages || []).reduce((a, pg) => a + (pg.overhead_amount || 0), 0);
-  el("breakdownBody").innerHTML = `
+  /* ★ هشدارهای موتور محاسبه — مثلاً تیکِ «در از ورق بدنه» که به‌دلیلِ جا نشدنِ
+     لنگه نادیده گرفته شده. بی‌سروصدا عددِ اشتباه نشان نمی‌دهیم.               */
+  const warns = r.warnings || [];
+  const warnHtml = warns.length ? `
+    <div class="warn-box" role="status">
+      <b>⚠ ${fa(String(warns.length))} هشدار در محاسبه</b>
+      <ul>${warns.map((w) => `<li>${esc(String(w))}</li>`).join("")}</ul>
+    </div>` : "";
+  el("breakdownBody").innerHTML = warnHtml + `
     <table class="data">
       <thead><tr><th>گروه هزینه</th><th>اقلام</th><th>مبلغ (${CUR.name})</th></tr></thead>
       <tbody>
@@ -4329,6 +5149,11 @@ function renderBreakdown() {
         <tr><td style="background:var(--accent);color:var(--on-accent)"><b>مبلغ قابل پرداخت</b></td>
             <td style="background:var(--accent)"></td>
             <td class="num" style="background:var(--accent);color:var(--on-accent);font-size:1.05rem">${fmt(scaled(r.final_price))} ${CUR.name}</td></tr>
+        ${r.deposit_amount > 0 ? `
+        <tr><td><b>پیش‌پرداخت</b></td><td class="sub">${fmt(r.deposit_percent, true)}٪ + ${fmt(scaled(p.deposit_amount || 0))}</td>
+            <td class="num" style="color:var(--danger)">− ${fmt(scaled(r.deposit_amount))}</td></tr>
+        <tr><td><b>باقی‌مانده (هنگام تحویل/نصب)</b></td><td></td>
+            <td class="num"><b>${fmt(scaled(r.remaining_amount))} ${CUR.name}</b></td></tr>` : ""}
       </tbody>
     </table>
     <div class="stats-inline tiny muted" style="margin-top:.8rem">
@@ -4339,7 +5164,14 @@ function renderBreakdown() {
       ${fa(r.stats.total_doors || 0)} لنگه در •
       ${fa(r.stats.total_drawers || 0)} کشو •
       ${fmt(r.stats.total_body_area || 0, true)} م² بدنه
-    </div>`;
+    </div>
+    ${r.price_per_ground_lm ? `
+    <div class="per-meter">
+      <span>💬 چیزی که مشتری می‌پرسد:</span>
+      <b>هر متر طول زمینی ${fmt(scaled(r.price_per_ground_lm))} ${CUR.name}</b>
+      ${r.price_per_total_lm ? `<span class="sep">•</span><span>هر متر طول کل (زمینی+دیواری) <b>${fmt(scaled(r.price_per_total_lm))} ${CUR.name}</b></span>` : ""}
+      ${r.cost_per_ground_lm ? `<span class="sep">•</span><span class="tiny muted">بهای تمام‌شده‌ی هر متر: ${fmt(scaled(r.cost_per_ground_lm))}</span>` : ""}
+    </div>` : ""}`;
 }
 
 /* ================================================================ فاکتور */
@@ -4587,8 +5419,367 @@ function demoSave() {
     localStorage.setItem("kabir-demo-db", JSON.stringify({
       materials: MATERIALS, styles: STYLES, projects: PROJECTS,
       history: HISTORY, archive: ARCHIVE, settings: SETTINGS,
+      unit_templates: UNIT_TEMPLATES,
     }));
   } catch (e) { /* حافظه پر یا حالت خصوصی */ }
+}
+
+/* ================================================================ الگوی یونیت
+   کابینت‌کار در هر پروژه همان یونیت‌های تکراری را می‌سازد. این‌جا یک یونیتِ
+   کامل (ابعاد + متریال + درها + کشوها) یک‌بار ذخیره می‌شود و بعد با یک کلیک
+   در هر پروژه‌ای قرار می‌گیرد. */
+let _tplPendingUnit = null;
+
+function renderTemplateSelect() {
+  const sel = el("tplSelect");
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">— انتخاب کنید —</option>` +
+    UNIT_TEMPLATES.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join("");
+  if (cur && [...sel.options].some((o) => o.value === cur)) sel.value = cur;
+}
+
+function openTemplateSaveModal(unitIdx) {
+  const pg = curPage();
+  const u = pg && pg.units[unitIdx];
+  if (!u) return;
+  _tplPendingUnit = JSON.parse(JSON.stringify(u));
+  el("tplName").value = u.label || "یونیت";
+  el("tplNote").value = "";
+  const doors = (u.doors || []).reduce((a, d) => a + (+d.qty || 0), 0);
+  const drawers = (u.drawers || []).reduce((a, d) => a + (+d.qty || 0), 0);
+  el("tplSummary").innerHTML =
+    `${esc(UNIT_TYPES[u.unit_type] || u.unit_type)} • ` +
+    `${fa(u.length_cm)}×${fa(u.height_cm)}×${fa(u.depth_cm)} سم • ` +
+    `${fa(doors)} لنگه در • ${fa(drawers)} کشو • ${fa(u.shelves || 0)} طبقه` +
+    `<br>متریال و یراق این یونیت هم همراه الگو ذخیره می‌شود.`;
+  openModal("tpl-save");
+  setTimeout(() => el("tplName").select(), 60);
+}
+
+async function saveUnitTemplate() {
+  if (!_tplPendingUnit) return;
+  const name = el("tplName").value.trim();
+  if (!name) { toast("نام الگو را وارد کنید", "warn"); return; }
+  const note = el("tplNote").value.trim();
+  const data = JSON.parse(JSON.stringify(_tplPendingUnit));
+  data.label = name;
+  if (API.ok) {
+    try {
+      const r = await API.req("POST", "/api/unit-templates", { name, note, data });
+      UNIT_TEMPLATES = r.templates || [];
+    } catch (e) { toast("ذخیره‌ی الگو ناموفق: " + esc(e.message), "error"); return; }
+  } else {
+    const id = Math.max(0, ...UNIT_TEMPLATES.map((t) => +t.id || 0)) + 1;
+    UNIT_TEMPLATES.push({ id, name, note, data, sort_order: UNIT_TEMPLATES.length });
+    demoSave();
+  }
+  _tplPendingUnit = null;
+  closeModal();
+  renderTemplateSelect();
+  toast(`الگوی «${esc(name)}» ذخیره شد`, "success");
+}
+
+function useTemplate() {
+  const pg = curPage();
+  const id = Number(el("tplSelect").value);
+  const t = UNIT_TEMPLATES.find((x) => +x.id === id);
+  if (!pg) return;
+  if (!t) { toast("ابتدا یک الگو انتخاب کنید", "warn"); return; }
+  const u = Object.assign(defaultUnit(t.data.unit_type), JSON.parse(JSON.stringify(t.data)));
+  u.doors = (u.doors || []).map((d) => Object.assign(defaultDoor(), d));
+  u.drawers = (u.drawers || []).map((d) => Object.assign(defaultDrawer(), d));
+  pg.units.push(u);
+  markDirty();
+  renderEditorTables();
+  scheduleRecalc(50);
+  toast(`الگوی «${esc(t.name)}» اضافه شد`, "success");
+}
+
+function renderTemplatesTable() {
+  const tbl = el("tplTable");
+  if (!tbl) return;
+  if (!UNIT_TEMPLATES.length) {
+    tbl.innerHTML = `<tbody><tr><td><div class="empty">${ICONS.inbox}<div>الگویی ذخیره نشده — در جدول یونیت‌ها روی دکمه‌ی «الگو» بزنید.</div></div></td></tr></tbody>`;
+    return;
+  }
+  tbl.innerHTML = `
+    <thead><tr><th>نام الگو</th><th>نوع</th><th>ابعاد (سم)</th><th>در/کشو</th><th>یادداشت</th><th>عملیات</th></tr></thead>
+    <tbody>${UNIT_TEMPLATES.map((t) => {
+      const d = t.data || {};
+      const doors = (d.doors || []).reduce((a, x) => a + (+x.qty || 0), 0);
+      const drawers = (d.drawers || []).reduce((a, x) => a + (+x.qty || 0), 0);
+      return `<tr>
+        <td><b>${esc(t.name)}</b></td>
+        <td class="sub">${esc(UNIT_TYPES[d.unit_type] || d.unit_type || "—")}</td>
+        <td class="sub nowrap">${fa(d.length_cm)}×${fa(d.height_cm)}×${fa(d.depth_cm)}</td>
+        <td class="sub nowrap">${fa(doors)} در / ${fa(drawers)} کشو</td>
+        <td class="sub">${esc(t.note || "—")}</td>
+        <td><div class="row-btns">
+          <button class="row-actions" type="button" title="افزودن به بخش جاری" data-tpl-use="${t.id}">${ICONS.copy}</button>
+          <button class="row-actions del" type="button" title="حذف الگو" data-tpl-del="${t.id}">${ICONS.trash}</button>
+        </div></td>
+      </tr>`; }).join("")}
+    </tbody>`;
+}
+
+async function deleteTemplate(id) {
+  if (API.ok) {
+    try { const r = await API.req("DELETE", `/api/unit-templates/${id}`); UNIT_TEMPLATES = r.templates || []; }
+    catch (e) { toast("حذف ناموفق: " + esc(e.message), "error"); return; }
+  } else {
+    UNIT_TEMPLATES = UNIT_TEMPLATES.filter((t) => +t.id !== +id);
+    demoSave();
+  }
+  renderTemplatesTable(); renderTemplateSelect();
+  toast("الگو حذف شد");
+}
+
+/* ============================================================== برش‌نامه
+   همان چیزی که اپراتور ارّه و دستگاه نوارچسبان لازم دارد + برگه‌ی خرید. */
+let _wsData = null;
+let _wsTab = "cut";
+
+async function openWorkshopModal() {
+  const p = state.editingProject;
+  if (!p) return;
+  readEditorFieldsInto(p);
+  const host = el("ws-cut");
+  el("wsProjectName").textContent = `${p.title || ""} — ${p.code || ""}`.trim();
+  openModal("workshop");
+  host.innerHTML = `<div class="empty">در حال آماده‌سازی برش‌نامه…</div>`;
+  el("ws-sheets").innerHTML = ""; el("ws-shop").innerHTML = "";
+  let pack;
+  if (API.ok) {
+    try {
+      pack = await API.req("POST", "/api/workshop",
+        { project: calcFields(p), pages: p.pages });
+    } catch (e) {
+      host.innerHTML = `<div class="empty">خطا: ${esc(e.message)}</div>`;
+      return;
+    }
+  } else {
+    pack = buildWorkshopLocal(p);
+  }
+  _wsData = pack;
+  renderWorkshop();
+}
+
+function renderWorkshop() {
+  const d = _wsData;
+  if (!d) return;
+  const st = d.stats || {};
+  el("wsStats").innerHTML = `
+    <span class="dim-cell"><b>${fa(st.part_kinds || 0)}</b>نوع قطعه</span>
+    <span class="dim-cell"><b>${fa(st.total_pieces || 0)}</b>قطعه برای برش</span>
+    <span class="dim-cell"><b>${fmt(st.total_area_sqm || 0, true)}</b>مترمربع</span>
+    <span class="dim-cell accent"><b>${fa(Math.round(st.total_sheets || 0))}</b>ورق لازم</span>
+    <span class="dim-cell"><b>${fa(st.banding_pieces || 0)}</b>قطعه نوارخور</span>
+    <span class="dim-cell"><b>${fmt(st.banding_perimeter_m || 0, true)}</b>متر نوار (محیط)</span>`;
+  el("wsCntCut").textContent = fa(st.part_kinds || 0);
+  el("wsCntSheets").textContent = fa((d.sheet_summary || []).length);
+  el("wsCntShop").textContent = fa((d.shopping || []).length);
+
+  /* --- برش‌نامه --- */
+  const catLbl = { body_sheet: "بدنه", back_sheet: "فیبر پشت", door_sheet: "در", drawer_sheet: "جعبه کشو" };
+  let lastKey = null;
+  const rows = (d.cut_parts || []).map((c, i) => {
+    const key = `${c.section}|${c.unit}`;
+    const head = key !== lastKey
+      ? `<tr class="cut-group"><td colspan="10">${esc(c.section)} — <b>${esc(c.unit)}</b></td></tr>` : "";
+    lastKey = key;
+    return `${head}<tr>
+      <td class="sub">${fa(i + 1)}</td>
+      <td>${esc(c.part)}</td>
+      <td class="num"><b>${fa(c.qty)}</b></td>
+      <td class="num ltr">${fa(Math.round(c.length_mm))}</td>
+      <td class="num ltr">${fa(Math.round(c.width_mm))}</td>
+      <td class="num">${fa(c.thickness_mm)} میل</td>
+      <td class="sub">${esc(c.material)}</td>
+      <td class="sub">${esc(catLbl[c.mat_cat] || c.mat_cat || "—")}</td>
+      <td class="sub">${c.banding ? `<span class="chip-ok">${esc(c.banding_sides || "بله")}</span>` : `<span class="muted">—</span>`}</td>
+      <td class="num sub">${fmt(c.area_sqm, true)}</td>
+    </tr>`;
+  }).join("");
+  el("ws-cut").innerHTML = `
+    <div class="table-wrap sticky-head"><table class="data cut-table">
+      <thead><tr><th>#</th><th>قطعه</th><th>تعداد</th><th>طول (mm)</th><th>عرض (mm)</th>
+      <th>ضخامت</th><th>متریال</th><th>نوع</th><th>نوار لبه</th><th>مساحت (م²)</th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="10"><div class="empty">قطعه‌ای نیست.</div></td></tr>`}</tbody>
+    </table></div>`;
+
+  /* --- خلاصه‌ی ورق --- */
+  el("ws-sheets").innerHTML = `
+    <div class="table-wrap"><table class="data">
+      <thead><tr><th>متریال / ورق</th><th>نوع</th><th>ضخامت</th><th>ابعاد ورق (سم)</th>
+      <th>مساحت قطعات (م²)</th><th>تعداد قطعه</th><th>ورق لازم</th><th>بهای هر ورق</th><th>جمع</th></tr></thead>
+      <tbody>${(d.sheet_summary || []).map((r) => `<tr>
+        <td><b>${esc(r.material)}</b></td>
+        <td class="sub">${esc(catLbl[r.cat] || r.cat)}</td>
+        <td class="num">${fa(r.thickness_mm)} میل</td>
+        <td class="num ltr">${esc(r.sheet_size || "—")}</td>
+        <td class="num">${fmt(r.area_sqm, true)}</td>
+        <td class="num">${fa(r.pieces || 0)}</td>
+        <td class="num"><b class="sheet-badge">${fa(r.sheets)}</b></td>
+        <td class="num">${r.price ? fmt(scaled(r.price)) : "—"}</td>
+        <td class="num">${r.cost ? fmt(scaled(r.cost)) : "—"}</td>
+      </tr>`).join("") || `<tr><td colspan="9"><div class="empty">ورقی لازم نیست.</div></td></tr>`}
+      </tbody>
+    </table></div>
+    <p class="tiny muted" style="margin-top:.5rem">
+      تعداد ورق با تجمیع قطعات هم‌جنس در سطح هر بخش و یک‌بار گردکردن به بالا
+      محاسبه می‌شود — یعنی همان چیزی که واقعاً از انبار برمی‌دارید.
+    </p>`;
+
+  /* --- لیست خرید --- */
+  el("ws-shop").innerHTML = (d.shopping_groups || []).map((g) => `
+    <div class="shop-group">
+      <div class="shop-head">
+        <h4>${esc(g.label)}</h4>
+        <span class="shop-sum">${fmt(scaled(g.total))} ${esc(CUR.name)}</span>
+      </div>
+      <div class="table-wrap"><table class="data">
+        <thead><tr><th>متریال / خدمت</th><th>مقدار</th><th>واحد</th><th>برآورد بها</th><th class="chk-col">خرید شد</th></tr></thead>
+        <tbody>${g.rows.map((r) => `<tr>
+          <td><b>${esc(r.name)}</b>${r.note ? `<div class="tiny muted">${esc(r.note)}</div>` : ""}</td>
+          <td class="num"><b>${fmt(r.qty, true)}</b></td>
+          <td class="sub">${esc(r.unit_label || "—")}</td>
+          <td class="num">${fmt(scaled(r.amount))}</td>
+          <td class="chk-col"><label class="check"><input type="checkbox" class="shop-check"></label></td>
+        </tr>`).join("")}</tbody>
+      </table></div>
+    </div>`).join("") || `<div class="empty">قلمی برای خرید نیست.</div>`;
+
+  /* تب فعال */
+  $$("#wsTabs .tab").forEach((t) => t.classList.toggle("active", t.dataset.wstab === _wsTab));
+  $$(".ws-panel").forEach((pn) => pn.classList.toggle("active", pn.id === "ws-" + _wsTab));
+}
+
+async function downloadWorkshopExcel() {
+  const p = state.editingProject;
+  if (!p) return;
+  if (!API.ok) { toast("خروجی اکسل فقط با سرور کبیر ممکن است (حالت نمایشی)", "warn"); return; }
+  try {
+    const blob = await API.blob("POST", "/api/workshop/xlsx", { project: calcFields(p), pages: p.pages });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `boresh-nameh-${p.code || p.id}.xlsx`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast("فایل اکسل برش‌نامه و لیست خرید دانلود شد", "success");
+  } catch (e) { toast("خطا در ساخت اکسل: " + esc(e.message), "error"); }
+}
+
+/* ============================================================== رند کردن
+   هیچ‌کس فاکتور ۲۵۳٬۳۷۴٬۱۶۵ ریال نمی‌دهد. این تابع تخفیف را طوری تنظیم
+   می‌کند که «مبلغ قابل پرداخت» دقیقاً به گام انتخابی گرد شود. */
+function roundFinalPrice() {
+  const p = state.editingProject;
+  const r = state.lastResult;
+  const step = Number(el("tbRoundStep").value || 0);
+  if (!p || !r) return;
+  if (!step) { toast("ابتدا گام رندکردن را انتخاب کنید", "warn"); return; }
+  const final = r.final_price || 0;
+  if (final <= 0) { toast("هنوز مبلغی محاسبه نشده", "warn"); return; }
+  const target = Math.round(final / step) * step;
+  if (target === Math.round(final)) { toast("مبلغ از قبل رُند است", "success"); return; }
+  /* final = (gross − discount) × (۱ + vat) → discount = gross − final/(۱+vat) */
+  const vatRate = 1 + (r.vat_percent || 0) / 100;
+  const needDisc = r.gross_price - target / vatRate;
+  if (needDisc < 0) {
+    toast("برای رسیدن به این مبلغ باید تخفیف منفی بدهید — گام کوچک‌تری انتخاب کنید", "warn");
+    return;
+  }
+  /* سهم تخفیف درصدی ثابت می‌ماند؛ بقیه در «مبلغ تخفیف» جبران می‌شود */
+  const pctPart = r.gross_price * (r.discount_percent || 0) / 100;
+  p.discount_amount = Math.max(0, Math.round(needDisc - pctPart));
+  el("tbDiscAmt").value = p.discount_amount ? fmtInp(p.discount_amount) : "";
+  markDirty();
+  scheduleRecalc(30);
+  toast(`مبلغ قابل پرداخت به ${fmt(scaled(target))} ${CUR.name} رُند شد (از راه تخفیف)`, "success");
+}
+
+/* ========================================================= قیمت‌گیری سریع
+   مشتری زنگ زده و قیمت می‌خواهد — به‌جای ساختن دستیِ ۱۲ یونیت، فقط متراژ
+   و سبک را می‌دهیم و یک پروژه‌ی واقعی ساخته می‌شود. */
+function openQuickModal() {
+  const st = el("qkStyle");
+  /* گزینه‌ی «بدون سبک» عمداً حذف شده: بدون سبک هیچ متریالی به یونیت نمی‌چسبد
+     و برآورد به «فقط اجرت» سقوط می‌کند. همیشه یک سبکِ واقعی انتخاب است. */
+  st.innerHTML = STYLES.map((s) => `<option value="${s.id}">✦ ${esc(s.name)}</option>`).join("");
+  if (STYLES.length) st.value = String(STYLES[0].id);
+  el("qkCounter").innerHTML = `<option value="0">— بدون صفحه —</option>` +
+    MATERIALS.filter((m) => m.cat === "countertop").map((m) =>
+      `<option value="${m.id}">${esc(m.name)} — ${fmt(m.price)}/متر</option>`).join("");
+  const prev = el("qkPreview");
+  if (prev) { prev.hidden = true; prev.innerHTML = ""; }
+  openModal("quick");
+  setTimeout(() => el("qkTitle").focus(), 60);
+}
+
+function quickPayload() {
+  return {
+    title: el("qkTitle").value.trim(),
+    customer: el("qkCustomer").value.trim(),
+    mobile: el("qkMobile").value.trim(),
+    ground_lm: parseNum(el("qkGround").value),
+    wall_lm: parseNum(el("qkWall").value),
+    style_id: Number(el("qkStyle").value) || 0,
+    countertop_id: Number(el("qkCounter").value) || 0,
+    countertop_lm: parseNum(el("qkCounterLm").value),
+    drawers: parseNum(el("qkDrawers").value),
+    tall: parseNum(el("qkTall").value),
+  };
+}
+
+async function buildQuickProject() {
+  const q = quickPayload();
+  if (q.ground_lm <= 0 && q.wall_lm <= 0) {
+    toast("حداقل یکی از متراژهای زمینی یا دیواری را وارد کنید", "warn"); return;
+  }
+  const btn = el("btnQuickBuild");
+  btn.disabled = true;
+  try {
+    if (API.ok) {
+      const r = await API.req("POST", "/api/quick-project", q);
+      const np = normalizeProject(r.project);
+      PROJECTS.unshift(np);
+      renderProjects(); fillInvoiceProjects(); renderDashboard();
+      closeModal();
+      openProjectEditor(np.id);
+      const c = r.calc || {};
+      toast(`پروژه ساخته شد — مبلغ برآوردی: ${fmt(scaled(c.final_price || 0))} ${CUR.name} • ابعاد را با اندازه‌ی واقعی چک کنید`, "success");
+    } else {
+      /* حالت نمایشی: همان منطق، محلی */
+      let st = STYLES.find((x) => +x.id === +q.style_id);
+      if (!st) st = STYLES[0] || {};          /* هم‌راستا با سمت سرور */
+      const sid = st.id || q.style_id;
+      const p = normalizeProject({
+        id: Math.max(0, ...PROJECTS.map((x) => x.id)) + 1,
+        code: `PR-DEMO-${fa(String(PROJECTS.length + 1).padStart(3, "0"))}`,
+        title: q.title || "قیمت‌گیری سریع", customer: q.customer, mobile: q.mobile,
+        status: "draft", date: TODAY_FA,
+        profit_mode: (st.data || {}).profit_mode || "markup",
+        profit_percent: (st.data || {}).profit_percent ?? 30,
+        note: "ساخته‌شده با «قیمت‌گیری سریع» — ابعاد را با اندازه‌ی واقعی چک کنید.",
+      });
+      const pg = defaultPage(sid, "بخش ۱");
+      pg.units = quickUnitsLocal(Object.assign({}, q, { style_id: sid }));
+      pg.countertop_lm = q.countertop_id ? (q.countertop_lm || q.ground_lm) : 0;
+      pg.wall_length_cm = q.ground_lm * 100;
+      applyStyleToPage(pg, sid);
+      p.pages = [pg];
+      PROJECTS.unshift(p); demoSave();
+      renderProjects(); fillInvoiceProjects(); renderDashboard();
+      closeModal();
+      openProjectEditor(p.id);
+      toast("پروژه ساخته شد (حالت نمایشی)", "success");
+    }
+  } catch (e) {
+    toast("خطا: " + esc(e.message), "error");
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 /* ============================================================== سیم‌کشی */
@@ -5177,8 +6368,8 @@ function wire() {
       toast(`سبک «${esc(st.name)}» روی بخش اعمال شد`, "success");
     }, "اعمال سبک", "اعمال");
   });
-  ["secWaste", "secOverhead", "secCounterLm", "facadeTotalSqm", "facadeTotalPrice"].forEach((id) =>
-    el(id).addEventListener("input", () => { readSectionBarInto(); markDirty(); scheduleRecalc(); }));
+  ["secWaste", "secOverhead", "secCounterLm", "secWallLen", "facadeTotalSqm", "facadeTotalPrice"].forEach((id) =>
+    el(id) && el(id).addEventListener("input", () => { readSectionBarInto(); markDirty(); renderDimRibbon(); scheduleRecalc(); }));
   el("secCounter").addEventListener("change", () => {
     const pg = curPage();
     if (!pg) return;
@@ -5271,7 +6462,8 @@ function wire() {
   const NUM_KEYS = new Set(["qty", "length_cm", "height_cm", "depth_cm", "shelves", "legs_per_unit",
     "pins_per_shelf", "w_cm", "h_cm", "d_cm", "price", "price_per_sqm", "hinges_per_leaf",
     "gas_springs_per_leaf", "handles_per_leaf"]);
-  const BOOL_KEYS = new Set(["glass", "has_top_panel", "has_bottom_panel", "visible"]);
+  const BOOL_KEYS = new Set(["glass", "has_top_panel", "has_bottom_panel", "visible",
+                             "from_body"]);
 
   function rowOf(pg, scope, ds) {
     const ui = ds.ui !== undefined && ds.ui !== "" ? +ds.ui : null;
@@ -5322,6 +6514,13 @@ function wire() {
       }
       return;
     }
+    /* تیکِ «در از ورق بدنه» → جدول بازآرایی می‌شود تا سلول، وضعیتِ درست را نشان دهد */
+    if (t.dataset.scope === "door" && t.dataset.k === "from_body") {
+      markDirty();
+      renderEditorTables();
+      scheduleRecalc(50);
+      return;
+    }
     /* تغییر نوع یونیت → ابعاد پیش‌فرضِ همان نوع خودکار اعمال می‌شود
        (رویداد change فقط وقتی مقدار واقعاً عوض شده باشد شلیک می‌شود) */
     if (t.dataset.scope === "unit" && t.dataset.k === "unit_type") {
@@ -5347,6 +6546,47 @@ function wire() {
       renderEditorTables();
       return;
     }
+    /* کپی ردیف — دقیقاً کنار ردیف فعلی قرار می‌گیرد */
+    const c = e.target.closest("[data-copy-row]");
+    if (c) {
+      const kind = c.dataset.copyRow;
+      const ui = c.dataset.ui !== "" ? +c.dataset.ui : null;
+      const di = c.dataset.di !== "" ? +c.dataset.di : null;
+      const ri = c.dataset.ri !== "" ? +c.dataset.ri : null;
+      const clone = (o) => JSON.parse(JSON.stringify(o));
+      let msg = "ردیف کپی شد";
+      if (kind === "unit") {
+        const src = pg.units[ui]; if (!src) return;
+        const copy = clone(src);
+        copy.label = `${src.label || "یونیت"} (کپی)`;
+        pg.units.splice(ui + 1, 0, copy);
+        msg = "یونیت کپی شد — ابعاد را عوض کنید";
+      } else if (kind === "door") {
+        const src = pg.units[ui].doors[di]; if (!src) return;
+        pg.units[ui].doors.splice(di + 1, 0, clone(src));
+        msg = "در کپی شد";
+      } else if (kind === "drawer") {
+        const src = pg.units[ui].drawers[di]; if (!src) return;
+        pg.units[ui].drawers.splice(di + 1, 0, clone(src));
+        msg = "کشو کپی شد";
+      } else if (kind === "facade") {
+        const src = pg.detail_rows[ri]; if (!src) return;
+        pg.detail_rows.splice(ri + 1, 0, clone(src));
+      } else if (kind === "extra") {
+        const src = pg.extras[ri]; if (!src) return;
+        pg.extras.splice(ri + 1, 0, clone(src));
+      } else if (kind === "service") {
+        const src = pg.services[ri]; if (!src) return;
+        pg.services.splice(ri + 1, 0, clone(src));
+      }
+      markDirty(); renderEditorTables(); scheduleRecalc(50);
+      toast(msg, "success");
+      return;
+    }
+    /* ذخیره‌ی یونیت به‌عنوان الگو */
+    const tp = e.target.closest("[data-tpl-save]");
+    if (tp) { openTemplateSaveModal(+tp.dataset.tplSave); return; }
+
     const d = e.target.closest("[data-del-row]");
     if (d) {
       const kind = d.dataset.delRow;
@@ -5623,6 +6863,107 @@ function wire() {
       }, "حذف نسخه");
     }
   });
+
+  /* ═════════════════════ قابلیت‌های کارگاهی (افزوده‌شده) ═════════════════════ */
+
+  /* --- ساخت خودکار درها برای همه‌ی یونیت‌های بدون در --- */
+  const btnAuto = el("btnAutoDoors");
+  if (btnAuto) btnAuto.addEventListener("click", () => {
+    const pg = curPage();
+    if (!pg) return;
+    const styleData = (STYLES.find((s) => s.id === Number(pg.style_id)) || {}).data || {};
+    let made = 0;
+    pg.units.forEach((u) => {
+      if ((u.doors || []).length) return;
+      if ((u.drawers || []).length) return;            /* یونیت کشودار در نمی‌خواهد */
+      autoDoorsForUnit(u, styleData);
+      made += 1;
+    });
+    if (!made) { toast("همه‌ی یونیت‌ها از قبل در یا کشو دارند", "warn"); return; }
+    markDirty(); renderEditorTables(); scheduleRecalc(50);
+    toast(`${fa(made)} یونیت درِ هم‌اندازه گرفت (درز ۳ میلی‌متر) — تعداد لنگه و ابعاد را چک کنید`, "success");
+  });
+
+  /* --- هم‌اندازه‌سازی درهای موجود با طول/ارتفاع فعلی یونیت --- */
+  const btnFit = el("btnFitDoors");
+  if (btnFit) btnFit.addEventListener("click", () => {
+    const pg = curPage();
+    if (!pg) return;
+    let n = 0;
+    pg.units.forEach((u) => { if (fitDoorsToUnit(u)) n += 1; });
+    if (!n) { toast("هیچ یونیتی در ندارد — ابتدا «ساخت خودکار درها» را بزنید", "warn"); return; }
+    markDirty(); renderEditorTables(); scheduleRecalc(50);
+    toast(`عرض لنگه‌های درِ ${fa(n)} یونیت با ابعاد فعلی هم‌اندازه شد`, "success");
+  });
+
+  /* --- الگوهای یونیت --- */
+  const btnUseTpl = el("btnUseTpl");
+  if (btnUseTpl) btnUseTpl.addEventListener("click", useTemplate);
+  const btnManageTpl = el("btnManageTpl");
+  if (btnManageTpl) btnManageTpl.addEventListener("click", () => {
+    renderTemplatesTable(); openModal("templates");
+  });
+  const btnTplSave = el("btnTplSave");
+  if (btnTplSave) btnTplSave.addEventListener("click", () => busy(btnTplSave, saveUnitTemplate));
+  const tplTable = el("tplTable");
+  if (tplTable) tplTable.addEventListener("click", (e) => {
+    const use = e.target.closest("[data-tpl-use]");
+    if (use) {
+      const t = UNIT_TEMPLATES.find((x) => +x.id === +use.dataset.tplUse);
+      if (!t) return;
+      closeModal();
+      el("tplSelect").value = String(t.id);
+      useTemplate();
+      return;
+    }
+    const del = e.target.closest("[data-tpl-del]");
+    if (del) {
+      const t = UNIT_TEMPLATES.find((x) => +x.id === +del.dataset.tplDel);
+      confirmAction(`الگوی «<b>${esc(t ? t.name : "")}</b>» حذف شود؟`,
+        () => deleteTemplate(del.dataset.tplDel), "حذف الگو");
+    }
+  });
+
+  /* --- برش‌نامه و لیست خرید --- */
+  const btnWs = el("btnWorkshop");
+  if (btnWs) btnWs.addEventListener("click", () => busy(btnWs, openWorkshopModal));
+  const wsTabs = el("wsTabs");
+  if (wsTabs) wsTabs.addEventListener("click", (e) => {
+    const t = e.target.closest("[data-wstab]");
+    if (!t) return;
+    _wsTab = t.dataset.wstab;
+    renderWorkshop();
+  });
+  const btnWsXls = el("btnWsExcel");
+  if (btnWsXls) btnWsXls.addEventListener("click", () => busy(btnWsXls, downloadWorkshopExcel));
+  const btnWsPrint = el("btnWsPrint");
+  if (btnWsPrint) btnWsPrint.addEventListener("click", () => {
+    document.body.classList.add("printing-ws");
+    const done = () => document.body.classList.remove("printing-ws");
+    setTimeout(() => { window.print(); setTimeout(done, 400); }, 60);
+  });
+
+  /* --- رند کردن مبلغ نهایی --- */
+  const btnRound = el("btnRoundPrice");
+  if (btnRound) btnRound.addEventListener("click", () => roundFinalPrice());
+
+  /* --- پیش‌پرداخت --- */
+  ["tbDepositPct", "tbDepositAmt"].forEach((id) => {
+    const n = el(id);
+    if (!n) return;
+    n.addEventListener("input", () => { markDirty(); scheduleRecalc(); refreshTbUnits(); });
+    n.addEventListener("change", () => { markDirty(); scheduleRecalc(); refreshTbUnits(); });
+  });
+
+  /* --- قیمت‌گیری سریع --- */
+  const btnQk = el("btnQuickQuote");
+  if (btnQk) btnQk.addEventListener("click", openQuickModal);
+  const btnQkBuild = el("btnQuickBuild");
+  if (btnQkBuild) btnQkBuild.addEventListener("click", buildQuickProject);
+  ["qkGround", "qkWall", "qkDrawers", "qkTall"].forEach((id) => {
+    const n = el(id);
+    if (n) n.addEventListener("keydown", (e) => { if (e.key === "Enter") buildQuickProject(); });
+  });
 }
 
 /* helper برای svcLibrary */
@@ -5635,6 +6976,7 @@ function renderAll() {
   renderHistory();
   renderStyles();
   renderProjects();
+  renderTemplateSelect();
   fillInvoiceProjects();
   renderInvRowChecks();
   renderArchive();
@@ -5943,6 +7285,10 @@ if (typeof module !== "undefined" && module.exports) {
           <option value="canceled">لغوشده</option>
         </select>
         <div class="spacer"></div>
+        <button class="btn outline" id="btnQuickQuote" type="button" title="ساخت یک پروژه‌ی کامل فقط با واردکردن متراژ — برای جواب‌دادن به تماس مشتری">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          قیمت‌گیری سریع
+        </button>
         <button class="btn primary" id="btnNewProject" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           پروژه‌ی جدید
@@ -5967,6 +7313,10 @@ if (typeof module !== "undefined" && module.exports) {
             <div class="card-actions">
               <button class="btn ghost sm" id="btnCloseEditor" type="button">بستن</button>
               <button class="btn ghost sm" id="btnDupProject" type="button">کپی پروژه</button>
+              <button class="btn outline sm" id="btnWorkshop" type="button" title="فهرست قطعات با ابعاد دقیق + آنچه باید بخرید">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.1-.6-.6-2.1z"/></svg>
+                برش‌نامه و لیست خرید
+              </button>
               <button class="btn primary sm" id="btnSaveProject" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 ذخیره‌ی تغییرات
@@ -6024,7 +7374,13 @@ if (typeof module !== "undefined" && module.exports) {
               <label>متر طول صفحه:
                 <input type="text" id="secCounterLm" class="narrow" inputmode="decimal">
               </label>
+              <label title="طول دیواری که اندازه گرفته‌اید — فقط برای اینکه ببینید چقدرش پر شده و چقدر مانده">طول دیوار (م):
+                <input type="text" id="secWallLen" class="narrow" inputmode="decimal" data-no-sep placeholder="۴٫۲">
+              </label>
             </div>
+
+            <!-- نوار زنده‌ی متراژ: هنگام تایپ ابعاد پر می‌شود -->
+            <div class="dim-ribbon" id="dimRibbon" role="status" aria-live="polite"></div>
 
             <div class="tabs" id="secTabs" role="tablist">
               <button class="tab active" data-tab="units" type="button" role="tab">یونیت‌ها <span class="cnt" id="cntUnits"></span></button>
@@ -6036,6 +7392,23 @@ if (typeof module !== "undefined" && module.exports) {
             </div>
 
             <div class="tab-panel active" id="tab-units" role="tabpanel">
+              <div class="unit-tools">
+                <button class="btn outline sm" id="btnAutoDoors" type="button" title="برای یونیت‌هایی که در ندارند، از روی طول و ارتفاعشان درِ هم‌اندازه می‌سازد">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M18 17.5 18.8 20l2.2.8-2.2.8-.8 2.4-.8-2.4-2.2-.8 2.2-.8z"/></svg>
+                  ساخت خودکار درها
+                </button>
+                <button class="btn outline sm" id="btnFitDoors" type="button" title="اگر طول یونیت را عوض کرده‌اید، عرض لنگه‌های در را دوباره با یونیت اندازه می‌کند">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+                  هم‌اندازه‌سازی درها
+                </button>
+                <span class="ut-sep"></span>
+                <label class="ut-label">الگوی یونیت:
+                  <select id="tplSelect" aria-label="الگوی یونیت"></select>
+                </label>
+                <button class="btn ghost sm" id="btnUseTpl" type="button" title="الگوی انتخاب‌شده را به این بخش اضافه می‌کند">＋ از الگو</button>
+                <button class="btn ghost sm" id="btnManageTpl" type="button" title="دیدن، ویرایش و حذف الگوهای ذخیره‌شده">مدیریت الگوها</button>
+                <span class="tiny muted ut-hint">برای ذخیره‌ی یک یونیت به‌عنوان الگو، از دکمه‌ی «الگو» در همان ردیف استفاده کنید.</span>
+              </div>
               <div class="table-wrap"><table class="data center" id="tblUnits"></table></div>
               <div class="add-unit-row">
                 <button class="btn ghost sm add-row" data-add="unit:ground" type="button" title="یونیت زمینی با ابعاد پیش‌فرض (قابل تغییر در تنظیمات)">＋ یونیت زمینی</button>
@@ -6130,11 +7503,33 @@ if (typeof module !== "undefined" && module.exports) {
                 </div>
               </div>
               <div class="tb-field"><span>مبلغ ثابت اضافه</span><span class="cell-wrap"><input type="text" id="tbExtraFixed" inputmode="numeric" title="بابت تفاوت نوع درِ بخش‌ها یا اقلام کلی" class="has-u"><i class="cell-u" id="uExtraFixed">تومان</i></span></div>
+              <div class="tb-field">
+                <span title="بیعانه‌ای که از مشتری گرفته‌اید — روی فاکتور چاپ می‌شود">پیش‌پرداخت</span>
+                <div class="pair">
+                  <span class="cell-wrap"><input type="text" id="tbDepositPct" inputmode="numeric" aria-label="درصد پیش‌پرداخت" class="has-u" data-no-sep><i class="cell-u" id="uDepositPct">٪</i></span>
+                  <span class="cell-wrap"><input type="text" id="tbDepositAmt" inputmode="numeric" placeholder="مبلغ" aria-label="مبلغ پیش‌پرداخت" class="has-u"><i class="cell-u" id="uDepositAmt">تومان</i></span>
+                </div>
+              </div>
+            </div>
+            <div class="tb-round">
+              <span>رند کردن مبلغ نهایی</span>
+              <div class="pair">
+                <select id="tbRoundStep" aria-label="گام رندکردن">
+                  <option value="0">خاموش</option>
+                  <option value="10000000">۱ میلیون تومان</option>
+                  <option value="1000000">۱۰۰ هزار تومان</option>
+                  <option value="100000">۱۰ هزار تومان</option>
+                  <option value="100000000">۱۰ میلیون تومان</option>
+                </select>
+                <button class="btn outline sm" id="btnRoundPrice" type="button" title="تخفیف را طوری تنظیم می‌کند که مبلغ قابل پرداخت رُند شود">رند کن</button>
+              </div>
             </div>
             <div class="tb-figures">
               <div class="tb-fig"><span>جمع هزینه‌ی تمام‌شده</span><b id="tbCost">—</b></div>
               <div class="tb-fig"><span>قیمت ناخالص</span><b id="tbGross">—</b></div>
+              <div class="tb-fig" title="همان چیزی که مشتری می‌پرسد: متری چند؟"><span>قیمت هر متر طول</span><b id="tbPerMeter">—</b></div>
               <div class="tb-final"><span>مبلغ قابل پرداخت</span><b id="tbFinal">—</b></div>
+              <div class="tb-fig tb-due" id="tbDueWrap" hidden><span>باقی‌مانده پس از پیش‌پرداخت</span><b id="tbDue">—</b></div>
             </div>
             <div class="tb-actions">
               <button class="btn outline" id="btnBreakdown" type="button">
@@ -6571,6 +7966,117 @@ if (typeof module !== "undefined" && module.exports) {
       <button class="btn success" id="btnBreakdownInvoice" type="button">صدور فاکتور از این محاسبه</button>
       <div class="spacer"></div>
       <button class="btn ghost" data-close type="button">بستن</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ بسته‌ی کارگاهی: برش‌نامه + لیست خرید ═══════════ -->
+  <div class="modal wide" id="modal-workshop" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3>🪚 بسته‌ی کارگاهی <span class="sub" id="wsProjectName"></span></h3>
+      <button class="icon-btn" data-close type="button" aria-label="بستن">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="ws-stats" id="wsStats"></div>
+      <div class="tabs" id="wsTabs" role="tablist">
+        <button class="tab active" data-wstab="cut" type="button" role="tab">برش‌نامه <span class="cnt" id="wsCntCut"></span></button>
+        <button class="tab" data-wstab="sheets" type="button" role="tab">خلاصه‌ی ورق <span class="cnt" id="wsCntSheets"></span></button>
+        <button class="tab" data-wstab="shop" type="button" role="tab">لیست خرید <span class="cnt" id="wsCntShop"></span></button>
+      </div>
+      <div class="ws-panel active" id="ws-cut"></div>
+      <div class="ws-panel" id="ws-sheets"></div>
+      <div class="ws-panel" id="ws-shop"></div>
+      <p class="tiny muted" style="margin-top:.7rem">
+        ابعاد برش‌نامه بر حسب <b>میلی‌متر</b> است و «طول» همیشه بُعد بزرگ‌تر نوشته می‌شود —
+        همان قراردادی که اپراتور ارّه‌ی پنل‌بر و دستگاه CNC انتظار دارد.
+        این اعداد از همان محاسبه‌ای می‌آیند که فاکتور از آن ساخته می‌شود.
+      </p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn outline" id="btnWsPrint" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        چاپ
+      </button>
+      <button class="btn primary" id="btnWsExcel" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        خروجی اکسل
+      </button>
+      <div class="spacer"></div>
+      <button class="btn ghost" data-close type="button">بستن</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ قیمت‌گیری سریع ═══════════ -->
+  <div class="modal" id="modal-quick" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3>⚡ قیمت‌گیری سریع</h3>
+      <button class="icon-btn" data-close type="button" aria-label="بستن">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="tiny muted" style="margin-bottom:.9rem">
+        مشتری زنگ زده و قیمت می‌خواهد؟ فقط متراژ و سبک را بدهید؛ کبیر یک پروژه‌ی
+        <b>واقعی</b> با یونیت‌های استاندارد و درهای هم‌اندازه می‌سازد که بعداً
+        می‌توانید دقیقش کنید. دیگر لازم نیست حدس بزنید.
+      </p>
+      <div class="grid2">
+        <div class="field" style="grid-column:1/-1"><label for="qkTitle">عنوان</label>
+          <input type="text" id="qkTitle" placeholder="مثلاً آشپزخانه ۴ متری هایگلاس"></div>
+        <div class="field"><label for="qkCustomer">نام مشتری</label><input type="text" id="qkCustomer"></div>
+        <div class="field"><label for="qkMobile">همراه</label><input type="tel" id="qkMobile" placeholder="۰۹۱۲…"></div>
+        <div class="field"><label for="qkGround">متراژ زمینی (متر طول)</label>
+          <input type="text" id="qkGround" inputmode="decimal" data-no-sep placeholder="۳٫۶"></div>
+        <div class="field"><label for="qkWall">متراژ دیواری (متر طول)</label>
+          <input type="text" id="qkWall" inputmode="decimal" data-no-sep placeholder="۳٫۰"></div>
+        <div class="field"><label for="qkStyle">سبک</label><select id="qkStyle"></select></div>
+        <div class="field"><label for="qkCounter">صفحه‌ی کابینت</label><select id="qkCounter"></select></div>
+        <div class="field"><label for="qkCounterLm">متر طول صفحه</label>
+          <input type="text" id="qkCounterLm" inputmode="decimal" data-no-sep placeholder="خالی = همان متراژ زمینی"></div>
+        <div class="field"><label for="qkDrawers">تعداد کشو</label>
+          <input type="text" id="qkDrawers" inputmode="numeric" value="۳" data-no-sep></div>
+        <div class="field"><label for="qkTall">کمد ایستاده</label>
+          <input type="text" id="qkTall" inputmode="numeric" value="۰" data-no-sep></div>
+      </div>
+      <div class="quick-preview" id="qkPreview" hidden></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn primary" id="btnQuickBuild" type="button">ساخت پروژه و مشاهده‌ی قیمت</button>
+      <div class="spacer"></div>
+      <button class="btn ghost" data-close type="button">انصراف</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ مدیریت الگوهای یونیت ═══════════ -->
+  <div class="modal" id="modal-templates" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3>📐 الگوهای یونیت</h3>
+      <button class="icon-btn" data-close type="button" aria-label="بستن">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="tiny muted" style="margin-bottom:.8rem">
+        یونیت‌های تکراری‌تان (یونیت سینک، یونیت گاز، کمد ایستاده و …) را یک‌بار
+        کامل بسازید و این‌جا ذخیره کنید؛ در هر پروژه‌ی بعدی با یک کلیک می‌آیند —
+        با همان متریال، درها و کشوها.
+      </p>
+      <div class="table-wrap"><table class="data" id="tplTable"></table></div>
+    </div>
+    <div class="modal-foot">
+      <div class="spacer"></div>
+      <button class="btn ghost" data-close type="button">بستن</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ ذخیره‌ی یونیت به‌عنوان الگو ═══════════ -->
+  <div class="modal" id="modal-tpl-save" role="dialog" aria-modal="true" style="width:min(28rem,100%)">
+    <div class="modal-head"><h3>ذخیره‌ی یونیت به‌عنوان الگو</h3>
+      <button class="icon-btn" data-close type="button" aria-label="بستن">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label for="tplName">نام الگو</label><input type="text" id="tplName" placeholder="مثلاً یونیت سینک ۹۰"></div>
+      <div class="field"><label for="tplNote">یادداشت (اختیاری)</label><input type="text" id="tplNote"></div>
+      <p class="tiny muted" id="tplSummary"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn primary" id="btnTplSave" type="button">ذخیره‌ی الگو</button>
+      <div class="spacer"></div>
+      <button class="btn ghost" data-close type="button">انصراف</button>
     </div>
   </div>
 

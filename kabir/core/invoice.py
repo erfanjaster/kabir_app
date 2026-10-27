@@ -98,6 +98,11 @@ def build_invoice_data(result: ProjectResult, project: Dict[str, Any],
         "vat_percent": result.vat_percent,
         "vat_amount": result.vat_amount,
         "final_price": result.final_price,
+        "deposit_percent": result.deposit_percent,
+        "deposit_amount": result.deposit_amount,
+        "remaining_amount": result.remaining_amount,
+        "price_per_ground_lm": result.price_per_ground_lm,
+        "price_per_total_lm": result.price_per_total_lm,
         "stats": result.stats,
     }
 
@@ -322,6 +327,14 @@ def render_html(data: Dict[str, Any], accent: str = "#0f766e") -> str:
         total_rows.append(trow(f"مالیات بر ارزش افزوده ({num(totals['vat_percent'], data)}٪)",
                                money(totals.get("vat_amount", 0), data)))
     total_rows.append(trow("مبلغ قابل پرداخت", money(totals.get("final_price", 0), data), "final"))
+    # پیش‌پرداخت (بیعانه) و باقی‌مانده — همان چیزی که مشتری می‌خواهد ببیند
+    if totals.get("deposit_amount"):
+        lbl = "پیش‌پرداخت"
+        if totals.get("deposit_percent"):
+            lbl += f" ({num(totals['deposit_percent'], data)}٪)"
+        total_rows.append(trow(lbl, "− " + money(totals.get("deposit_amount", 0), data)))
+        total_rows.append(trow("باقی‌مانده (هنگام تحویل/نصب)",
+                               money(totals.get("remaining_amount", 0), data), "final"))
 
     # --- آمار فنی ---
     stats_block = ""
@@ -338,6 +351,13 @@ def render_html(data: Dict[str, Any], accent: str = "#0f766e") -> str:
             ("نوار PVC", fa.fmt_number(st.get("total_banding_m", 0), 1, fa_digits) + " م"),
             ("ورق مصرفی", fa.fmt_number(st.get("total_sheets", 0), persian=fa_digits) + " ورق"),
         ]
+        # «متری چند؟» — زبان رایج بازار کابینت
+        ppm = totals.get("price_per_ground_lm") or 0
+        if ppm:
+            stat_items.append(("قیمت هر متر طول زمینی", money(ppm, data)))
+        ppt = totals.get("price_per_total_lm") or 0
+        if ppt:
+            stat_items.append(("قیمت هر متر طول کل", money(ppt, data)))
         stats_block = "<div class='stats'>" + "".join(
             f"<div class='stat'><b>{_esc(v)}</b>{_esc(k)}</div>" for k, v in stat_items) + "</div>"
 

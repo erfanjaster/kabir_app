@@ -1,52 +1,53 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Kabir - self-contained cross-platform updater
-=============================================
-Works even when it is the ONLY new file the user received, and even on
-installations that were extracted from a ZIP (no git folder).
+Kabir — به‌روزرسانِ خودبسنده و چندسکویی (ویندوز / لینوکس / مک)
+================================================================
+این فایل تنها چیزی است که کاربر برای به‌روز کردن نیاز دارد؛ حتی اگر نصبِ
+فعلی از یک ZIP استخراج شده باشد (بدون پوشه‌ی .git) کار می‌کند.
 
-What it does, in order:
-  1. Fetches the latest code into the app folder:
-       - "git pull --ff-only" if the folder is a git checkout, otherwise
-       - downloads the repository ZIP from GitHub and overlays the files
-         (existing extra files are never deleted; user data is not here).
-  2. Installs/updates Python dependencies (requirements.txt).
-  3. Creates a pre-update backup of the database, then applies migrations
-     WITHOUT touching user data (projects, materials, invoices, settings).
-  4. Recalculates project prices with the current material rates.
+مراحل، به ترتیب:
+  ۱) گرفتن کدِ نسخه‌ی تازه در پوشه‌ی برنامه:
+       - اگر پوشه checkout گیت است: «git pull --ff-only»
+       - وگرنه: دانلود ZIP مخزن از گیت‌هاب و جایگذاری فایل‌ها
+         (فایل‌های اضافه‌ی کاربر هرگز پاک نمی‌شوند)
+  ۲) نصب/به‌روزرسانی وابستگی‌های پایتون (requirements.txt)
+  ۳) پشتیبان‌گیری از پایگاه‌داده، سپس مهاجرتِ امن
+  ۴) بازمحاسبه‌ی قیمت پروژه‌ها با نرخ‌های جاری
 
-User data lives OUTSIDE the program folder, so updating code never
-destroys it:
-  Windows : %APPDATA%\\KabirCabinet
-  Linux   : ~/.local/share/KabirCabinet
-  macOS   : ~/Library/Application Support/KabirCabinet
+داده‌های کاربر «بیرون» از پوشه‌ی برنامه نگه داشته می‌شوند، پس به‌روزرسانیِ کد
+هرگز آن‌ها را از بین نمی‌برد:
+  ویندوز : %APPDATA%\\KabirCabinet
+  لینوکس : ~/.local/share/KabirCabinet
+  مک     : ~/Library/Application Support/KabirCabinet
 
-Usage:
-  python update.py                      update the folder this script is in
-  python update.py --app-dir "C:\\Kabir"  update another folder
-  python update.py --force-zip          download ZIP even if git is available
-  python update.py --no-fetch           skip code download (deps+migrate only)
-  python update.py --skip-deps          do not touch pip packages
-  python update.py --no-backup          skip the pre-update database backup
-  python update.py --no-recalc          skip project price recalculation
+اجرا:
+  python update.py                        به‌روزرسانیِ همان پوشه‌ای که اسکریپت در آن است
+  python update.py --app-dir "C:\\Kabir"  به‌روزرسانیِ پوشه‌ای دیگر
+  python update.py --force-zip            دانلود ZIP حتی اگر گیت در دسترس است
+  python update.py --no-fetch             فقط وابستگی‌ها + مهاجرت (بدون دانلود کد)
+  python update.py --skip-deps            دست‌نزدن به بسته‌های pip
+  python update.py --no-backup            رد کردن پشتیبان‌گیریِ پیش از به‌روزرسانی
+  python update.py --no-recalc            رد کردن بازمحاسبه‌ی قیمت پروژه‌ها
 
-Windows specifics handled here (these were real crashes before):
-  * pythonw.exe / "no console" launches  -> stdout is None, every print()
-    used to raise AttributeError.
-  * legacy console code pages (cp1252/cp437/cp1025...) + Persian paths or
-    non-ASCII error text -> UnicodeEncodeError while printing.
-  * files locked by a running Kabir instance -> PermissionError
-    (WinError 32/5) right in the middle of the ZIP overlay, leaving a
-    half-updated installation.
-  * files extracted from a ZIP that are read-only -> os.replace() refused.
-  * writes into a protected folder (C:\\Program Files\\...) -> traceback.
-  * overwriting in place instead of an atomic rename -> truncated files if
-    the update is interrupted (power loss, antivirus, Ctrl+C).
-  * stale __pycache__ next to freshly overlaid sources.
+مشکلات ویندوزی که این‌جا حل شده‌اند (همه قبلاً crash واقعی بودند):
+  * اجرای pythonw.exe / بدون کنسول → stdout مقدار None است و هر print()
+    با AttributeError می‌ترکید.
+  * code page قدیمی کنسول (cp1252/cp437/…) + مسیر فارسی → UnicodeEncodeError.
+  * فایل‌های قفل‌شده توسط کبیرِ در حال اجرا → PermissionError (WinError 32/5)
+    وسطِ جایگذاری ZIP و نصبِ نیمه‌تمام.
+  * فایل‌های فقط‌خواندنیِ استخراج‌شده از ZIP → os.replace() رد می‌کرد.
+  * نوشتن در پوشه‌ی محافظت‌شده (C:\\Program Files) → traceback.
+  * نوشتنِ درجا به‌جای rename اتمیک → فایلِ نیمه‌نویس هنگام قطعی برق/Ctrl+C.
+  * __pycache__ کهنه کنار کدِ تازه.
+  * مسیرهای بلندتر از ۲۶۰ نویسه (prefix «\\\\?\\»).
 
-All console output is ASCII-only so it renders correctly everywhere
-(including the Windows console). Only the Python standard library is used.
+مشکلات لینوکس/مک که حل شده‌اند:
+  * ZIP گیت‌هاب «مجوز اجرا» را نگه نمی‌دارد → run.sh/update.sh بعد از
+    به‌روزرسانی غیرقابل‌اجرا می‌شدند (۶۴۴). این‌جا مجوز اجرا بازمی‌گردد.
+
+خروجیِ کنسول عمداً فقط ASCII است تا روی هر کنسولی درست نمایش داده شود.
+فقط از کتابخانه‌ی استاندارد پایتون استفاده می‌شود.
 """
 
 from __future__ import annotations
@@ -61,6 +62,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -70,31 +72,43 @@ REPO_ZIP_URL = "https://github.com/erfanjaster/kabir_app/archive/refs/heads/main
 
 IS_WINDOWS = os.name == "nt"
 
-# Files that must not be replaced while they may be running (Windows cmd
-# re-reads .bat files line by line; replacing one mid-run corrupts it).
-# Compared case-insensitively because Windows filenames are.
-_SKIP_ON_WINDOWS = {"update.bat", "update.cmd"}
+#: فایل‌هایی که نباید جایگزین شوند چون ممکن است «همین الان» در حال اجرا باشند.
+#: cmd.exe فایل .bat/.cmd را خط‌به‌خط می‌خواند و بازنویسیِ میانه‌ی اجرا خرابش
+#: می‌کند. (در لینوکس/مک، update.sh با `exec` جای خودش را به پایتون می‌دهد،
+#: پس بازنویسی‌اش بی‌خطر است.) مقایسه بدون توجه به بزرگی/کوچکی حروف است.
+_SKIP_WHILE_RUNNING = {"update.bat", "update.cmd"}
 
-# Never copied from the archive / never kept next to the new sources.
-_IGNORED_TOP_DIRS = {".git", "__pycache__"}
+#: هرگز از آرشیو کپی نمی‌شوند — در «هر» سطحی از مسیر، نه فقط سطح اول.
+#: (یک ZIP آینه‌شده می‌تواند .git یا __pycache__ تودرتو داشته باشد و کپی‌شدنِ
+#:  .git تودرتو، تاریخچه‌ی گیتِ کاربر را خراب می‌کند.)
+_IGNORED_DIR_NAMES = {".git", "__pycache__", ".hg", ".svn"}
 
-# Suffix used for the temp file created next to a target while replacing it.
+#: پسوندِ فایل موقتِ کنارِ مقصد، برای جایگزینیِ اتمیک
 _TMP_SUFFIX = ".kabirnew"
+
+#: فایل‌هایی که در لینوکس/مک باید مجوز اجرا بگیرند
+_EXECUTABLE_SUFFIXES = {".sh", ".bash", ".command"}
+
+#: مهلت‌های پیش‌فرض (ثانیه). pip روی اینترنت کند یا هنگام ساختِ بسته‌ی بومی
+#: می‌تواند خیلی طول بکشد، پس مهلتِ جداگانه و بلندتری دارد.
+_TIMEOUT_DEFAULT = 600
+_TIMEOUT_PIP = 1800
 
 
 # ---------------------------------------------------------------------------
-# console / printing (must run before anything prints)
+# کنسول
 # ---------------------------------------------------------------------------
 
 def _init_console() -> None:
-    """Make printing impossible to crash on Windows.
+    """چاپ کردن را روی ویندوز غیرقابل‌خراب‌شدن می‌کند.
 
-    Two distinct failure modes:
-      * pythonw.exe (double-clicked .py/.pyw, or a shortcut with "Hidden"
-        window): sys.stdout / sys.stderr are None -> print() raises
-        AttributeError: 'NoneType' object has no attribute 'write'.
-      * a legacy console code page that cannot encode the text (Persian
-        paths, localized OSError messages) -> UnicodeEncodeError.
+    دو حالت خرابیِ جدا:
+      * pythonw.exe (دابل‌کلیک روی .py/.pyw یا میان‌بُرِ «Hidden»):
+        sys.stdout / sys.stderr مقدار None هستند → print() با
+        AttributeError: 'NoneType' object has no attribute 'write' می‌ترکد.
+      * code page قدیمی کنسول که نمی‌تواند متن را رمزگذاری کند (مسیر فارسی،
+        پیام خطای محلی‌شده) → UnicodeEncodeError.
+      * جریانِ بسته‌شده (کنسول بسته شده ولی فرایند زنده است).
     """
     for name in ("stdout", "stderr"):
         stream = getattr(sys, name, None)
@@ -105,10 +119,15 @@ def _init_console() -> None:
                 pass
             continue
         try:
-            # errors="replace" degrades gracefully instead of raising.
+            if stream.closed:
+                setattr(sys, name, open(os.devnull, "w", encoding="utf-8"))
+                continue
+        except (AttributeError, OSError):
+            pass
+        try:
+            # errors="replace" به‌جای ترکیدن، نویسه‌ی جایگزین می‌گذارد.
             stream.reconfigure(encoding="utf-8", errors="replace")
         except (AttributeError, ValueError, OSError):
-            # Python < 3.7, or a stream that refuses to be reconfigured.
             pass
 
 
@@ -120,8 +139,8 @@ def _hr(title: str = "") -> None:
 
 
 def _child_env() -> dict:
-    """Env for child Python processes: UTF-8 output, so pip/migrate never
-    die on a Windows code page either."""
+    """محیط برای فرایندهای فرزندان: خروجی UTF-8 تا pip/migrate هم روی
+    code page ویندوزی نمیرند."""
     env = os.environ.copy()
     env.setdefault("PYTHONUTF8", "1")
     env.setdefault("PYTHONIOENCODING", "utf-8")
@@ -129,26 +148,35 @@ def _child_env() -> dict:
     return env
 
 
-def _run(cmd: Sequence, cwd, quiet: bool = False) -> int:
-    # Keep our own output in order relative to the child's output when the
-    # console is a file / pipe (Windows cmd without a real console does that).
+def _run(cmd: Sequence, cwd: Path, quiet: bool = False,
+         timeout: int = _TIMEOUT_DEFAULT) -> int:
+    """اجرای یک فرمان و برگرداندن کد خروج آن (بدون shell=True)."""
+    if not quiet:
+        cmd_str = " ".join(f'"{c}"' if " " in str(c) else str(c) for c in cmd)
+        print(f"  $ {cmd_str}")
+    # ★ مهم: «بعد از» چاپِ فرمان flush می‌کنیم، نه قبل از آن. وگرنه وقتی خروجی
+    #   به pipe/فایل می‌رود، متنِ فرزند زودتر از عنوانِ فرمانِ خودمان روی
+    #   دیسک می‌نشیند و لاگ به هم ریخته نشان داده می‌شود (فرمان بعد از
+    #   خروجیِ خودش چاپ می‌شد).
     try:
         sys.stdout.flush()
     except (AttributeError, ValueError, OSError):
         pass
-    if not quiet:
-        print(f"  $ {' '.join(str(c) for c in cmd)}")
     try:
-        # No shell=True: the argument list is passed straight to Windows and
-        # spaces / non-ASCII characters in paths are preserved.
         return subprocess.run(
             [str(c) for c in cmd],
+            # نکته: مسیر cwd را با prefix «\\?\» به CreateProcess نمی‌دهیم؛
+            # برخی ابزارها (pip/git) آن را درست تفسیر نمی‌کنند.
             cwd=str(cwd),
             env=_child_env(),
+            timeout=timeout,
         ).returncode
     except FileNotFoundError:
         print(f"  [WARN] Command not found: {cmd[0]}")
         return 127
+    except subprocess.TimeoutExpired:
+        print(f"  [WARN] Command timed out after {timeout // 60} minute(s): {cmd[0]}")
+        return 124
     except OSError as exc:
         print(f"  [WARN] Could not start {cmd[0]}: {exc}")
         return 126
@@ -160,120 +188,187 @@ def _die(msg: str, code: int = 1):
 
 
 # ---------------------------------------------------------------------------
-# file helpers (Windows-safe replace)
+# کمکی‌های فایل
 # ---------------------------------------------------------------------------
 
-def _win_long(path: Path) -> str:
-    """Return a string usable for very long paths on Windows (> MAX_PATH).
-
-    Without the \\\\?\\ prefix, os/shutil calls fail with
-    [WinError 206] / [Errno 2] on deeply nested folders.
-    """
+def _win_long(path) -> str:
+    """مسیرِ بلندِ ویندوزی: برای مسیرهای >۲۴۰ نویسه prefix «\\\\?\\» می‌گذارد."""
     s = str(path)
     if IS_WINDOWS and len(s) > 240 and not s.startswith("\\\\?\\"):
         try:
-            s = "\\\\?\\" + os.path.abspath(s)
+            abs_path = os.path.abspath(s)
+            if len(abs_path) > 240:
+                return "\\\\?\\" + abs_path
         except OSError:
             pass
     return s
 
 
+def _safe_path(path) -> str:
+    """مسیرِ امن برای عملیات فایل (روی لینوکس/مک همان str ساده)."""
+    return _win_long(path) if IS_WINDOWS else str(path)
+
+
 def _remove_quietly(path: Path) -> None:
     try:
-        if path.exists():
+        # exists() سمبُلینک را دنبال می‌کند، پس برای سمبُلینکِ شکسته
+        # is_symlink() هم لازم است.
+        if path.exists() or path.is_symlink():
             try:
-                os.chmod(_win_long(path), stat.S_IWRITE)
+                os.chmod(_safe_path(path), stat.S_IWRITE | stat.S_IREAD)
             except OSError:
                 pass
-            os.unlink(_win_long(path))
+            try:
+                os.unlink(_safe_path(path))
+            except PermissionError:
+                # روی ویندوز ممکن است آنتی‌ویروس لحظه‌ای قفلش کرده باشد.
+                time.sleep(0.5)
+                try:
+                    os.unlink(_safe_path(path))
+                except OSError:
+                    pass
+    except OSError:
+        pass
+
+
+def _apply_permissions(src: Path, dst: Path) -> None:
+    """مجوزهای درست را روی فایلِ مقصد می‌گذارد.
+
+    روی ویندوز فقط زمان/صفت‌ها کپی می‌شود. روی لینوکس/مک مجوزِ همان فایلِ
+    مبدأ گرفته می‌شود و برای اسکریپت‌ها (run.sh و…) «مجوز اجرا» اضافه
+    می‌شود — چون ZIP گیت‌هاب این بیت را نگه نمی‌دارد و بدون آن، برنامه بعد از
+    به‌روزرسانی با «Permission denied» اجرا نمی‌شد.
+    """
+    if IS_WINDOWS:
+        try:
+            shutil.copystat(_safe_path(src), _safe_path(dst))
+        except OSError:
+            pass
+        return
+
+    try:
+        mode = src.stat().st_mode & 0o7777
+    except OSError:
+        mode = 0o644
+
+    if src.suffix.lower() in _EXECUTABLE_SUFFIXES:
+        mode |= stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+
+    try:
+        os.chmod(_safe_path(dst), mode)
     except OSError:
         pass
 
 
 def _replace_file(src: Path, dst: Path, retries: int = 5) -> None:
-    """Atomically install `src` at `dst`, surviving Windows file locks.
+    """جایگذاریِ اتمیکِ `src` در `dst`، با تحملِ قفل‌های ویندوزی.
 
-    * The data is first written to a temp file in the *destination* folder
-      and then renamed with os.replace(), which is atomic on NTFS. A crash
-      can therefore never leave a half-written .py next to the old one
-      (the previous behaviour with shutil.copy2 truncated files in place).
-    * PermissionError (WinError 32 "being used by another process" /
-      WinError 5 "access denied" from a read-only file) is retried a few
-      times, because antivirus scanners and a closing app release their
-      handles after a moment.
+    * داده اول در یک فایلِ موقت «در همان پوشه‌ی مقصد» نوشته می‌شود و بعد با
+      os.replace() تغییر نام می‌یابد که روی NTFS اتمیک است. پس قطعی برق
+      هرگز فایلِ نیمه‌نوشته کنارِ فایل قبلی نمی‌گذارد.
+    * PermissionError (WinError 32 «being used by another process» یا
+      WinError 5 «access denied» برای فایلِ فقط‌خواندنی) چند بار با مکث
+      تکرار می‌شود، چون آنتی‌ویروس و برنامه‌ی در حالِ بسته‌شدن پس از لحظه‌ای
+      دسته‌شان را آزاد می‌کنند.
     """
     dst.parent.mkdir(parents=True, exist_ok=True)
     tmp = dst.with_name(dst.name + _TMP_SUFFIX)
     _remove_quietly(tmp)
-    shutil.copyfile(_win_long(src), _win_long(tmp))
-    try:
-        shutil.copystat(_win_long(src), _win_long(tmp))
-    except OSError:
-        pass  # timestamps are cosmetic; never fail an update over them
+
+    shutil.copyfile(_safe_path(src), _safe_path(tmp))
+    _apply_permissions(src, tmp)
 
     last_exc: Optional[BaseException] = None
-    for attempt in range(retries):
+    for attempt in range(max(1, retries)):
         try:
             if IS_WINDOWS and dst.exists():
-                # A file extracted from a ZIP / restored from a backup can be
-                # read-only, and os.replace() then fails on the target.
+                # فایلی که از ZIP استخراج شده می‌تواند فقط‌خواندنی باشد و
+                # os.replace() روی مقصد شکست بخورد.
                 try:
-                    os.chmod(_win_long(dst), stat.S_IWRITE)
+                    os.chmod(_safe_path(dst), stat.S_IWRITE | stat.S_IREAD)
                 except OSError:
                     pass
-            os.replace(_win_long(tmp), _win_long(dst))
+            os.replace(_safe_path(tmp), _safe_path(dst))
             return
-        except PermissionError as exc:          # locked or read-only
+        except PermissionError as exc:              # قفل یا فقط‌خواندنی
             last_exc = exc
-            time.sleep(0.2 * (attempt + 1))
-        except OSError as exc:                  # disk full, path too long...
+            time.sleep((0.5 if IS_WINDOWS else 0.2) * (attempt + 1))
+        except OSError as exc:                      # دیسک پر، مسیر بلند، …
             last_exc = exc
-            break
+            text = str(exc)
+            if "Device or resource busy" in text or "Access denied" in text:
+                time.sleep(0.5 * (attempt + 1))
+            else:
+                break
 
     _remove_quietly(tmp)
-    assert last_exc is not None
+    # ★ به‌جای assert (که با python -O حذف می‌شود و raise None می‌سازد)
+    #   یک خطای روشن و همیشگی پرتاب می‌کنیم.
+    if last_exc is None:
+        raise RuntimeError(f"Could not install {dst} (unknown reason).")
     raise last_exc
 
 
 def _purge_pycache(root: Path) -> int:
-    """Delete stale __pycache__ folders after the ZIP overlay.
-
-    Windows keeps .pyc files locked for a moment and OneDrive/antivirus can
-    hold them longer, so failures are ignored on purpose: a stale cache is
-    harmless, a crash is not.
-    """
     removed = 0
     for dirpath, dirnames, _files in os.walk(str(root)):
         for d in list(dirnames):
             if d == "__pycache__":
-                dirnames.remove(d)
-                shutil.rmtree(os.path.join(dirpath, d), ignore_errors=True)
-                removed += 1
+                dirnames.remove(d)          # تا os.walk داخلش نرود
+                target = Path(dirpath) / d
+                try:
+                    shutil.rmtree(str(target), ignore_errors=False)
+                    removed += 1
+                except OSError as exc:
+                    if IS_WINDOWS:
+                        print(f"  [WARN] Could not remove {target} "
+                              f"(files may be locked): {exc.__class__.__name__}")
     return removed
 
 
 # ---------------------------------------------------------------------------
-# misc helpers
+# متفرقه
 # ---------------------------------------------------------------------------
 
-def _download(url: str, dest: Path, timeout: int = 180) -> None:
-    req = urllib.request.Request(url, headers={"User-Agent": "kabir-updater"})
-    with urllib.request.urlopen(req, timeout=timeout) as r, open(dest, "wb") as f:
-        shutil.copyfileobj(r, f)
+def _download(url: str, dest: Path, timeout: int = 180, attempts: int = 2) -> None:
+    """دانلود با تلاشِ دوباره و پیام خطای تفکیک‌شده.
+
+    ★ ترتیب except مهم است: HTTPError «زیرکلاسِ» URLError است، پس اگر
+      URLError اول بیاید، شاخه‌ی HTTPError هرگز اجرا نمی‌شود و خطای ۴۰۴
+      به‌شکلِ گمراه‌کننده‌ی «Network error: Not Found» گزارش می‌شد.
+    """
+    last: Optional[BaseException] = None
+    for i in range(max(1, attempts)):
+        if i:
+            time.sleep(1.5 * i)
+            print(f"  [WARN] Retrying download ({i + 1}/{attempts}) ...")
+        req = urllib.request.Request(url, headers={"User-Agent": "kabir-updater"})
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r, open(dest, "wb") as f:
+                shutil.copyfileobj(r, f)
+            return
+        except urllib.error.HTTPError as exc:            # باید اول بیاید
+            # ۴۰۴/۴۰۳ یعنی آدرس یا دسترسی غلط است؛ تلاشِ دوباره فایده ندارد.
+            raise OSError(f"HTTP error {exc.code}: {exc.reason}") from exc
+        except urllib.error.URLError as exc:
+            reason = getattr(exc, "reason", exc)
+            last = OSError(f"Network error: {reason}")
+        except OSError as exc:                           # timeout، قطع اتصال، …
+            last = exc
+    raise OSError(str(last) if last else "Download failed.") from last
 
 
 def read_version(app_dir: Path) -> str:
-    """Read the app version from disk WITHOUT importing it (safe pre-update)."""
     try:
-        text = (app_dir / "kabir" / "__init__.py").read_text(encoding="utf-8")
-        m = re.search(r'__version__\s*=\s*"([^"]+)"', text)
+        text = (app_dir / "kabir" / "__init__.py").read_text(
+            encoding="utf-8", errors="replace")
+        m = re.search(r'__version__\s*=\s*[\'"]([^\'"]+)[\'"]', text)
         return m.group(1) if m else "unknown"
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return "(not installed yet)"
 
 
 def _find_repo_root(base: Path) -> Optional[Path]:
-    """GitHub ZIPs extract into a single top folder (kabir_app-<branch>)."""
     if (base / "main.py").is_file():
         return base
     try:
@@ -310,7 +405,7 @@ def _warn_if_server_running() -> None:
 
 
 # ---------------------------------------------------------------------------
-# step 1: fetch the latest code
+# گام ۱ — کد
 # ---------------------------------------------------------------------------
 
 def git_update(app_dir: Path) -> bool:
@@ -319,6 +414,9 @@ def git_update(app_dir: Path) -> bool:
         return False
     print("  Folder is a git checkout - trying 'git pull --ff-only' ...")
     if _run([git, "pull", "--ff-only"], cwd=app_dir) == 0:
+        cache = _purge_pycache(app_dir)
+        if cache:
+            print(f"  Cleared {cache} stale __pycache__ folder(s).")
         return True
     print("  [WARN] git pull failed (local changes or diverged history).")
     print("         Falling back to the ZIP download ...")
@@ -326,11 +424,6 @@ def git_update(app_dir: Path) -> bool:
 
 
 def zip_update(app_dir: Path) -> List[str]:
-    """Download the repository ZIP and overlay it on app_dir.
-
-    Returns the list of files that could NOT be replaced (normally: open by
-    a running Kabir or an antivirus). An empty list means "fully updated".
-    """
     url = os.environ.get("KABIR_UPDATE_ZIP_URL") or REPO_ZIP_URL
     print("  Downloading the latest version from GitHub ...")
     print(f"    {url}")
@@ -339,64 +432,102 @@ def zip_update(app_dir: Path) -> List[str]:
     failed: List[str] = []
     try:
         zpath = tmp / "repo.zip"
-        _download(url, zpath)
+        try:
+            _download(url, zpath)
+        except OSError as exc:
+            _die(f"[ERROR] Could not download the update: {exc}\n"
+                 "        Check your internet connection (or proxy settings) "
+                 "and try again.", 2)
+
         print(f"  Downloaded {zpath.stat().st_size // 1024} KB - extracting ...")
 
         ex = tmp / "ex"
-        with zipfile.ZipFile(zpath) as zf:
-            bad = zf.testzip()
-            if bad is not None:
-                _die(f"[ERROR] The downloaded archive is corrupt ({bad}). "
-                     "Aborting; nothing was changed.", 2)
-            zf.extractall(ex)
+        try:
+            with zipfile.ZipFile(zpath) as zf:
+                bad = zf.testzip()
+                if bad is not None:
+                    _die(f"[ERROR] The downloaded archive is corrupt ({bad}). "
+                         "Aborting; nothing was changed.", 2)
+                # extractall خودش مسیرهای مطلق و «..» را پاکسازی می‌کند
+                # (Zip-Slip ایمن)، ولی بعداً هم با _is_within چک می‌کنیم.
+                zf.extractall(ex)
+        except zipfile.BadZipFile as exc:
+            _die(f"[ERROR] The downloaded archive is not a valid ZIP file "
+                 f"({exc}). Aborting.", 2)
+        except OSError as exc:
+            _die(f"[ERROR] Could not extract the archive: {exc}", 2)
 
         src = _find_repo_root(ex)
         if src is None:
             _die("[ERROR] The downloaded archive has an unexpected structure "
                  "(main.py not found). Aborting.", 2)
 
-        skip = {n.lower() for n in _SKIP_ON_WINDOWS} if IS_WINDOWS else set()
+        skip = {n.lower() for n in _SKIP_WHILE_RUNNING} if IS_WINDOWS else set()
         n = 0
         for item in sorted(src.rglob("*")):
             rel = item.relative_to(src)
             if not rel.parts:
                 continue
-            # .git / __pycache__ anywhere in the tree, not only at the top.
-            if any(part in _IGNORED_TOP_DIRS for part in rel.parts):
+
+            # ★ «هر» بخشی از مسیر که نامِ ممنوعه دارد رد می‌شود، نه فقط بخشِ
+            #   اول. بررسیِ تنها-سطحِ-اول باعث می‌شد یک .git تودرتو (در ZIP
+            #   آینه‌شده) داخل پوشه‌ی نصب کپی شود و تاریخچه‌ی گیتِ کاربر
+            #   خراب شود.
+            if any(part in _IGNORED_DIR_NAMES for part in rel.parts):
                 continue
 
             dest = app_dir / rel
-
-            # Refuse anything that would escape the app folder ("zip slip").
             if not _is_within(dest, app_dir):
                 print(f"  [WARN] Skipping unsafe path: {rel}")
                 continue
 
             if item.is_dir():
                 try:
+                    # اگر مقصد سمبُلینک یا فایلِ هم‌نام است، اول برداریم؛
+                    # وگرنه mkdir شکست می‌خورد.
+                    if dest.is_symlink():
+                        dest.unlink()
+                    elif dest.exists() and not dest.is_dir():
+                        dest.unlink()
                     dest.mkdir(parents=True, exist_ok=True)
                 except OSError as exc:
                     print(f"  [WARN] Cannot create {rel}: {exc}")
                     failed.append(str(rel))
                 continue
 
-            if len(rel.parts) == 1 and rel.name.lower() in skip:
-                # Never replace the Windows script that may be running now.
+            # فایل‌های .bat/.cmd فقط وقتی از قبل موجودند رد می‌شوند (چون ممکن
+            # است همین الان در حال اجرا باشند)؛ اگر نباشند، نصب می‌شوند.
+            if (len(rel.parts) == 1 and rel.name.lower() in skip
+                    and (app_dir / rel).exists()):
                 print(f"  [NOTE] Left {rel.name} untouched (it may be running).")
                 continue
 
             try:
                 _replace_file(item, dest)
                 n += 1
+            except PermissionError as exc:
+                print(f"  [WARN] Permission denied replacing {rel}: {exc}")
+                if IS_WINDOWS:
+                    print("           File may be locked or in use. Try closing Kabir.")
+                failed.append(str(rel))
             except OSError as exc:
-                # Locked / read-only / no permission: keep the rest going so
-                # the user sees the full picture instead of a traceback.
                 print(f"  [WARN] Could not replace {rel}: {exc}")
                 failed.append(str(rel))
 
         cache_dirs = _purge_pycache(app_dir)
         if cache_dirs:
             print(f"  Cleared {cache_dirs} stale __pycache__ folder(s).")
+
+        # اسکریپت‌های اجراییِ ریشه باید قابل‌اجرا بمانند (ZIP گیت‌هاب بیتِ
+        # اجرا را نگه نمی‌دارد).
+        if not IS_WINDOWS:
+            for name in ("run.sh", "update.sh", "install.sh", "web.py"):
+                f = app_dir / name
+                if f.is_file() and not f.is_symlink() and f.suffix in _EXECUTABLE_SUFFIXES:
+                    try:
+                        f.chmod(f.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+                    except OSError:
+                        pass
 
         if failed:
             print(f"  [WARN] {n} file(s) installed, {len(failed)} file(s) NOT "
@@ -409,8 +540,6 @@ def zip_update(app_dir: Path) -> List[str]:
             print(f"  [OK] {n} file(s) installed into: {app_dir}")
         return failed
     finally:
-        # On Windows a still-open handle (antivirus) can make rmtree fail or
-        # raise; the temp folder is disposable, so give up quietly.
         shutil.rmtree(tmp, ignore_errors=True)
 
 
@@ -424,8 +553,6 @@ def step_fetch_code(app_dir: Path, no_fetch: bool, force_zip: bool) -> str:
 
     failed = zip_update(app_dir)
     if failed:
-        # Abort BEFORE touching dependencies or the database: a half-updated
-        # tree plus a migration run against a live DB is the worst case.
         _die("\n[ERROR] The program folder is partially updated because some "
              "files are in use.\n"
              "        Close Kabir (and any opened file inside the program "
@@ -435,7 +562,7 @@ def step_fetch_code(app_dir: Path, no_fetch: bool, force_zip: bool) -> str:
 
 
 # ---------------------------------------------------------------------------
-# step 2: dependencies
+# گام ۲ — وابستگی‌ها
 # ---------------------------------------------------------------------------
 
 def step_deps(app_dir: Path, skip: bool) -> None:
@@ -449,22 +576,30 @@ def step_deps(app_dir: Path, skip: bool) -> None:
         return
 
     if _run([sys.executable, "-m", "pip", "--version"],
-            cwd=app_dir, quiet=True) != 0:
+            cwd=app_dir, quiet=True, timeout=120) != 0:
         print("  pip is not available - trying 'ensurepip' ...")
-        _run([sys.executable, "-m", "ensurepip", "--upgrade"], cwd=app_dir)
+        _run([sys.executable, "-m", "ensurepip", "--upgrade"], cwd=app_dir,
+             timeout=300)
 
-    code = _run([sys.executable, "-m", "pip", "install", "-r", str(req)],
-                cwd=app_dir)
-    if code != 0:
+    code = _run([sys.executable, "-m", "pip", "install", "-r", _safe_path(req)],
+                cwd=app_dir, timeout=_TIMEOUT_PIP)
+    if code == 124:
+        print("  [WARN] pip did not finish in time. Re-run the updater with a")
+        print("         faster connection, or install requirements.txt manually.")
+    elif code != 0:
         print("  [WARN] Some dependencies failed to install.")
         print("         The core app still runs; PDF/Excel exports may be limited.")
         if IS_WINDOWS:
             print("         If this folder is protected (e.g. C:\\Program Files),")
             print("         move Kabir to a user folder such as C:\\Kabir and retry.")
+            print("         Or run this updater as Administrator.")
+        else:
+            print("         If this folder is protected (e.g. /opt or /usr/local),")
+            print("         try running with sudo or move Kabir to your home folder.")
 
 
 # ---------------------------------------------------------------------------
-# step 3: backup + migrate + recalc (in a fresh subprocess => runs the NEW code)
+# گام ۳ — پایگاه‌داده
 # ---------------------------------------------------------------------------
 
 def step_migrate(app_dir: Path, no_backup: bool, no_recalc: bool) -> None:
@@ -477,8 +612,16 @@ def step_migrate(app_dir: Path, no_backup: bool, no_recalc: bool) -> None:
         cmd.append("--no-backup")
     if not no_recalc:
         cmd.append("--recalc")
-    code = _run(cmd, cwd=app_dir)
+    code = _run(cmd, cwd=app_dir, timeout=_TIMEOUT_DEFAULT)
     if code != 0:
+        if code == 124:
+            # در این حالت «نمی‌دانیم» مهاجرت تا کجا رفته، پس صادقانه می‌گوییم
+            # از پشتیبان برگردانید — نه اینکه ادعا کنیم داده دست‌نخورده است.
+            _die("[ERROR] Database migration timed out. Its final state is "
+                 "unknown.\n"
+                 "        Re-run this updater; if it fails again, restore the "
+                 "latest backup\n"
+                 "        from the 'backups' folder inside your data directory.", 3)
         _die("[ERROR] Database migration failed (exit code "
              f"{code}). Your data was not modified after the backup; "
              "check the messages above.", 3)
@@ -510,8 +653,6 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
 
     if args.app_dir:
-        # expandvars: lets "%APPDATA%\\..." work even from PowerShell, where
-        # single quotes prevent cmd's own expansion.
         app_dir = Path(os.path.expandvars(
             os.path.expanduser(args.app_dir))).resolve()
     else:
@@ -523,6 +664,7 @@ def main(argv=None) -> int:
     print(f"  App folder        : {app_dir}")
     print(f"  Version on disk   : {read_version(app_dir)}")
     print(f"  Platform          : {'Windows' if IS_WINDOWS else os.name}")
+    print(f"  Python            : {sys.version.split()[0]}")
     _warn_if_server_running()
 
     try:
@@ -541,12 +683,21 @@ def main(argv=None) -> int:
                   "folder and retry.")
             print("          - Do not install Kabir under C:\\Program Files; "
                   "use e.g. C:\\Kabir.")
-            print("          - Or start this updater as Administrator.")
+            print("          - Or start this updater as Administrator "
+                  "(right-click > Run as Administrator).")
+        else:
+            print("          - Check folder permissions (e.g. ls -ld <folder>).")
+            print("          - If installed in /opt or /usr, run with sudo:")
+            print(f"            sudo {sys.argv[0]}")
+            print("          - Or move Kabir to your home folder.")
         return 5
     except OSError as exc:
         _hr("Update failed")
         print("  [ERROR] Filesystem error - nothing else was attempted.")
         print(f"          {exc}")
+        if IS_WINDOWS and "206" in str(exc):
+            print("          (Path too long - move Kabir to a shorter path "
+                  "like C:\\Kabir)")
         return 6
 
     print()
@@ -557,6 +708,7 @@ def main(argv=None) -> int:
         print("  (or: python main.py)")
     else:
         print(f'    "{app_dir}/run.sh"')
+        print(f"  (or: python3 {app_dir}/main.py)")
     print()
     return 0
 

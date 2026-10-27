@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 # ---------------------------------------------------------------------------
 # ثابت‌ها
@@ -196,6 +196,10 @@ class DoorRow:
     packaging_price: float = 0.0
     glass: bool = False
     note: str = ""
+    #: ★ «در از ورق بدنه» — اگر تیک خورده باشد، لنگه‌ها به‌جای ورقِ جداگانه‌ی در،
+    #:   از همان ورقی برش می‌خورند که بدنه‌ی یونیت از آن است. این‌طور مساحت در
+    #:   با مساحت بدنه یک‌جا گرد می‌شود و ورق کم‌تری خریداری می‌شود.
+    from_body: bool = False
 
     @property
     def leaves(self) -> int:
@@ -429,6 +433,9 @@ class Page:
     banding_waste_percent: float = 8.0
     # صفحه‌ی کابینت به‌صورت کلی
     countertop_lm: float = 0.0
+    # طول اندازه‌گیری‌شده‌ی دیوار (سانتی‌متر) — فقط برای کنترل خطا در ویرایشگر؛
+    # در محاسبه‌ی قیمت اثری ندارد.
+    wall_length_cm: float = 0.0
     note: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
@@ -464,6 +471,12 @@ class LineItem:
     unit_price: float = 0.0
     amount: float = 0.0
     visible: bool = True
+    # --- داده‌های کمکی برای تجمیع ورق، برش‌نامه و لیست خرید ---
+    mat_id: int = 0                 # شناسه‌ی متریال (برای گروه‌بندی/لیست خرید)
+    mat_cat: str = ""               # دسته‌ی متریال
+    area_sqm: float = 0.0           # مساحت مصرفی با احتساب پرت (م²)
+    sheet_area_sqm: float = 0.0     # مساحت یک ورقِ این متریال (م²)
+    sheets: float = 0.0             # سهم این ردیف از ورق‌های خریداری‌شده
 
     def to_dict(self) -> Dict[str, Any]:
         return dict(self.__dict__)
@@ -490,6 +503,8 @@ class UnitResult:
     countertop_lm: float = 0.0
     cost: float = 0.0
     items: List[LineItem] = field(default_factory=list)
+    #: هشدارهای محاسباتی (مثلاً «تیکِ در از ورق بدنه زده شد ولی لنگه جا نمی‌شود»)
+    warnings: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -523,6 +538,7 @@ class PageResult:
     waste_amount: float = 0.0
     overhead_amount: float = 0.0
     total_cost: float = 0.0
+    warnings: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -543,9 +559,19 @@ class ProjectResult:
     vat_percent: float = 0.0
     vat_amount: float = 0.0
     final_price: float = 0.0
+    # پیش‌پرداخت / باقی‌مانده (فقط نمایشی — در محاسبه‌ی سود اثر ندارد)
+    deposit_percent: float = 0.0
+    deposit_amount: float = 0.0
+    remaining_amount: float = 0.0
+    # قیمت هر متر طول (زبان رایج بازار کابینت)
+    price_per_ground_lm: float = 0.0
+    price_per_total_lm: float = 0.0
+    cost_per_ground_lm: float = 0.0
     # آمار تجمیعی
     stats: Dict[str, float] = field(default_factory=dict)
     items: List[LineItem] = field(default_factory=list)
+    #: هشدارهای محاسباتی کل پروژه (بدون اثر روی مبلغ — فقط اطلاع به کاربر)
+    warnings: List[str] = field(default_factory=list)
 
     @property
     def total_profit(self) -> float:
@@ -569,6 +595,31 @@ def round_up_sheets(area_sqm: float, sheet_area: float, waste_percent: float = 0
         return 0.0
     a = area_sqm * (1 + _f(waste_percent) / 100.0)
     return math.ceil(round(a / sheet_area, 6))
+
+
+def door_leaf_fits_sheet(dr: "DoorRow", mat: Optional["Material"]) -> Tuple[bool, str]:
+    """
+    ★ آیا یک لنگه‌ی در روی این ورق جا می‌شود؟
+
+    شرطِ لازم (نه کافی) برای «در از ورق بدنه»: بزرگ‌ترین لنگه باید در یکی از دو
+    جهت روی ورق بنشیند. چیدمان بهینه‌ی برش مسئله‌ی دیگری است، ولی اگر همین شرط
+    ساده برقرار نباشد، ساختنِ در از آن ورق قطعاً ممکن نیست و نباید تیک بخورد.
+
+    خروجی: (امکان‌پذیر است؟، دلیلِ فارسی در صورت رد)
+    """
+    if mat is None:
+        return False, "ورق بدنه‌ی یونیت انتخاب نشده است."
+    if mat.unit != "sheet":
+        return False, f"«{mat.name}» ورق نیست (واحد: {mat.unit})."
+    sw, sh = _f(mat.sheet_width_cm), _f(mat.sheet_height_cm)
+    if sw <= 0 or sh <= 0:
+        return False, f"ابعاد ورقِ «{mat.name}» در کتابخانه قیمت ثبت نشده است."
+    w, h = _f(dr.w_cm), _f(dr.h_cm)
+    if w <= 0 or h <= 0:
+        return False, "ابعاد لنگه‌ی در وارد نشده است."
+    if (w <= sw and h <= sh) or (w <= sh and h <= sw):
+        return True, ""
+    return False, (f"لنگه‌ی {w:g}×{h:g} سانت روی ورق {sw:g}×{sh:g} سانت جا نمی‌شود.")
 
 
 # ---------------------------------------------------------------------------
@@ -670,20 +721,24 @@ class CostingEngine:
             per_unit_area = body_area * (1 + waste / 100.0)
             sheet_area = _f(body_mat.sheet_area_sqm)
             if sheet_area > 0:
-                sheets = math.ceil(per_unit_area / sheet_area) if n == 1 else \
-                    math.ceil(per_unit_area * n / sheet_area)
-                unit_price = _f(body_mat.price)
-                amount = sheets * unit_price
-                detail = (f"{sheets} ورق {body_mat.sheet_width_cm:.0f}×{body_mat.sheet_height_cm:.0f}"
-                          f" — مساحت خالص {body_area * n:.3f} م² (با پرت {waste:.0f}٪: {per_unit_area * n:.3f} م²)")
-                items.append(LineItem("body_sheet", "ورق بدنه", body_mat.name, detail,
-                                      sheets, "ورق", unit_price, amount))
-                res.sheets += sheets
+                # ⚠ تعداد ورق در این‌جا گرد نمی‌شود! مساحت ثبت می‌شود و در
+                # `_batch_sheets` کل ورق‌های همین متریال در سطح بخش یک‌جا گرد
+                # می‌شوند (مثل برش واقعی کارگاه که دورریزِ یک یونیت، تکه‌ی
+                # یونیت بعدی است).
+                net = body_area * n
+                items.append(LineItem(
+                    "body_sheet", "ورق بدنه", body_mat.name,
+                    f"{net:.3f} م² (با پرت {waste:.0f}٪)",
+                    net, "م²", body_ppsqm, net * body_ppsqm,
+                    mat_id=int(body_mat.id), mat_cat="body_sheet",
+                    area_sqm=per_unit_area * n, sheet_area_sqm=sheet_area))
             else:
                 amount = per_unit_area * n * body_ppsqm
                 items.append(LineItem("body_sheet", "ورق بدنه", body_mat.name,
                                       f"{per_unit_area * n:.3f} م² با احتساب {waste:.0f}٪ پرت",
-                                      per_unit_area * n, "م²", body_ppsqm, amount))
+                                      per_unit_area * n, "م²", body_ppsqm, amount,
+                                      mat_id=int(body_mat.id), mat_cat="body_sheet",
+                                      area_sqm=per_unit_area * n))
             res.body_area += body_area * n
 
         # --- فیبر پشت ---
@@ -691,18 +746,21 @@ class CostingEngine:
             per_unit_area = back_area * (1 + waste / 100.0)
             sheet_area = _f(back_mat.sheet_area_sqm)
             if sheet_area > 0:
-                sheets = math.ceil(per_unit_area * n / sheet_area)
-                amount = sheets * _f(back_mat.price)
+                net = back_area * n
                 items.append(LineItem("back_sheet", "فیبر پشت", back_mat.name,
-                                      f"{sheets} ورق — {back_area * n:.3f} م²",
-                                      sheets, "ورق", _f(back_mat.price), amount))
-                res.sheets += sheets
+                                      f"{net:.3f} م² (با پرت {waste:.0f}٪)", net, "م²",
+                                      _f(back_mat.price_per_sqm),
+                                      net * _f(back_mat.price_per_sqm),
+                                      mat_id=int(back_mat.id), mat_cat="back_sheet",
+                                      area_sqm=per_unit_area * n, sheet_area_sqm=sheet_area))
             else:
                 amount = per_unit_area * n * _f(back_mat.price_per_sqm)
                 items.append(LineItem("back_sheet", "فیبر پشت", back_mat.name,
                                       f"{per_unit_area * n:.3f} م²",
                                       per_unit_area * n, "م²",
-                                      _f(back_mat.price_per_sqm), amount))
+                                      _f(back_mat.price_per_sqm), amount,
+                                      mat_id=int(back_mat.id), mat_cat="back_sheet",
+                                      area_sqm=per_unit_area * n))
             res.back_area += back_area * n
 
         # --- نوار PVC بدنه ---
@@ -715,19 +773,22 @@ class CostingEngine:
             items.append(LineItem("banding_body", "نوار PVC بدنه",
                                   bmat.name if bmat else (u.banding_name or "نوار PVC"),
                                   f"ضریب {factor} × مساحت بدنه + {page.banding_waste_percent:.0f}٪ پرت",
-                                  meters, "متر", price, meters * price))
+                                  meters, "متر", price, meters * price,
+                                  mat_id=int(u.banding_id), mat_cat="banding"))
             res.banding_m += meters
 
         # --- درب‌ها ---
         for dr in u.doors:
-            self._calc_door(dr, n, res, items)
+            self._calc_door(dr, n, res, items, page, body_mat)
 
         # --- کشوها ---
         for dw in u.drawers:
-            self._calc_drawer(dw, n, res, items)
+            self._calc_drawer(dw, n, res, items, page)
 
         # --- صفحه‌ی کابینت ---
-        if u.countertop_id:
+        # اگر کاربر «متر طول صفحه» را در سطح بخش وارد کرده باشد، همان ملاک است
+        # و دیگر برای هر یونیت جداگانه صفحه حساب نمی‌شود (جلوگیری از دوباره‌شماری).
+        if u.countertop_id and _f(page.countertop_lm) <= 0:
             cm = self.mat(u.countertop_id)
             if cm is not None:
                 lm = _f(u.length_cm) / 100.0 * n
@@ -735,7 +796,8 @@ class CostingEngine:
                 width = _f(cm.width_cm) or 60.0
                 items.append(LineItem("countertop", "صفحه کابینت", cm.name,
                                       f"{lm:.2f} متر طول × عرض {width:g} سانتی‌متر",
-                                      lm, "متر", price, lm * price))
+                                      lm, "متر", price, lm * price,
+                                      mat_id=int(u.countertop_id), mat_cat="countertop"))
                 res.countertop_area += lm * width / 100.0
                 res.countertop_lm += lm
 
@@ -745,7 +807,8 @@ class CostingEngine:
             if cm is not None:
                 lm = _f(u.length_cm) / 100.0 * n
                 items.append(LineItem("crown", "تاج", cm.name, f"{lm:.2f} متر طول",
-                                      lm, "متر", _f(cm.price), lm * _f(cm.price)))
+                                      lm, "متر", _f(cm.price), lm * _f(cm.price),
+                                      mat_id=int(u.crown_id), mat_cat="crown"))
 
         # --- زیرچراغ ---
         if u.underlight_id and u.unit_type == "wall":
@@ -753,7 +816,8 @@ class CostingEngine:
             if cm is not None:
                 lm = _f(u.length_cm) / 100.0 * n
                 items.append(LineItem("underlight", "زیرچراغ", cm.name, f"{lm:.2f} متر طول",
-                                      lm, "متر", _f(cm.price), lm * _f(cm.price)))
+                                      lm, "متر", _f(cm.price), lm * _f(cm.price),
+                                      mat_id=int(u.underlight_id), mat_cat="underlight"))
 
         # --- پاخور ---
         if u.kickboard_id and u.unit_type in ("ground", "tall"):
@@ -761,7 +825,8 @@ class CostingEngine:
             if cm is not None:
                 lm = _f(u.length_cm) / 100.0 * n
                 items.append(LineItem("kickboard", "پاخور", cm.name, f"{lm:.2f} متر طول",
-                                      lm, "متر", _f(cm.price), lm * _f(cm.price)))
+                                      lm, "متر", _f(cm.price), lm * _f(cm.price),
+                                      mat_id=int(u.kickboard_id), mat_cat="kickboard"))
 
         # --- پایه ---
         if u.leg_id and u.unit_type in ("ground", "tall"):
@@ -769,7 +834,8 @@ class CostingEngine:
             price = self.price_of(u.leg_id, u.leg_price)
             items.append(LineItem("leg", "پایه", (self.mat(u.leg_id).name if self.mat(u.leg_id)
                                                   else u.leg_name) or "پایه",
-                                  f"{legs:.0f} عدد", legs, "عدد", price, legs * price))
+                                  f"{legs:.0f} عدد", legs, "عدد", price, legs * price,
+                                  mat_id=int(u.leg_id), mat_cat="leg"))
 
         # --- خار طبقه ---
         if u.shelf_pin_id and u.shelves:
@@ -779,7 +845,8 @@ class CostingEngine:
                                   (self.mat(u.shelf_pin_id).name if self.mat(u.shelf_pin_id)
                                    else u.shelf_pin_name) or "خار طبقه",
                                   f"{pins:.0f} عدد ({int(u.shelves)} طبقه × {int(u.pins_per_shelf)} خار)",
-                                  pins, "عدد", price, pins * price))
+                                  pins, "عدد", price, pins * price,
+                                  mat_id=int(u.shelf_pin_id), mat_cat="shelf_pin"))
 
         # --- مونتاژ یونیت ---
         if u.assembly_id or u.assembly_price:
@@ -787,7 +854,8 @@ class CostingEngine:
             name = (self.mat(u.assembly_id).name if self.mat(u.assembly_id)
                     else u.assembly_name) or "مونتاژ یونیت"
             items.append(LineItem("assembly_unit", "مونتاژ و خدمات", name,
-                                  f"{n} یونیت", n, "یونیت", price, n * price))
+                                  f"{n} یونیت", n, "یونیت", price, n * price,
+                                  mat_id=int(u.assembly_id), mat_cat="service"))
 
         # --- اکسسوری‌های اختصاصی یونیت ---
         res.cost = sum(i.amount for i in items)
@@ -796,45 +864,94 @@ class CostingEngine:
 
     # ------------------------------------------------------------------
     def _calc_door(self, dr: DoorRow, unit_qty: int, res: UnitResult,
-                   items: List[LineItem]) -> None:
+                   items: List[LineItem], page: Optional[Page] = None,
+                   body_mat: Optional[Material] = None) -> None:
         leaves = dr.leaves * unit_qty
         if leaves <= 0:
             return
         area = dr.area_sqm * unit_qty
         res.door_area += area
+        waste = _f(page.waste_percent, 10.0) if page is not None else 10.0
 
-        # ورق / متریال در
+        # ★ «در از ورق بدنه»
+        # اگر کاربر تیک زده باشد که لنگه‌ها از همان ورقِ بدنه برش بخورند،
+        # مساحتِ در به‌جای دسته‌ی «ورق در»، به دسته‌ی «ورق بدنه» می‌رود تا با
+        # بقیه‌ی قطعات بدنه یک‌جا گرد شود (دورریزِ بدنه، تکه‌ی در می‌شود).
+        # اگر لنگه روی ورق جا نشود، تیک نادیده گرفته می‌شود و هشدار می‌دهیم —
+        # بهتر از این است که بی‌سروصدا عددِ غلطِ ارزانی نشان دهیم.
         dmat = self.mat(dr.material_id)
-        if dmat is not None:
+        use_body = False
+        if dr.from_body:
+            fits, why = door_leaf_fits_sheet(dr, body_mat)
+            if fits:
+                use_body = True
+                dmat = body_mat
+            else:
+                res.warnings.append(
+                    f"«{dr.label or 'در'}»: تیکِ «در از ورق بدنه» نادیده گرفته شد — {why}")
+
+        if use_body:
+            sheet_area = _f(dmat.sheet_area_sqm)
+            ppsqm = _f(dmat.price_per_sqm)
+            if sheet_area > 0:
+                gross = area * (1 + waste / 100.0)
+                items.append(LineItem(
+                    "body_sheet", "ورق بدنه", dmat.name,
+                    f"در از ورق بدنه — {leaves} لنگه، {area:.3f} م² (با پرت {waste:.0f}٪)",
+                    area, "م²", ppsqm, area * ppsqm,
+                    mat_id=int(dmat.id), mat_cat="body_sheet",
+                    area_sqm=gross, sheet_area_sqm=sheet_area))
+            else:
+                items.append(LineItem(
+                    "body_sheet", "ورق بدنه", dmat.name,
+                    f"در از ورق بدنه — {leaves} لنگه، {area:.3f} م²",
+                    area, "م²", ppsqm, area * ppsqm,
+                    mat_id=int(dmat.id), mat_cat="body_sheet", area_sqm=area))
+        elif dmat is not None:
             ppsqm = _f(dmat.price_per_sqm)
             if dmat.unit == "sheet" and dmat.sheet_area_sqm > 0:
-                sheets = math.ceil(area * 1.08 / dmat.sheet_area_sqm)
-                items.append(LineItem("door_sheet", "ورق در", dmat.name,
-                                      f"{leaves} لنگه — {area:.3f} م² — {sheets} ورق",
-                                      sheets, "ورق", _f(dmat.price), sheets * _f(dmat.price)))
-                res.sheets += sheets
+                # گردکردن به ورق کامل در `_batch_sheets` و در سطح کل بخش انجام
+                # می‌شود (نه برای هر یونیت) — پرت هم از تنظیم بخش می‌آید نه ۸٪ ثابت.
+                gross = area * (1 + waste / 100.0)
+                items.append(LineItem(
+                    "door_sheet", "ورق در", dmat.name,
+                    f"{leaves} لنگه — {area:.3f} م² (با پرت {waste:.0f}٪)",
+                    area, "م²", ppsqm, area * ppsqm,
+                    mat_id=int(dmat.id), mat_cat="door_sheet",
+                    area_sqm=gross, sheet_area_sqm=_f(dmat.sheet_area_sqm)))
             else:
                 items.append(LineItem("door_sheet", "ورق در", dmat.name,
                                       f"{leaves} لنگه — {area:.3f} م²",
-                                      area, "م²", ppsqm, area * ppsqm))
+                                      area, "م²", ppsqm, area * ppsqm,
+                                      mat_id=int(dmat.id), mat_cat="door_sheet",
+                                      area_sqm=area))
 
         # هزینه‌ی ساخت/ CNC مدل در (مثلاً ممبران، هایگلاس، رنگ)
         if dr.door_model_id or dr.door_model_price:
             price = self.price_of(dr.door_model_id, dr.door_model_price)
             name = (self.mat(dr.door_model_id).name if self.mat(dr.door_model_id)
                     else dr.door_model_name) or "اجرت ساخت در"
+            dm = self.mat(dr.door_model_id)
+            # اجرت‌های «مترمربعی» (CNC/رنگ) باید بر اساس مساحت در حساب شوند
+            qty, ulabel = leaves, "لنگه"
+            if dm is not None and dm.unit == "sqm":
+                qty, ulabel = area, "م²"
             items.append(LineItem("door_model", "مدل و اجرت در", name,
-                                  f"{leaves} لنگه", leaves, "لنگه", price, leaves * price))
+                                  f"{leaves} لنگه" + (f" — {area:.3f} م²" if ulabel == "م²" else ""),
+                                  qty, ulabel, price, qty * price,
+                                  mat_id=int(dr.door_model_id), mat_cat="door_model"))
 
         # نوار در
         if dr.banding_id:
             bmat = self.mat(dr.banding_id)
             if bmat is not None:
                 meters = dr.perimeter_m * leaves
+                meters *= (1 + (_f(page.banding_waste_percent, 8.0) if page is not None else 0.0) / 100.0)
                 price = _f(bmat.price)
                 items.append(LineItem("banding_door", "نوار PVC در", bmat.name,
                                       f"محیط {dr.perimeter_m:.2f} متر × {leaves} لنگه",
-                                      meters, "متر", price, meters * price))
+                                      meters, "متر", price, meters * price,
+                                      mat_id=int(dr.banding_id), mat_cat="banding"))
                 res.banding_m += meters
 
         # لولا
@@ -844,7 +961,8 @@ class CostingEngine:
             name = (self.mat(dr.hinge_id).name if self.mat(dr.hinge_id) else dr.hinge_name) or "لولا"
             items.append(LineItem("hinge", "لولا", name,
                                   f"{int(dr.hinges_per_leaf)} عدد در هر لنگه × {leaves} لنگه",
-                                  qty, "عدد", price, qty * price))
+                                  qty, "عدد", price, qty * price,
+                                  mat_id=int(dr.hinge_id), mat_cat="hinge"))
 
         # گازور / جک
         if (dr.gas_spring_id or dr.gas_spring_price) and dr.gas_springs_per_leaf:
@@ -854,7 +972,8 @@ class CostingEngine:
                     else dr.gas_spring_name) or "گازور"
             items.append(LineItem("gas_spring", "گازور / جک", name,
                                   f"{int(dr.gas_springs_per_leaf)} عدد در هر لنگه",
-                                  qty, "عدد", price, qty * price))
+                                  qty, "عدد", price, qty * price,
+                                  mat_id=int(dr.gas_spring_id), mat_cat="gas_spring"))
 
         # دستگیره
         if dr.handle_id or dr.handle_price:
@@ -862,7 +981,8 @@ class CostingEngine:
             price = self.price_of(dr.handle_id, dr.handle_price)
             name = (self.mat(dr.handle_id).name if self.mat(dr.handle_id) else dr.handle_name) or "دستگیره"
             items.append(LineItem("handle", "دستگیره", name, f"{leaves} لنگه",
-                                  qty, "عدد", price, qty * price))
+                                  qty, "عدد", price, qty * price,
+                                  mat_id=int(dr.handle_id), mat_cat="handle"))
 
         # مونتاژ و بسته‌بندی هر لنگه
         if dr.assembly_id or dr.assembly_price:
@@ -870,22 +990,25 @@ class CostingEngine:
             name = (self.mat(dr.assembly_id).name if self.mat(dr.assembly_id)
                     else dr.assembly_name) or "مونتاژ در"
             items.append(LineItem("assembly_door", "مونتاژ و خدمات", name,
-                                  f"{leaves} لنگه در", leaves, "لنگه", price, leaves * price))
+                                  f"{leaves} لنگه در", leaves, "لنگه", price, leaves * price,
+                                  mat_id=int(dr.assembly_id), mat_cat="service"))
         if dr.packaging_id or dr.packaging_price:
             price = self.price_of(dr.packaging_id, dr.packaging_price)
             name = (self.mat(dr.packaging_id).name if self.mat(dr.packaging_id)
                     else dr.packaging_name) or "بسته‌بندی در"
             items.append(LineItem("packaging_door", "مونتاژ و خدمات", name,
-                                  f"{leaves} لنگه در", leaves, "لنگه", price, leaves * price))
+                                  f"{leaves} لنگه در", leaves, "لنگه", price, leaves * price,
+                                  mat_id=int(dr.packaging_id), mat_cat="service"))
 
         res.total_doors = getattr(res, "total_doors", 0) + leaves
 
     # ------------------------------------------------------------------
     def _calc_drawer(self, dw: DrawerRow, unit_qty: int, res: UnitResult,
-                     items: List[LineItem]) -> None:
+                     items: List[LineItem], page: Optional[Page] = None) -> None:
         count = int(dw.qty or 0) * unit_qty
         if count <= 0:
             return
+        waste = _f(page.waste_percent, 10.0) if page is not None else 10.0
 
         # بدنه‌ی جعبه‌ی کشو
         if dw.sheet_id or dw.sheet_price_per_sqm:
@@ -893,9 +1016,13 @@ class CostingEngine:
             ppsqm = _f(m.price_per_sqm) if m else _f(dw.sheet_price_per_sqm)
             name = m.name if m else (dw.sheet_name or "ورق بدنه‌ی کشو")
             area = dw.box_area_sqm * count
+            sa = _f(m.sheet_area_sqm) if m else 0.0
             items.append(LineItem("drawer_box", "جعبه‌ی کشو", name,
                                   f"{count} عدد × {dw.box_area_sqm:.3f} م²",
-                                  area, "م²", ppsqm, area * ppsqm))
+                                  area, "م²", ppsqm, area * ppsqm,
+                                  mat_id=int(dw.sheet_id), mat_cat="drawer_sheet",
+                                  area_sqm=area * (1 + waste / 100.0),
+                                  sheet_area_sqm=sa))
 
         # تیره‌ی کشو
         if dw.front_id or dw.front_price_per_sqm:
@@ -903,9 +1030,13 @@ class CostingEngine:
             ppsqm = _f(m.price_per_sqm) if m else _f(dw.front_price_per_sqm)
             name = m.name if m else (dw.front_name or "تیره‌ی کشو")
             area = dw.front_area_sqm * count
+            sa = _f(m.sheet_area_sqm) if m else 0.0
             items.append(LineItem("drawer_front", "تیره‌ی کشو", name,
                                   f"{count} عدد × {dw.front_area_sqm:.3f} م²",
-                                  area, "م²", ppsqm, area * ppsqm))
+                                  area, "م²", ppsqm, area * ppsqm,
+                                  mat_id=int(dw.front_id), mat_cat="door_sheet",
+                                  area_sqm=area * (1 + waste / 100.0),
+                                  sheet_area_sqm=sa))
             res.door_area += area
 
         # ریل
@@ -913,7 +1044,8 @@ class CostingEngine:
             price = self.price_of(dw.slide_id, dw.slide_price)
             name = (self.mat(dw.slide_id).name if self.mat(dw.slide_id) else dw.slide_name) or "ریل کشو"
             items.append(LineItem("drawer_slide", "ریل کشو", name, f"{count} عدد کشو",
-                                  count, "ست", price, count * price))
+                                  count, "ست", price, count * price,
+                                  mat_id=int(dw.slide_id), mat_cat="drawer_slide"))
 
         # نوار
         if dw.banding_id:
@@ -922,7 +1054,8 @@ class CostingEngine:
                 meters = dw.banding_m * count
                 items.append(LineItem("banding_drawer", "نوار PVC کشو", m.name,
                                       f"{dw.banding_m:.2f} متر در هر کشو",
-                                      meters, "متر", _f(m.price), meters * _f(m.price)))
+                                      meters, "متر", _f(m.price), meters * _f(m.price),
+                                      mat_id=int(dw.banding_id), mat_cat="banding"))
                 res.banding_m += meters
 
         # دستگیره
@@ -931,7 +1064,8 @@ class CostingEngine:
             name = (self.mat(dw.handle_id).name if self.mat(dw.handle_id)
                     else dw.handle_name) or "دستگیره"
             items.append(LineItem("handle", "دستگیره", name, f"{count} عدد کشو",
-                                  count, "عدد", price, count * price))
+                                  count, "عدد", price, count * price,
+                                  mat_id=int(dw.handle_id), mat_cat="handle"))
 
         # مونتاژ
         if dw.assembly_id or dw.assembly_price:
@@ -939,12 +1073,68 @@ class CostingEngine:
             name = (self.mat(dw.assembly_id).name if self.mat(dw.assembly_id)
                     else dw.assembly_name) or "مونتاژ کشو"
             items.append(LineItem("assembly_drawer", "مونتاژ و خدمات", name,
-                                  f"{count} عدد کشو", count, "عدد", price, count * price))
+                                  f"{count} عدد کشو", count, "عدد", price, count * price,
+                                  mat_id=int(dw.assembly_id), mat_cat="service"))
 
         res.total_drawers = getattr(res, "total_drawers", 0) + count
 
     # ------------------------------------------------------------------
     # محاسبه‌ی یک صفحه (سبک)
+    # ------------------------------------------------------------------
+    #: کلیدهای ردیف‌هایی که از «ورق کامل» برش می‌خورند
+    SHEET_ITEM_KEYS = ("body_sheet", "back_sheet", "door_sheet",
+                       "drawer_front", "drawer_box")
+
+    def batch_sheets(self, items: List[LineItem]) -> Dict[int, float]:
+        """
+        ★ تجمیع مصرف ورق در سطح یک بخش (نه هر یونیت).
+
+        پیش‌تر مساحت هر یونیت به‌تنهایی به «ورق کامل» گرد می‌شد؛ یعنی یک یونیت
+        ۴۵ سانتی با ۱٫۲ مترمربع بدنه، یک ورق ۶٫۷ مترمربعی مصرف می‌کرد. در
+        کارگاهِ واقعی دورریزِ یک یونیت تکه‌ی یونیت بعدی می‌شود و همه‌ی قطعاتِ
+        هم‌جنس با هم روی ورق چیده می‌شوند.
+
+        این تابع:
+          ۱. ردیف‌های ورقی را بر اساس متریال گروه می‌کند؛
+          ۲. مجموع مساحت (با پرت) را یک‌بار بر مساحت ورق تقسیم و به بالا گرد
+             می‌کند → **تعداد واقعی ورقِ خریدنی**؛
+          ۳. بهای همان ورق‌ها را به نسبت سهم مساحت، بین ردیف‌ها تقسیم می‌کند
+             تا ریزِ هر یونیت در فاکتور دست‌نخورده باقی بماند.
+
+        خروجی: {شناسه‌ی متریال → تعداد ورق}
+        """
+        groups: Dict[int, List[LineItem]] = {}
+        for it in items:
+            if it.key in self.SHEET_ITEM_KEYS and it.mat_id and it.sheet_area_sqm > 0:
+                groups.setdefault(int(it.mat_id), []).append(it)
+
+        sheets_by_material: Dict[int, float] = {}
+        for mid, its in groups.items():
+            m = self.materials.get(mid)
+            total_gross = sum(_f(i.area_sqm) for i in its)      # با پرت
+            total_net = sum(_f(i.qty) for i in its)             # بدون پرت (نمایشی)
+            sheet_area = _f(its[0].sheet_area_sqm)
+            if total_gross <= 0 or sheet_area <= 0:
+                continue
+            sheets = float(math.ceil(round(total_gross / sheet_area, 6)))
+            sheets_by_material[mid] = sheets
+            sheet_price = _f(m.price) if m is not None else 0.0
+            total_cost = sheets * sheet_price
+            # نرخ مؤثر هر مترمربع = بهای ورق‌های خریدنی ÷ مساحت خالص مصرفی.
+            # این‌طور جمع ردیف‌ها دقیقاً برابر «تعداد ورق × قیمت ورق» می‌شود
+            # و همزمان پرت و دورریزِ برش هم در قیمت دیده می‌شود.
+            eff = (total_cost / total_net) if total_net > 0 else 0.0
+            size = (f"{m.sheet_width_cm:.0f}×{m.sheet_height_cm:.0f}"
+                    if m is not None else "")
+            for i in its:
+                share = (_f(i.area_sqm) / total_gross) if total_gross else 0.0
+                i.sheets = sheets * share
+                i.unit_label = "م²"
+                i.unit_price = eff
+                i.amount = total_cost * share
+                i.detail = (i.detail or "") + f" — از {sheets:.0f} ورق {size}ِ این بخش"
+        return sheets_by_material
+
     # ------------------------------------------------------------------
     def calc_page(self, page: Page) -> PageResult:
         pr = PageResult(name=page.name or "بخش")
@@ -954,6 +1144,7 @@ class CostingEngine:
             ur = self.calc_unit(u, page)
             pr.unit_results.append(ur)
             pr.items.extend(ur.items)
+            pr.warnings.extend(ur.warnings)
             pr.total_units += max(0, int(u.qty or 0))
             pr.total_doors += sum(d.leaves for d in u.doors) * max(1, int(u.qty or 1))
             pr.total_drawers += sum(int(d.qty or 0) for d in u.drawers) * max(1, int(u.qty or 1))
@@ -961,6 +1152,11 @@ class CostingEngine:
                 pr.total_ground_lm += _f(u.length_cm) / 100.0 * max(1, int(u.qty or 1))
             if u.unit_type == "wall":
                 pr.total_wall_lm += _f(u.length_cm) / 100.0 * max(1, int(u.qty or 1))
+
+        # ★ تجمیع ورق‌ها: همه‌ی قطعات هم‌جنسِ این بخش روی ورق‌های مشترک برش
+        #   می‌خورند، پس تعداد ورق یک‌بار (و نه برای هر یونیت) گرد می‌شود.
+        self.batch_sheets(pr.items)
+        pr.total_sheets = sum(_f(i.sheets) for i in pr.items)
 
         # صفحه‌ی کابینت کلی صفحه (اگر کاربر متراژ کلی داده باشد)
         if page.countertop_lm > 0:
@@ -972,7 +1168,8 @@ class CostingEngine:
                     countertop_items.append(LineItem(
                         "countertop", "صفحه کابینت", cm.name,
                         f"{page.countertop_lm:.2f} متر طول (ورودی کلی)",
-                        page.countertop_lm, "متر", price, page.countertop_lm * price))
+                        page.countertop_lm, "متر", price, page.countertop_lm * price,
+                        mat_id=int(used[0].countertop_id), mat_cat="countertop"))
 
         pr.items.extend(countertop_items)
 
@@ -1020,7 +1217,6 @@ class CostingEngine:
             pr.total_back_area += ur.back_area
             pr.total_door_area += ur.door_area
             pr.total_banding_m += ur.banding_m
-            pr.total_sheets += ur.sheets
         for ur in pr.unit_results:
             pr.total_countertop_area += ur.countertop_area
         pr.total_area_sqm = pr.total_body_area + pr.total_door_area + pr.total_back_area
@@ -1082,7 +1278,9 @@ class CostingEngine:
                      profit_mode: str = "markup", profit_percent: float = 30.0,
                      discount_percent: float = 0.0, discount_amount: float = 0.0,
                      vat_enabled: bool = False, vat_percent: float = 10.0,
-                     extra_fixed_amount: float = 0.0) -> ProjectResult:
+                     extra_fixed_amount: float = 0.0,
+                     deposit_percent: float = 0.0,
+                     deposit_amount: float = 0.0) -> ProjectResult:
         out = ProjectResult()
         out.profit_mode = profit_mode
         out.profit_percent = _f(profit_percent)
@@ -1109,6 +1307,7 @@ class CostingEngine:
             out.pages.append(pr)
             out.pages_cost += pr.total_cost
             out.items.extend(pr.items)
+            out.warnings.extend(pr.warnings)
             for k in stats:
                 stats[k] += getattr(pr, k, 0) or 0
 
@@ -1140,6 +1339,20 @@ class CostingEngine:
         # مالیات
         out.vat_amount = out.net_price * out.vat_percent / 100.0
         out.final_price = out.net_price + out.vat_amount
+
+        # پیش‌پرداخت (بیعانه) و باقی‌مانده
+        out.deposit_percent = _f(deposit_percent)
+        dep = out.final_price * out.deposit_percent / 100.0 + _f(deposit_amount)
+        out.deposit_amount = max(0.0, min(dep, out.final_price))
+        out.remaining_amount = out.final_price - out.deposit_amount
+
+        # قیمت هر متر طول — همان چیزی که مشتری و بازار می‌پرسند («متری چند؟»)
+        glm = _f(stats.get("total_ground_lm", 0.0))
+        tlm = glm + _f(stats.get("total_wall_lm", 0.0))
+        out.price_per_ground_lm = (out.final_price / glm) if glm > 0 else 0.0
+        out.price_per_total_lm = (out.final_price / tlm) if tlm > 0 else 0.0
+        out.cost_per_ground_lm = (out.total_cost / glm) if glm > 0 else 0.0
+
         out.stats = stats
         return out
 

@@ -87,6 +87,8 @@ CREATE TABLE IF NOT EXISTS projects (
     vat_enabled   INTEGER DEFAULT 0,
     vat_percent   REAL DEFAULT 10,
     extra_fixed_amount REAL DEFAULT 0,
+    deposit_percent REAL DEFAULT 0,
+    deposit_amount REAL DEFAULT 0,
     valid_until   TEXT DEFAULT '',
     note          TEXT DEFAULT '',
     final_price   REAL DEFAULT 0,
@@ -116,6 +118,16 @@ CREATE TABLE IF NOT EXISTS invoices (
     total       REAL DEFAULT 0,
     created_at  TEXT,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS unit_templates (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    name       TEXT NOT NULL,
+    note       TEXT DEFAULT '',
+    data       TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at TEXT,
+    updated_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS activity_log (

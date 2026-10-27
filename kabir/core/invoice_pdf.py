@@ -382,6 +382,16 @@ def build_pdf(data: Dict[str, Any], out_path: Path, *, accent: Tuple[float, floa
     final_idx = len(trows)
     trows.append(trow("مبلغ قابل پرداخت", f"{num(totals.get('final_price', 0), data)} {cur}", final=True))
     tcmds.append(("BACKGROUND", (0, final_idx), (-1, final_idx), colors.Color(*accent)))
+    # پیش‌پرداخت (بیعانه) و باقی‌مانده
+    if totals.get("deposit_amount"):
+        lbl = "پیش‌پرداخت"
+        if totals.get("deposit_percent"):
+            lbl += f" ({num(totals['deposit_percent'], data)}٪)"
+        trows.append(trow(lbl, f"− {num(totals.get('deposit_amount', 0), data)} {cur}"))
+        rem_idx = len(trows)
+        trows.append(trow("باقی‌مانده (هنگام تحویل/نصب)",
+                          f"{num(totals.get('remaining_amount', 0), data)} {cur}", final=True))
+        tcmds.append(("BACKGROUND", (0, rem_idx), (-1, rem_idx), colors.Color(*accent)))
     tcmds.append(("ROUNDEDCORNERS", [4, 4, 4, 4]))
     for i in range(len(trows)):
         tcmds.append(("TOPPADDING", (0, i), (-1, i), 3))

@@ -20,6 +20,11 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+#: نسخه‌ی جاری اسکیما — تست‌ها به‌جای عددِ ثابت، این را می‌سنجند تا با هر
+#: مهاجرتِ تازه خودکار به‌روز بمانند.
+from kabir.data.migrate import SCHEMA_VERSION  # noqa: E402
 
 
 def _make_old_db(db_path: Path) -> None:
@@ -158,13 +163,29 @@ class TestMigration(unittest.TestCase):
     def test_migration_preserves_data_and_upgrades_schema(self):
         r = self._run_scenario()
         self.assertTrue(r["has_rates_rev"], "ستون rates_rev باید اضافه شود")
-        self.assertEqual(r["user_version"], 4)
-        self.assertEqual(r["schema_version"], 4)
+        self.assertEqual(r["user_version"], SCHEMA_VERSION)
+        self.assertEqual(r["schema_version"], SCHEMA_VERSION)
         self.assertTrue(r["title_kept"], "عنوان پروژه‌ی قدیمی باید حفظ شود")
         self.assertTrue(r["final_price_kept"], "قیمت ذخیره‌شده پیش از بازمحاسبه حفظ شود")
         self.assertTrue(r["pages_kept"], "بخش‌های پروژه باید حفظ شوند")
         self.assertTrue(r["material_kept"], "متریال کاربر باید حفظ شود")
         self.assertEqual(r["second_migration_notes"], [], "مهاجرت باید توان‌دوس باشد")
+
+    def test_v5_deposit_and_templates_added(self):
+        """نسخه‌ی ۵: ستون‌های بیعانه و جدول الگوهای یونیت، بدون دست‌خوردن داده‌ی قدیمی"""
+        self._run_scenario()
+        conn = sqlite3.connect(str(self.db_path))
+        try:
+            tables = {r[0] for r in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'")}
+            pcols = [r[1] for r in conn.execute("PRAGMA table_info(projects)")]
+            title = conn.execute("SELECT title FROM projects WHERE id=1").fetchone()[0]
+        finally:
+            conn.close()
+        self.assertIn("unit_templates", tables, "جدول الگوهای یونیت ساخته نشد")
+        self.assertIn("deposit_percent", pcols)
+        self.assertIn("deposit_amount", pcols)
+        self.assertEqual(title, "پروژه‌ی قدیمی", "داده‌ی کاربر باید دست‌نخورده بماند")
 
     def test_stale_detection_and_auto_recalc(self):
         r = self._run_scenario()
@@ -274,7 +295,7 @@ class TestStandaloneUpdateFlow(unittest.TestCase):
                 "SELECT value FROM settings WHERE key='prices_rev'").fetchone()
         finally:
             conn.close()
-        self.assertEqual(ver, 4)
+        self.assertEqual(ver, SCHEMA_VERSION)
         self.assertIn("rates_rev", cols)
         self.assertEqual(title, "پروژه‌ی قدیمی")
         self.assertIsNotNone(rev, "prices_rev باید مقداردهی شود")

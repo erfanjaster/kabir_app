@@ -281,3 +281,126 @@ def export_invoice_xlsx(data: Dict[str, Any], path: Path) -> Path:
     _autosize(ws, [8, 34, 54, 10, 10, 16, 18])
     wb.save(str(path))
     return path
+
+
+# ---------------------------------------------------------------------------
+# ۴) برش‌نامه و لیست خرید کارگاه
+# ---------------------------------------------------------------------------
+
+def export_workshop_xlsx(pack: Dict[str, Any], path: Path,
+                         project: Optional[Dict[str, Any]] = None,
+                         settings: Optional[Dict[str, str]] = None) -> Path:
+    """
+    خروجی اکسلِ «بسته‌ی کارگاهی»: سه برگه
+      ۱. برش‌نامه      — تک‌تک قطعات با ابعاد میلی‌متری، برای ارّه و CNC
+      ۲. خلاصه‌ی ورق   — چند ورق از هر متریال باید خرید/از انبار برداشت
+      ۳. لیست خرید     — همه‌ی متریال و یراق، گروه‌بندی‌شده
+
+    اگر `openpyxl` نصب نباشد، به‌جایش یک فایل CSV از برش‌نامه نوشته می‌شود تا
+    کاربر دستِ خالی نماند.
+    """
+    proj = project or {}
+    fa_digits = str((settings or {}).get("persian_digits", "1")) == "1"
+    header = [f"{proj.get('title', '')}".strip() or "پروژه",
+              f"کد: {proj.get('code', '')}".strip(),
+              f"مشتری: {proj.get('customer', '')}".strip(),
+              f"تاریخ: {fa.jdate_str()}"]
+    header = [h for h in header if h and h not in ("کد:", "مشتری:", "تاریخ:")]
+
+    parts = pack.get("cut_parts") or []
+    sheets = pack.get("sheet_summary") or []
+    groups = pack.get("shopping_groups") or []
+
+    if not HAS_OPENPYXL:                      # خروجی جایگزین: CSV
+        csv_path = path.with_suffix(".csv")
+        with open(csv_path, "w", newline="", encoding="utf-8-sig") as fh:
+            w = csv.writer(fh)
+            w.writerow(["برش‌نامه"] + header)
+            w.writerow(["ردیف", "بخش", "یونیت", "قطعه", "تعداد",
+                        "طول (mm)", "عرض (mm)", "ضخامت (mm)", "متریال",
+                        "نوار لبه", "مساحت (م²)"])
+            for i, p in enumerate(parts, 1):
+                w.writerow([i, p.get("section", ""), p.get("unit", ""), p.get("part", ""),
+                            p.get("qty", 0), p.get("length_mm", 0), p.get("width_mm", 0),
+                            p.get("thickness_mm", 0), p.get("material", ""),
+                            "بله" if p.get("banding") else "خیر", p.get("area_sqm", 0)])
+        return csv_path
+
+    wb = Workbook()
+
+    # --- برگه‌ی ۱: برش‌نامه ---
+    ws = wb.active
+    ws.title = "برش‌نامه"
+    _rtl(ws)
+    if header:
+        ws.append([" | ".join(header)])
+        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=11)
+        ws.cell(row=1, column=1).font = Font(name="Vazirmatn", bold=True, size=12)
+    ws.append(["ردیف", "بخش", "یونیت", "قطعه", "تعداد", "طول (mm)", "عرض (mm)",
+               "ضخامت", "متریال / ورق", "نوار لبه", "مساحت (م²)"])
+    _style_header(ws, ws.max_row, 11)
+    for i, p in enumerate(parts, 1):
+        ws.append([
+            fa.to_fa_digits(str(i)) if fa_digits else i,
+            p.get("section", ""), p.get("unit", ""), p.get("part", ""),
+            p.get("qty", 0),
+            round(p.get("length_mm", 0)), round(p.get("width_mm", 0)),
+            f"{p.get('thickness_mm', 0):g} میل",
+            p.get("material", ""),
+            ("دور تا دور" if p.get("banding_sides") == "دور تا دور"
+             else p.get("banding_sides", "")) if p.get("banding") else "—",
+            round(p.get("area_sqm", 0), 3),
+        ])
+    st = pack.get("stats") or {}
+    ws.append([])
+    ws.append(["جمع", "", "", f"{st.get('part_kinds', 0)} نوع قطعه",
+               st.get("total_pieces", 0), "", "", "", "",
+               "", st.get("total_area_sqm", 0)])
+    for c in range(1, 12):
+        ws.cell(row=ws.max_row, column=c).font = Font(name="Vazirmatn", bold=True)
+    _autosize(ws, [6, 16, 20, 26, 8, 11, 11, 9, 30, 22, 12])
+    ws.freeze_panes = "A3"
+
+    # --- برگه‌ی ۲: خلاصه‌ی ورق ---
+    ws2 = wb.create_sheet("خلاصه ورق")
+    _rtl(ws2)
+    ws2.append(["متریال / ورق", "دسته", "ضخامت", "ابعاد ورق (سم)",
+                "مساحت قطعات (م²)", "تعداد قطعه", "ورق لازم", "بهای هر ورق", "جمع"])
+    _style_header(ws2, 1, 9)
+    cat_labels = {"body_sheet": "بدنه", "back_sheet": "فیبر پشت",
+                  "door_sheet": "در", "drawer_sheet": "جعبه کشو"}
+    for r in sheets:
+        ws2.append([
+            r.get("material", ""), cat_labels.get(r.get("cat"), r.get("cat", "")),
+            f"{r.get('thickness_mm', 0):g} میل", r.get("sheet_size", ""),
+            r.get("area_sqm", 0), r.get("pieces", 0), r.get("sheets", 0),
+            r.get("price", 0), r.get("cost", 0),
+        ])
+    _autosize(ws2, [34, 12, 10, 16, 16, 12, 11, 15, 16])
+
+    # --- برگه‌ی ۳: لیست خرید ---
+    ws3 = wb.create_sheet("لیست خرید")
+    _rtl(ws3)
+    ws3.append(["#", "متریال / خدمت", "مقدار", "واحد", "برآورد بها", "خرید شد؟"])
+    _style_header(ws3, 1, 6)
+    idx = 1
+    for g in groups:
+        ws3.append([g.get("label", "")])
+        cell = ws3.cell(row=ws3.max_row, column=1)
+        cell.font = Font(name="Vazirmatn", bold=True, size=11)
+        cell.fill = PatternFill("solid", fgColor=SOFT_HEX)
+        ws3.merge_cells(start_row=ws3.max_row, start_column=1,
+                        end_row=ws3.max_row, end_column=6)
+        for r in g.get("rows", []):
+            ws3.append([fa.to_fa_digits(str(idx)) if fa_digits else idx,
+                        r.get("name", ""), round(r.get("qty", 0), 2),
+                        r.get("unit_label", ""), round(r.get("amount", 0)), ""])
+            idx += 1
+        ws3.append(["", "جمع این گروه", "", "", round(g.get("total", 0)), ""])
+        for c in range(1, 7):
+            ws3.cell(row=ws3.max_row, column=c).font = Font(name="Vazirmatn", bold=True)
+    _autosize(ws3, [5, 40, 12, 10, 18, 12])
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    wb.save(str(path))
+    return path

@@ -26,7 +26,9 @@ from typing import Any, Callable, Dict, List
 # 3 → نسخه‌های ۲٫۱٫۰ و قبل‌تر
 # 4 → افزودن projects.rates_rev (نسخه‌ی نرخ‌های متریال هنگام آخرین محاسبه)
 #      و کلید تنظیمات prices_rev برای تشخیص «پروژه‌ی مانده با نرخ قدیمی»
-SCHEMA_VERSION = 4
+# 5 → افزودن projects.deposit_percent / deposit_amount (پیش‌پرداخت و باقی‌مانده
+#      روی فاکتور) و جدول unit_templates (الگوهای یونیت آماده برای استفاده‌ی مجدد)
+SCHEMA_VERSION = 5
 
 
 # ---------------------------------------------------------------------------
@@ -84,8 +86,39 @@ def _m4_add_rates_rev(conn: sqlite3.Connection) -> List[str]:
     return notes
 
 
+def _m5_deposit_and_templates(conn: sqlite3.Connection) -> List[str]:
+    """
+    افزودن ستون‌های پیش‌پرداخت به projects و ساخت جدول الگوهای یونیت.
+
+    هیچ داده‌ای حذف نمی‌شود؛ مقدار پیش‌فرض هر دو ستون صفر است یعنی پروژه‌های
+    قدیمی دقیقاً مثل قبل رفتار می‌کنند.
+    """
+    notes: List[str] = []
+    if table_exists(conn, "projects"):
+        for col, ddl in (("deposit_percent", "REAL DEFAULT 0"),
+                         ("deposit_amount", "REAL DEFAULT 0")):
+            if not column_exists(conn, "projects", col):
+                conn.execute(f"ALTER TABLE projects ADD COLUMN {col} {ddl}")
+                notes.append(f"projects.{col} column added")
+    if not table_exists(conn, "unit_templates"):
+        conn.execute("""
+            CREATE TABLE unit_templates (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                name       TEXT NOT NULL,
+                note       TEXT DEFAULT '',
+                data       TEXT,
+                sort_order INTEGER DEFAULT 0,
+                created_at TEXT,
+                updated_at TEXT
+            )
+        """)
+        notes.append("unit_templates table created")
+    return notes
+
+
 MIGRATIONS: Dict[int, List[Callable[[sqlite3.Connection], List[str]]]] = {
     4: [_m4_add_rates_rev],
+    5: [_m5_deposit_and_templates],
 }
 
 

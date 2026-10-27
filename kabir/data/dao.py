@@ -279,8 +279,8 @@ class ProjectRepo:
         cols = ["code", "customer_name", "customer_phone", "customer_mobile", "customer_address",
                 "title", "status", "install_mode", "install_value", "profit_mode", "profit_percent",
                 "discount_percent", "discount_amount", "vat_enabled", "vat_percent",
-                "extra_fixed_amount", "valid_until", "note", "final_price", "total_cost",
-                "rates_rev"]
+                "extra_fixed_amount", "deposit_percent", "deposit_amount",
+                "valid_until", "note", "final_price", "total_cost", "rates_rev"]
         vals = [data.get(c) for c in cols]
         vals[0] = vals[0] or self.next_code()
         if vals[-1] is None:
@@ -294,8 +294,8 @@ class ProjectRepo:
         allowed = ["code", "customer_name", "customer_phone", "customer_mobile", "customer_address",
                    "title", "status", "install_mode", "install_value", "profit_mode", "profit_percent",
                    "discount_percent", "discount_amount", "vat_enabled", "vat_percent",
-                   "extra_fixed_amount", "valid_until", "note", "final_price", "total_cost",
-                   "rates_rev"]
+                   "extra_fixed_amount", "deposit_percent", "deposit_amount",
+                   "valid_until", "note", "final_price", "total_cost", "rates_rev"]
         sets, vals = [], []
         for k in allowed:
             if k in data:
@@ -455,3 +455,56 @@ class InvoiceRepo:
         n = int(self.db.scalar("SELECT COUNT(*) FROM invoices WHERE kind=?", (kind,), default=0) or 0) + 1
         prefix = "PI" if kind == "quote" else "INV"
         return f"{prefix}-{jdate_str(persian=False).replace('/', '')}-{n:04d}"
+
+
+# ===========================================================================
+# الگوهای یونیت — «یونیت آماده» برای استفاده‌ی مجدد در پروژه‌های بعدی
+# ===========================================================================
+
+class UnitTemplateRepo:
+    """
+    کابینت‌کار در هر پروژه همان یونیت‌های تکراری را می‌سازد (یونیت سینک ۹۰،
+    یونیت گاز، کمد ایستاده و …). این‌جا یک یونیتِ کامل — با متریال، درها و
+    کشوها — یک‌بار ذخیره می‌شود و بعد با یک کلیک در هر پروژه‌ای قرار می‌گیرد.
+    """
+
+    def __init__(self, db: Optional[Database] = None):
+        self.db = db or Database.instance()
+
+    def all(self) -> List[Dict[str, Any]]:
+        rows = self.db.q("SELECT * FROM unit_templates ORDER BY sort_order, id")
+        out = []
+        for r in rows:
+            d = dict(r)
+            try:
+                d["data"] = json.loads(d.get("data") or "{}")
+            except json.JSONDecodeError:
+                d["data"] = {}
+            out.append(d)
+        return out
+
+    def get(self, tid: int) -> Optional[Dict[str, Any]]:
+        r = self.db.one("SELECT * FROM unit_templates WHERE id=?", (tid,))
+        if not r:
+            return None
+        d = dict(r)
+        try:
+            d["data"] = json.loads(d.get("data") or "{}")
+        except json.JSONDecodeError:
+            d["data"] = {}
+        return d
+
+    def add(self, name: str, data: Dict[str, Any], note: str = "") -> int:
+        n = int(self.db.scalar("SELECT COUNT(*) FROM unit_templates", default=0) or 0)
+        return int(self.db.execute(
+            "INSERT INTO unit_templates(name,note,data,sort_order,created_at,updated_at) "
+            "VALUES(?,?,?,?,?,?)",
+            (name, note, json.dumps(data or {}, ensure_ascii=False), n, _now(), _now())))
+
+    def update(self, tid: int, name: str, data: Dict[str, Any], note: str = "") -> None:
+        self.db.execute(
+            "UPDATE unit_templates SET name=?, note=?, data=?, updated_at=? WHERE id=?",
+            (name, note, json.dumps(data or {}, ensure_ascii=False), _now(), tid))
+
+    def delete(self, tid: int) -> None:
+        self.db.execute("DELETE FROM unit_templates WHERE id=?", (tid,))

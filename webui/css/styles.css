@@ -1910,3 +1910,194 @@ table.data th.sorted.desc .sort-ic { transform: scaleY(-1); }
 @media print {
   #splash, .demo-banner, .clock-chip, .skeleton { display: none !important; }
 }
+
+/* ==========================================================================
+   ۲۶) قابلیت‌های کارگاهی — نوار متراژ، برش‌نامه، لیست خرید، الگوها
+   (افزوده‌شده بر پایه‌ی همان توکن‌های سیستم طراحی ۳٫۰)
+   ========================================================================== */
+
+/* --- گروه دکمه‌های داخل هر ردیف (کپی / الگو / حذف) --- */
+.row-btns { display: inline-flex; gap: .2rem; align-items: center; justify-content: center; }
+.row-btns .row-actions { padding: .22rem; }
+
+/* --- نوار زنده‌ی متراژ --- */
+.dim-ribbon {
+  display: flex; flex-wrap: wrap; gap: .45rem; align-items: center;
+  margin: .2rem 0 .85rem; padding: .5rem .7rem;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--r-sm, 10px);
+}
+.dim-ribbon:empty { display: none; }
+.dim-cell {
+  display: inline-flex; flex-direction: column; align-items: flex-start;
+  gap: .05rem; padding: .18rem .6rem;
+  border-inline-end: 1px solid var(--border);
+  font-size: .72rem; color: var(--text-3); line-height: 1.5; white-space: nowrap;
+}
+.dim-cell:last-child { border-inline-end: 0; }
+.dim-cell b { font-size: .95rem; color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+.dim-cell.accent b { color: var(--accent-text); }
+.dim-cell.ok b { color: var(--success); }
+.dim-cell.over b { color: var(--danger); }
+.dim-cell.under b { color: var(--warning); }
+
+/* سنجه‌ی پرشدن دیوار */
+.dim-gauge { min-width: 11rem; }
+.dim-gauge .gauge {
+  display: block; width: 100%; height: 5px; border-radius: 99px;
+  background: var(--surface-3); overflow: hidden; margin-bottom: .18rem;
+}
+.dim-gauge .gauge i { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .25s ease; }
+.dim-gauge.ok .gauge i { background: var(--success); }
+.dim-gauge.over .gauge i { background: var(--danger); }
+.dim-gauge.under .gauge i { background: var(--warning); }
+
+/* --- نوار ابزار تب یونیت‌ها --- */
+.unit-tools {
+  display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;
+  padding: .55rem .7rem; margin-bottom: .7rem;
+  background: var(--surface-2); border: 1px dashed var(--border-strong);
+  border-radius: var(--r-sm, 10px);
+}
+.unit-tools .ut-sep { width: 1px; height: 1.5rem; background: var(--border-strong); }
+.unit-tools .ut-label { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; color: var(--text-2); }
+.unit-tools .ut-label select { min-width: 11rem; }
+.unit-tools .ut-hint { flex-basis: 100%; margin: 0; }
+.unit-tools .btn svg { width: 1rem; height: 1rem; }
+
+/* --- نوار جمع: بلوک رندکردن و باقی‌مانده --- */
+.tb-round {
+  display: flex; flex-direction: column; gap: .25rem;
+  padding: .35rem .7rem; border-inline-start: 1px solid var(--ink-line);
+}
+.tb-round > span { font-size: .72rem; color: var(--ink-muted); }
+.tb-round .pair { display: flex; gap: .35rem; align-items: center; }
+.tb-round select { min-width: 9.5rem; }
+.tb-round .btn { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.22); color: #fff; }
+.tb-round .btn:hover { background: rgba(255,255,255,.2); }
+.tb-due b { color: #ffd9a8; }
+.tb-fig small, .tb-final small { font-size: .68rem; opacity: .7; font-weight: 400; }
+
+/* --- «متری چند؟» در محاسبه‌ی دقیق --- */
+.per-meter {
+  display: flex; flex-wrap: wrap; gap: .45rem; align-items: center;
+  margin-top: .7rem; padding: .6rem .8rem;
+  background: var(--accent-soft); border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--accent);
+  border-radius: var(--r-sm, 10px); font-size: .84rem; color: var(--text-2);
+}
+.per-meter b { color: var(--accent-text); font-size: .95rem; }
+.per-meter .sep { opacity: .4; }
+
+/* --- بسته‌ی کارگاهی (مودال برش‌نامه) --- */
+.ws-stats { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .8rem;
+  padding: .5rem .7rem; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: var(--r-sm, 10px); }
+.ws-panel { display: none; }
+.ws-panel.active { display: block; }
+.sheet-badge {
+  display: inline-block; min-width: 1.9rem; padding: .05rem .35rem;
+  background: var(--accent-soft); color: var(--accent-text);
+  border-radius: 6px; font-weight: 700;
+}
+table.cut-table td, table.cut-table th { padding: .28rem .45rem; font-size: .8rem; }
+table.cut-table tr.cut-group td {
+  background: var(--surface-3); font-size: .78rem; color: var(--text-2);
+  padding: .3rem .6rem; border-top: 2px solid var(--border-strong);
+}
+.chip-ok {
+  display: inline-block; padding: .04rem .4rem; border-radius: 99px;
+  background: var(--success-soft); color: var(--success); font-size: .7rem; white-space: nowrap;
+}
+
+/* لیست خرید */
+.shop-group { margin-bottom: 1.1rem; }
+.shop-head {
+  display: flex; align-items: center; justify-content: space-between; gap: .6rem;
+  padding: .45rem .7rem; margin-bottom: .3rem;
+  background: var(--accent-soft); border-radius: var(--r-sm, 10px);
+}
+.shop-head h4 { margin: 0; font-size: .92rem; color: var(--accent-text); }
+.shop-sum { font-weight: 700; color: var(--accent-text); font-variant-numeric: tabular-nums; }
+.chk-col { width: 4.2rem; text-align: center; }
+.shop-check { width: 1.05rem; height: 1.05rem; accent-color: var(--accent); }
+tr:has(.shop-check:checked) td { opacity: .45; text-decoration: line-through; }
+tr:has(.shop-check:checked) td:last-child { text-decoration: none; opacity: 1; }
+
+/* --- قیمت‌گیری سریع --- */
+.quick-preview { margin-top: .9rem; padding: .7rem .85rem;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm, 10px); }
+
+/* --- چاپ برش‌نامه / لیست خرید --- */
+@media print {
+  body.printing-ws .sidebar, body.printing-ws .topbar,
+  body.printing-ws .modal-head .icon-btn, body.printing-ws .modal-foot,
+  body.printing-ws #wsTabs, body.printing-ws .chk-col,
+  body.printing-ws .toasts { display: none !important; }
+  body.printing-ws .modal-backdrop { position: static; background: none; padding: 0; overflow: visible; }
+  body.printing-ws .modal { position: static; width: auto !important; max-width: none !important;
+    max-height: none !important; box-shadow: none; border: 0; overflow: visible; }
+  body.printing-ws .modal-body { max-height: none !important; overflow: visible !important; padding: 0; }
+  body.printing-ws .table-wrap { max-height: none !important; overflow: visible !important; }
+  body.printing-ws .ws-panel { display: block !important; page-break-after: always; }
+  body.printing-ws .ws-panel:empty { display: none !important; }
+  body.printing-ws table.cut-table td, body.printing-ws table.cut-table th { font-size: 9pt; }
+}
+
+/* --- واکنش‌گرا --- */
+@media (max-width: 720px) {
+  .unit-tools { gap: .4rem; }
+  .unit-tools .ut-sep { display: none; }
+  .unit-tools .ut-label select { min-width: 8rem; }
+  .dim-cell { border-inline-end: 0; padding: .15rem .4rem; }
+  .dim-gauge { min-width: 100%; }
+  .tb-round { border-inline-start: 0; width: 100%; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ۲۷) «در از ورق بدنه» + هشدارهای محاسبه
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* سلول «ورق در»: تیک + یادداشت + (در صورت لزوم) انتخاب متریال */
+.fb-wrap { display: flex; flex-direction: column; gap: .25rem; min-width: 11rem; }
+
+.fb-check {
+  display: inline-flex; align-items: center; gap: .35rem;
+  font-size: .8rem; font-weight: 600; color: var(--text);
+  cursor: pointer; user-select: none; white-space: nowrap;
+}
+.fb-check input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+.fb-check.bad { color: var(--danger); }
+.fb-check:has(input:disabled) { cursor: not-allowed; opacity: .72; }
+
+/* یادداشتِ زیر تیک */
+.fb-note {
+  font-size: .74rem; line-height: 1.5; padding: .2rem .45rem;
+  border-radius: var(--radius-sm, 6px); border-inline-start: 3px solid transparent;
+}
+.fb-note.ok   { background: var(--success-soft, #e8f4ec); color: var(--success);
+                border-inline-start-color: var(--success); }
+.fb-note.bad  { background: var(--danger-soft, #fbeae9); color: var(--danger);
+                border-inline-start-color: var(--danger); }
+.fb-note.hint { background: var(--surface-2); color: var(--muted);
+                border-inline-start-color: var(--border); }
+
+/* جعبه‌ی هشدارهای موتور محاسبه (بالای جدول تجزیه‌ی مبلغ) */
+.warn-box {
+  margin-bottom: .7rem; padding: .6rem .8rem;
+  background: var(--warning-soft); color: var(--warning);
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+  border-inline-start: 4px solid var(--warning);
+  border-radius: var(--radius, 10px); font-size: .85rem;
+}
+.warn-box b { display: block; margin-bottom: .25rem; }
+.warn-box ul { margin: 0; padding-inline-start: 1.1rem; }
+.warn-box li { margin: .15rem 0; line-height: 1.6; }
+
+@media (max-width: 720px) {
+  .fb-wrap { min-width: 9rem; }
+}
+
+@media print {
+  .warn-box { break-inside: avoid; }
+}
