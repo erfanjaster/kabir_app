@@ -1,0 +1,14 @@
+# Enforce correct line endings per platform
+# NOTE: .bat files are stored WITH their CRLF bytes (-text = no conversion)
+# so that ZIP downloads from GitHub also work correctly on Windows.
+*.bat -text
+*.cmd -text
+*.sh text eol=lf
+*.command text eol=lf
+*.py text eol=lf
+*.js text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.png binary
+*.ttf binary
+*.ico binary

@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>کبیر — محاسبه‌گر قیمت تمام‌شده و فاکتور کابینت</title>
+<meta name="description" content="کبیر: نرم‌افزار تحت وب محاسبه‌ی قیمت تمام‌شده و صدور فاکتور حرفه‌ای برای کارگاه‌ها و فروشگاه‌های کابینت‌سازی — کاملاً فارسی و راست‌به‌چپ">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#0c3b36" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1a18" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/styles.css">
+<script src="js/data.js" defer></script>
+<script src="js/engine.js" defer></script>
+<script src="js/ui.js" defer></script>
+</head>
+<body>
+
+<!-- ==================== اسپلش راه‌اندازی ==================== -->
+<div id="splash" role="status" aria-live="polite">
+  <div class="splash-box">
+    <div class="splash-logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="9.5" y1="7" x2="9.5" y2="8"/><line x1="14.5" y1="7" x2="14.5" y2="8"/>
+      </svg>
+    </div>
+    <div class="splash-title">کبیر</div>
+    <div class="splash-sub">محاسبه‌گر قیمت تمام‌شده و صدور فاکتور صنعت کابینت</div>
+    <div class="splash-bar" aria-hidden="true"><i></i></div>
+    <div class="splash-msg" id="splashMsg">در حال راه‌اندازی…</div>
+  </div>
+</div>
+
+<noscript>
+  <div style="padding:2rem;text-align:center;font-family:Tahoma,sans-serif">
+    کبیر برای اجرا به جاوااسکریپت نیاز دارد. لطفاً جاوااسکریپت مرورگر را فعال کنید.
+  </div>
+</noscript>
+
+<!-- ==================== نوار کناری ==================== -->
+<aside class="sidebar" id="sidebar" aria-label="ناوبری اصلی">
+  <div class="brand">
+    <div class="brand-logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="9.5" y1="7" x2="9.5" y2="8"/><line x1="14.5" y1="7" x2="14.5" y2="8"/>
+      </svg>
+    </div>
+    <div>
+      <h1>کبیر</h1>
+      <p>محاسبه‌گر قیمت تمام‌شده‌ی کابینت</p>
+    </div>
+  </div>
+
+  <nav class="nav" id="nav">
+    <div class="nav-sec">کارگاه و فروش</div>
+    <button class="nav-btn active" data-page="dashboard" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/></svg>
+      داشبورد<span class="nav-kbd">۱</span>
+    </button>
+    <button class="nav-btn" data-page="projects" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4.5l2 2.5H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      پروژه‌ها<span class="nav-kbd">۲</span>
+    </button>
+    <div class="nav-sec">تعریف‌ها و پایه‌ها</div>
+    <button class="nav-btn" data-page="materials" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 10 5.5-10 5.5L2 7.5z"/><path d="m2 12.5 10 5.5 10-5.5"/><path d="m2 17 10 5.5L22 17"/></svg>
+      متریال و خدمات<span class="nav-kbd">۳</span>
+    </button>
+    <button class="nav-btn" data-page="styles" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.9 5.6 5.6 1.9-5.6 1.9L12 18l-1.9-5.6-5.6-1.9 5.6-1.9z"/><path d="M19 15.5 19.8 18l2.2.8-2.2.8L19 22l-.8-2.4-2.2-.8 2.2-.8z"/></svg>
+      سبک‌ها<span class="nav-kbd">۴</span>
+    </button>
+    <div class="nav-sec">اسناد و سیستم</div>
+    <button class="nav-btn" data-page="invoice" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18l-2.4-1.6L14 21l-2-1.6L10 21l-2.6-1.6L5 21z"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12.5" y2="16"/></svg>
+      فاکتور<span class="nav-kbd">۵</span>
+    </button>
+    <button class="nav-btn" data-page="settings" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      تنظیمات<span class="nav-kbd">۶</span>
+    </button>
+  </nav>
+
+  <div class="sidebar-foot">
+    <div class="ver"><span class="dot"></span> <span id="appVer">کبیر — رابط وب</span></div>
+    <div id="connBadge" class="conn demo"><span class="dot"></span> در حال اتصال…</div>
+    <div class="tiny" style="opacity:.7">میان‌بر: <b>/</b> جست‌وجو • <b>Alt+۱..۶</b> صفحه‌ها</div>
+  </div>
+</aside>
+<div class="scrim" id="scrim"></div>
+
+<!-- ==================== بدنه‌ی اصلی ==================== -->
+<div class="main">
+  <header class="topbar">
+    <button class="icon-btn btn-menu" id="btnMenu" type="button" aria-label="منو">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+    </button>
+    <div class="topbar-titles">
+      <h2 id="pageTitle">داشبورد</h2>
+      <p id="pageSub">نمای کلی کارگاه و پروژه‌ها</p>
+    </div>
+    <div class="topbar-actions">
+      <div class="clock-chip" id="clockChip" title="تاریخ و ساعت امروز">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 13.8"/></svg>
+        <span id="clockDate">—</span><b id="clockTime">—</b>
+      </div>
+      <div class="search-wrap">
+        <svg class="search-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        <input type="search" id="globalSearch" placeholder="جست‌وجوی متریال، پروژه…" autocomplete="off" aria-label="جست‌وجوی سراسری">
+        <span class="search-kbd">/</span>
+        <div class="search-drop" id="searchDrop" hidden></div>
+      </div>
+      <button class="icon-btn" id="btnRefresh" type="button" aria-label="به‌روزرسانی داده‌ها" title="به‌روزرسانی داده‌ها از پایگاه‌داده">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+      </button>
+      <button class="icon-btn" id="btnTheme" type="button" aria-label="تغییر پوسته" title="پوسته‌ی روشن/تاریک"></button>
+      <button class="btn primary" id="btnQuickProject" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        پروژه‌ی جدید
+      </button>
+    </div>
+  </header>
+
+  <div class="demo-banner" id="demoBanner" hidden role="status">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>
+    <span><b>حالت نمایشی:</b> سرور کبیر در دسترس نیست و داده‌ها فقط در مرورگر ذخیره می‌شوند. برای کار با پایگاه‌داده‌ی واقعی، کبیر را اجرا کنید: <b class="ltr">python main.py</b></span>
+    <button class="btn outline sm" id="btnBannerReconnect" type="button">اتصال به سرور</button>
+  </div>
+
+  <div class="content">
+
+    <!-- ================= صفحه‌ی داشبورد ================= -->
+    <section class="page active" id="page-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card" style="--stat-c:var(--info)">
+          <div class="stat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4.5l2 2.5H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
+          <div class="stat-info">
+            <div class="stat-label">پروژه‌ها</div>
+            <div class="stat-value" id="statProjects">—</div>
+            <div class="stat-sub" id="statProjectsSub"></div>
+          </div>
+        </div>
+        <div class="stat-card" style="--stat-c:var(--accent)">
+          <div class="stat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <div class="stat-info">
+            <div class="stat-label">فروش ماه اخیر</div>
+            <div class="stat-value"><span id="statSales">—</span><span class="stat-trend up" id="statSalesTrend"></span></div>
+            <div class="stat-sub">جمع پروژه‌های ثبت‌شده</div>
+          </div>
+        </div>
+        <div class="stat-card" style="--stat-c:var(--success)">
+          <div class="stat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div>
+          <div class="stat-info">
+            <div class="stat-label">سود تقریبی</div>
+            <div class="stat-value" id="statProfit">—</div>
+            <div class="stat-sub">اختلاف قیمت فروش و هزینه‌ی ثبت‌شده</div>
+          </div>
+        </div>
+        <div class="stat-card" style="--stat-c:var(--warning)">
+          <div class="stat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 10 5.5-10 5.5L2 7.5z"/><path d="m2 12.5 10 5.5 10-5.5"/><path d="m2 17 10 5.5L22 17"/></svg></div>
+          <div class="stat-info">
+            <div class="stat-label">اقلام متریال</div>
+            <div class="stat-value" id="statMaterials">—</div>
+            <div class="stat-sub" id="statMaterialsSub"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="card">
+          <div class="card-head">
+            <h3>فروش ماه‌های اخیر <span class="sub" id="chartUnit"></span></h3>
+            <div class="card-actions"><span class="badge b-final" id="chartBadge"></span></div>
+          </div>
+          <div class="card-body"><div class="chart" id="salesChart" role="img" aria-label="نمودار فروش ماه‌های اخیر"></div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>راهنمای سریع</h3></div>
+          <div class="card-body" style="padding-top:.4rem;padding-bottom:.6rem">
+            <ol class="guide">
+              <li>قیمت روز ورق، یراق و خدمات را در <a data-goto="materials">متریال و خدمات</a> وارد کنید.</li>
+              <li>ترکیب پرکاربرد خود را یک‌بار در <a data-goto="styles">سبک‌ها</a> ذخیره کنید.</li>
+              <li>در <a data-goto="projects">پروژه‌ها</a> یونیت‌ها، درها و کشوها را با ابعاد دقیق بسازید.</li>
+              <li>سود، نصب، تخفیف و مالیات را در نوار پایین تنظیم و <b>محاسبه‌ی دقیق</b> کنید.</li>
+              <li>از صفحه‌ی <a data-goto="invoice">فاکتور</a> چاپ، PDF یا اکسل بگیرید.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="card">
+          <div class="card-head">
+            <h3>آخرین پروژه‌ها</h3>
+            <div class="card-actions"><button class="btn ghost sm" data-goto="projects" type="button">همه‌ی پروژه‌ها</button></div>
+          </div>
+          <div class="card-body" style="padding-top:.4rem"><div class="mini-list" id="recentProjects"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h3>آخرین تغییرات قیمت متریال</h3>
+            <div class="card-actions"><button class="btn ghost sm" id="btnDashHistory" type="button">تاریخچه</button></div>
+          </div>
+          <div class="card-body" style="padding-top:.4rem"><div class="mini-list" id="priceChanges"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= صفحه‌ی پروژه‌ها ================= -->
+    <section class="page" id="page-projects">
+      <div class="toolbar no-print">
+        <div class="search-wrap">
+          <svg class="search-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+          <input type="search" id="projSearch" placeholder="جست‌وجوی عنوان، مشتری یا کد…" autocomplete="off">
+        </div>
+        <select id="projFilter" aria-label="فیلتر وضعیت" style="width:auto">
+          <option value="all">همه‌ی وضعیت‌ها</option>
+          <option value="draft">پیش‌نویس</option>
+          <option value="open">در جریان</option>
+          <option value="done">انجام‌شده</option>
+          <option value="canceled">لغوشده</option>
+        </select>
+        <div class="spacer"></div>
+        <button class="btn primary" id="btnNewProject" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          پروژه‌ی جدید
+        </button>
+      </div>
+
+      <div class="notice warn" id="staleBanner" hidden role="status">
+        <span class="n-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg></span>
+        <span>قیمت متریال تغییر کرده است — <b id="staleCount">۰</b> پروژه هنوز با نرخ‌های قدیمی محاسبه شده‌اند. برای به‌روزرسانی همه‌ی قیمت‌ها «بازمحاسبه» را بزنید.</span>
+        <button class="btn warn sm" id="btnRecalcAll" type="button">بازمحاسبه‌ی همه‌ی پروژه‌ها</button>
+      </div>
+
+      <div class="card no-print">
+        <div class="table-wrap sticky-head"><table class="data" id="projectsTable" aria-label="فهرست پروژه‌ها"></table></div>
+      </div>
+
+      <!-- ویرایشگر پروژه -->
+      <div class="editor-stack" id="projectEditor" hidden>
+        <div class="card">
+          <div class="card-head">
+            <h3>مشخصات پروژه <span class="badge b-open" id="edStatusBadge"></span></h3>
+            <div class="card-actions">
+              <button class="btn ghost sm" id="btnCloseEditor" type="button">بستن</button>
+              <button class="btn ghost sm" id="btnDupProject" type="button">کپی پروژه</button>
+              <button class="btn primary sm" id="btnSaveProject" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                ذخیره‌ی تغییرات
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="fields-grid">
+              <div class="field"><label for="edCode">کد پروژه</label><input type="text" id="edCode" readonly></div>
+              <div class="field span2"><label for="edTitle">عنوان پروژه</label><input type="text" id="edTitle" placeholder="مثلاً کابینت آشپزخانه"></div>
+              <div class="field"><label for="edStatus">وضعیت</label>
+                <select id="edStatus">
+                  <option value="draft">پیش‌نویس</option>
+                  <option value="open">در جریان</option>
+                  <option value="done">انجام‌شده</option>
+                  <option value="canceled">لغوشده</option>
+                </select>
+              </div>
+              <div class="field"><label for="edCustomer">نام مشتری</label><input type="text" id="edCustomer"></div>
+              <div class="field"><label for="edMobile">همراه</label><input type="tel" id="edMobile" placeholder="۰۹۱۲…" class="ltr" style="text-align:right"></div>
+              <div class="field"><label for="edPhone">تلفن</label><input type="tel" id="edPhone" class="ltr" style="text-align:right"></div>
+              <div class="field"><label for="edValid">اعتبار تا</label><input type="text" id="edValid" placeholder="۱۴۰۵/۰۸/۱۵"></div>
+              <div class="field span4"><label for="edAddress">نشانی</label><input type="text" id="edAddress"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>بخش‌ها (سبک‌ها) <span class="sub">در یک پروژه چند بخش با سبک‌های متفاوت بسازید</span></h3>
+            <div class="card-actions">
+              <button class="btn ghost sm" id="btnDelSection" type="button">حذف بخش</button>
+              <button class="btn ghost sm" id="btnAddSection" type="button">＋ افزودن بخش</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="sec-pills" id="secPills"></div>
+            <div class="section-bar">
+              <label>نام بخش:
+                <input type="text" id="secName" style="width:8rem">
+              </label>
+              <label>سبک:
+                <select id="secStyle" aria-label="سبک بخش"></select>
+              </label>
+              <button class="btn outline sm" id="btnApplyStyle" type="button" title="متریالِ سبک روی همه‌ی یونیت‌ها، درها و کشوها اعمال می‌شود">اعمال سبک روی بخش</button>
+              <label>پرت ورق ٪:
+                <input type="text" id="secWaste" class="narrow" inputmode="numeric" data-no-sep>
+              </label>
+              <label>سربار ٪:
+                <input type="text" id="secOverhead" class="narrow" inputmode="numeric" data-no-sep>
+              </label>
+              <label>صفحه‌ی کابینت:
+                <select id="secCounter" aria-label="متریال صفحه"></select>
+              </label>
+              <label>متر طول صفحه:
+                <input type="text" id="secCounterLm" class="narrow" inputmode="decimal">
+              </label>
+            </div>
+
+            <div class="tabs" id="secTabs" role="tablist">
+              <button class="tab active" data-tab="units" type="button" role="tab">یونیت‌ها <span class="cnt" id="cntUnits"></span></button>
+              <button class="tab" data-tab="doors" type="button" role="tab">درها <span class="cnt" id="cntDoors"></span></button>
+              <button class="tab" data-tab="drawers" type="button" role="tab">کشوها <span class="cnt" id="cntDrawers"></span></button>
+              <button class="tab" data-tab="facade" type="button" role="tab">درنما <span class="cnt" id="cntFacade"></span></button>
+              <button class="tab" data-tab="extras" type="button" role="tab">اضافات و اکسسوری <span class="cnt" id="cntExtras"></span></button>
+              <button class="tab" data-tab="services" type="button" role="tab">خدمات بخش <span class="cnt" id="cntServices"></span></button>
+            </div>
+
+            <div class="tab-panel active" id="tab-units" role="tabpanel">
+              <div class="table-wrap"><table class="data center" id="tblUnits"></table></div>
+              <div class="add-unit-row">
+                <button class="btn ghost sm add-row" data-add="unit:ground" type="button" title="یونیت زمینی با ابعاد پیش‌فرض (قابل تغییر در تنظیمات)">＋ یونیت زمینی</button>
+                <button class="btn ghost sm add-row" data-add="unit:wall" type="button" title="یونیت دیواری با ابعاد پیش‌فرض (قابل تغییر در تنظیمات)">＋ یونیت دیواری</button>
+                <button class="btn ghost sm add-row" data-add="unit:tall" type="button" title="کمد ایستاده با ابعاد پیش‌فرض (قابل تغییر در تنظیمات)">＋ کمد ایستاده</button>
+              </div>
+              <p class="tiny muted" style="margin-top:.4rem">ابعاد هر نوع به‌صورت پیش‌فرض از «تنظیمات → ابعاد پیش‌فرض یونیت‌ها» می‌آید و با تغییر نوع یونیت هم خودکار اعمال می‌شود. برای انتخاب متریال و یراق هر یونیت، روی «جزئیات» ردیف آن کلیک کنید.</p>
+            </div>
+            <div class="tab-panel" id="tab-doors" role="tabpanel">
+              <div class="table-wrap"><table class="data center" id="tblDoors"></table></div>
+              <button class="btn ghost sm add-row" data-add="doors" type="button">＋ افزودن در</button>
+            </div>
+            <div class="tab-panel" id="tab-drawers" role="tabpanel">
+              <div class="table-wrap"><table class="data center" id="tblDrawers"></table></div>
+              <button class="btn ghost sm add-row" data-add="drawers" type="button">＋ افزودن کشو</button>
+            </div>
+            <div class="tab-panel" id="tab-facade" role="tabpanel">
+              <div class="section-bar" style="margin-bottom:.8rem">
+                <label>حالت درنما:
+                  <select id="facadeMode">
+                    <option value="none">بدون درنما</option>
+                    <option value="detailed">ریز (ردیف‌های زیر)</option>
+                    <option value="total">متراژ کلی</option>
+                  </select>
+                </label>
+                <span id="facadeTotalWrap" class="hidden" style="display:flex;gap:.8rem;flex-wrap:wrap">
+                  <label>متراژ کل (م²): <input type="text" id="facadeTotalSqm" class="narrow" inputmode="decimal" data-no-sep></label>
+                  <label>قیمت هر م²: <input type="text" id="facadeTotalPrice" class="narrow" inputmode="numeric"></label>
+                </span>
+              </div>
+              <div id="facadeRowsWrap">
+                <div class="table-wrap"><table class="data center" id="tblFacade"></table></div>
+                <button class="btn ghost sm add-row" data-add="facade" type="button">＋ افزودن ردیف درنما</button>
+              </div>
+            </div>
+            <div class="tab-panel" id="tab-extras" role="tabpanel">
+              <div class="table-wrap"><table class="data center" id="tblExtras"></table></div>
+              <button class="btn ghost sm add-row" data-add="extras" type="button">＋ افزودن ردیف</button>
+            </div>
+            <div class="tab-panel" id="tab-services" role="tabpanel">
+              <div class="section-bar" style="margin-bottom:.8rem">
+                <label>افزودن از کتابخانه‌ی خدمات:
+                  <select id="svcLibrary"><option value="">— انتخاب کنید —</option></select>
+                </label>
+                <span class="tiny muted">مبنا: مقدار ردیف خودکار از روی آمار بخش محاسبه می‌شود (تعداد یونیت، لنگه در، متر طول…)</span>
+              </div>
+              <div class="table-wrap"><table class="data center" id="tblServices"></table></div>
+              <button class="btn ghost sm add-row" data-add="services" type="button">＋ افزودن خدمت</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="totalbar" id="totalBar">
+          <div class="totalbar-inner">
+            <div class="tb-fields">
+              <div class="tb-field">
+                <span>روش سود</span>
+                <div class="pair">
+                  <select id="tbProfitMode" aria-label="روش سود">
+                    <option value="markup">مارکاپ</option>
+                    <option value="margin">مارجین</option>
+                  </select>
+                  <span class="cell-wrap"><input type="text" id="tbProfitPct" inputmode="numeric" aria-label="درصد سود" class="has-u" data-no-sep><i class="cell-u" id="uProfitPct">٪</i></span>
+                </div>
+              </div>
+              <div class="tb-field">
+                <span>نصب</span>
+                <div class="pair">
+                  <select id="tbInstallMode" aria-label="روش نصب">
+                    <option value="none">بدون نصب</option>
+                    <option value="fixed">مبلغ ثابت</option>
+                    <option value="per_meter">متری</option>
+                    <option value="percent">درصدی</option>
+                  </select>
+                  <span class="cell-wrap"><input type="text" id="tbInstallVal" inputmode="numeric"><i class="cell-u" id="uInstallVal" style="display:none"></i></span>
+                </div>
+              </div>
+              <div class="tb-field">
+                <span>تخفیف</span>
+                <div class="pair">
+                  <span class="cell-wrap"><input type="text" id="tbDiscPct" inputmode="numeric" aria-label="درصد تخفیف" class="has-u" data-no-sep><i class="cell-u" id="uDiscPct">٪</i></span>
+                  <span class="cell-wrap"><input type="text" id="tbDiscAmt" inputmode="numeric" placeholder="مبلغ" aria-label="مبلغ تخفیف" class="has-u"><i class="cell-u" id="uDiscAmt">تومان</i></span>
+                </div>
+              </div>
+              <div class="tb-field">
+                <span>مالیات بر ارزش افزوده</span>
+                <div class="pair">
+                  <label class="switch" title="فعال/غیرفعال">
+                    <input type="checkbox" id="tbVat"><span class="track"></span>
+                  </label>
+                  <span class="cell-wrap"><input type="text" id="tbVatPct" inputmode="numeric" aria-label="درصد مالیات" style="min-width:3.6rem" class="has-u" data-no-sep><i class="cell-u" id="uVatPct">٪</i></span>
+                </div>
+              </div>
+              <div class="tb-field"><span>مبلغ ثابت اضافه</span><span class="cell-wrap"><input type="text" id="tbExtraFixed" inputmode="numeric" title="بابت تفاوت نوع درِ بخش‌ها یا اقلام کلی" class="has-u"><i class="cell-u" id="uExtraFixed">تومان</i></span></div>
+            </div>
+            <div class="tb-figures">
+              <div class="tb-fig"><span>جمع هزینه‌ی تمام‌شده</span><b id="tbCost">—</b></div>
+              <div class="tb-fig"><span>قیمت ناخالص</span><b id="tbGross">—</b></div>
+              <div class="tb-final"><span>مبلغ قابل پرداخت</span><b id="tbFinal">—</b></div>
+            </div>
+            <div class="tb-actions">
+              <button class="btn outline" id="btnBreakdown" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="12" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="12" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="13" y2="18"/></svg>
+                محاسبه‌ی دقیق
+              </button>
+              <button class="btn success" id="btnGoInvoice" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18l-2.4-1.6L14 21l-2-1.6L10 21l-2.6-1.6L5 21z"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+                صدور فاکتور
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= صفحه‌ی متریال و خدمات ================= -->
+    <section class="page" id="page-materials">
+      <div class="toolbar no-print">
+        <div class="search-wrap">
+          <svg class="search-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+          <input type="search" id="matSearch" placeholder="جست‌وجوی متریال و خدمات…" autocomplete="off">
+        </div>
+        <span class="badge b-final" id="matCurBadge"></span>
+        <div class="spacer"></div>
+        <button class="btn ghost" id="btnMatHistory" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><polyline points="3 3 3 8 8 8"/><polyline points="12 7.5 12 12 15.5 14"/></svg>
+          تاریخچه‌ی قیمت
+        </button>
+        <button class="btn ghost" id="btnMatExcel" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          خروجی اکسل
+        </button>
+        <button class="btn outline" id="btnBulkPrice" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+          تغییر دسته‌جمعی قیمت
+        </button>
+        <button class="btn primary" id="btnNewMaterial" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          افزودن قلم
+        </button>
+      </div>
+
+      <div class="chips no-print" id="matChips" role="tablist" aria-label="دسته‌بندی‌ها"></div>
+
+      <div class="card no-print">
+        <div class="table-wrap sticky-head"><table class="data" id="matTable" aria-label="فهرست متریال و خدمات"></table></div>
+        <div class="card-foot" id="matCount"></div>
+      </div>
+
+      <div class="card no-print" id="historyCard" hidden>
+        <div class="card-head">
+          <h3>تاریخچه‌ی تغییرات قیمت</h3>
+          <div class="card-actions"><button class="btn ghost sm" id="btnCloseHistory" type="button">بستن</button></div>
+        </div>
+        <div class="table-wrap sticky-head"><table class="data" id="historyTable" aria-label="تاریخچه‌ی قیمت‌ها"></table></div>
+      </div>
+    </section>
+
+    <!-- ================= صفحه‌ی سبک‌ها ================= -->
+    <section class="page" id="page-styles">
+      <div class="toolbar no-print">
+        <p class="muted" style="font-size:.85rem">ترکیب متریال پرکاربرد خود را یک‌بار ذخیره کنید و در هر پروژه با یک کلیک فراخوانید. <b id="stylesLimitNote">حداکثر ۲۰ سبک.</b></p>
+        <div class="spacer"></div>
+        <button class="btn primary" id="btnNewStyle" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          تعریف سبک جدید
+        </button>
+      </div>
+      <div class="styles-grid" id="stylesGrid"></div>
+    </section>
+
+    <!-- ================= صفحه‌ی فاکتور ================= -->
+    <section class="page" id="page-invoice">
+      <div class="invoice-layout">
+        <div class="card inv-options no-print">
+          <div class="card-head"><h3>تنظیمات سند</h3></div>
+          <div class="card-body">
+            <div class="field">
+              <label for="invProject">پروژه</label>
+              <select id="invProject"></select>
+            </div>
+            <div class="field">
+              <label for="invType">نوع سند</label>
+              <select id="invType">
+                <option value="quote">پیش‌فاکتور</option>
+                <option value="proforma">پیش‌فاکتور رسمی</option>
+                <option value="invoice">فاکتور فروش</option>
+              </select>
+            </div>
+            <div class="grid2">
+              <div class="field"><label for="invNumber">شماره</label><input type="text" id="invNumber" readonly></div>
+              <div class="field"><label for="invDate">تاریخ</label><input type="text" id="invDate" readonly></div>
+            </div>
+            <div class="field"><label for="invValid">اعتبار تا</label><input type="text" id="invValid"></div>
+
+            <div class="field">
+              <span class="lbl">سطح نمایش</span>
+              <div class="segmented" id="invLevel" role="tablist">
+                <button type="button" class="active" data-level="grouped">گروه‌بندی</button>
+                <button type="button" data-level="detailed">ریز</button>
+                <button type="button" data-level="summary">خلاصه</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <span class="lbl">ردیف‌های قابل‌نمایش</span>
+              <div class="rows-checks" id="invRows"></div>
+            </div>
+
+            <label class="switch"><input type="checkbox" id="invShowCost"><span class="track"></span><span class="sw-label">نمایش هزینه‌ی تمام‌شده <span class="tiny muted">(نسخه‌ی داخلی)</span></span></label>
+            <label class="switch"><input type="checkbox" id="invShowStats" checked><span class="track"></span><span class="sw-label">نمایش آمار (یونیت، متراژ، ورق)</span></label>
+
+            <button class="btn primary block" id="btnRefreshInv" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
+              به‌روزرسانی فاکتور
+            </button>
+            <div style="display:flex;gap:.5rem">
+              <button class="btn outline" id="btnPrintInv" type="button" style="flex:1">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                چاپ
+              </button>
+              <button class="btn ghost" id="btnPdfInv" type="button" style="flex:1">PDF</button>
+              <button class="btn ghost" id="btnXlsInv" type="button" style="flex:1">اکسل</button>
+            </div>
+            <button class="btn success block" id="btnSaveInv" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              ذخیره در بایگانی فاکتورها
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <div class="inv-preview-wrap">
+            <div class="sheet" id="invoiceSheet"></div>
+            <iframe class="inv-frame hidden" id="invFrame" title="پیش‌نمایش فاکتور"></iframe>
+          </div>
+          <div class="card no-print" style="margin-top:1.2rem">
+            <div class="card-head"><h3>بایگانی فاکتورهای صادرشده</h3></div>
+            <div class="table-wrap sticky-head"><table class="data" id="archiveTable" aria-label="بایگانی فاکتورها"></table></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= صفحه‌ی تنظیمات ================= -->
+    <section class="page" id="page-settings">
+      <div class="settings-grid">
+
+        <div class="card">
+          <div class="card-head"><h3>اطلاعات فروشگاه / شرکت</h3></div>
+          <div class="card-body">
+            <div class="grid2">
+              <div class="field"><label for="setCompanyName">نام فروشگاه</label><input type="text" id="setCompanyName"></div>
+              <div class="field"><label for="setManager">مدیریت</label><input type="text" id="setManager"></div>
+              <div class="field"><label for="setPhone">تلفن</label><input type="tel" id="setPhone"></div>
+              <div class="field"><label for="setMobile">همراه</label><input type="tel" id="setMobile"></div>
+              <div class="field"><label for="setEmail">ایمیل</label><input type="text" id="setEmail" dir="ltr"></div>
+              <div class="field"><label for="setWeb">وب‌سایت</label><input type="text" id="setWeb" dir="ltr"></div>
+              <div class="field span2"><label for="setAddress">نشانی</label><input type="text" id="setAddress"></div>
+              <div class="field span2"><label for="setInvTitle">عنوان سربرگ فاکتور</label><input type="text" id="setInvTitle"></div>
+              <div class="field span2"><label for="setInvFooter">پانویس فاکتور</label><textarea id="setInvFooter"></textarea></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>پیش‌فرض‌های محاسبه</h3></div>
+          <div class="card-body">
+            <div class="grid2">
+              <div class="field"><label for="setProfitMode">روش سود</label>
+                <select id="setProfitMode"><option value="markup">مارکاپ (هزینه × ۱+٪)</option><option value="margin">مارجین (هزینه ÷ ۱−٪)</option></select>
+              </div>
+              <div class="field"><label for="setProfitPct">درصد سود</label><input type="text" id="setProfitPct" inputmode="numeric" data-no-sep></div>
+              <div class="field"><label for="setOverhead">سربار ٪</label><input type="text" id="setOverhead" inputmode="numeric" data-no-sep></div>
+              <div class="field"><label for="setWaste">پرت ورق ٪</label><input type="text" id="setWaste" inputmode="numeric" data-no-sep></div>
+              <div class="field"><label for="setInstallMode">روش نصب پیش‌فرض</label>
+                <select id="setInstallMode">
+                  <option value="none">بدون نصب</option><option value="fixed">مبلغ ثابت</option>
+                  <option value="per_meter">متری</option><option value="percent">درصدی</option>
+                </select>
+              </div>
+              <div class="field"><label for="setInstallVal">مقدار نصب</label><input type="text" id="setInstallVal" inputmode="numeric"></div>
+              <div class="field"><label for="setSheetW">عرض ورق استاندارد (سانتی‌متر)</label><input type="text" id="setSheetW" inputmode="numeric"></div>
+              <div class="field"><label for="setSheetH">ارتفاع ورق استاندارد</label><input type="text" id="setSheetH" inputmode="numeric"></div>
+              <div class="field"><label for="setFiberW">عرض ورق فیبر</label><input type="text" id="setFiberW" inputmode="numeric"></div>
+              <div class="field"><label for="setFiberH">ارتفاع ورق فیبر</label><input type="text" id="setFiberH" inputmode="numeric"></div>
+              <div class="field"><label for="setBandBody">ضریب نوار بدنه</label><input type="text" id="setBandBody" inputmode="decimal"><span class="hint">به ازای هر م² بدنه چند متر نوار PVC مصرف می‌شود (پیش‌فرض صنعتی: ۲٫۲)</span></div>
+              <div class="field"><label for="setBandDoor">ضریب نوار در</label><input type="text" id="setBandDoor" inputmode="decimal"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>ابعاد پیش‌فرض یونیت‌ها</h3>
+            <div class="card-actions"><span class="badge b-final">به تفکیک نوع</span></div>
+          </div>
+          <div class="card-body">
+            <p class="tiny muted" style="margin-bottom:.9rem">
+              هنگام «افزودن یونیت» یا «تغییر نوع یونیت» در ویرایشگر پروژه، این ابعاد خودکار اعمال می‌شوند
+              (بعداً قابل ویرایش‌اند). همه‌ی مقادیر بر حسب سانتی‌متر و تعداد طبقات بر حسب عدد است.
+            </p>
+            <div class="unit-def-grid">
+              <div class="unit-def-col">
+                <h4><span class="ud-dot ground"></span>زمینی</h4>
+                <div class="field"><label for="setGroundL">طول</label><input type="text" id="setGroundL" inputmode="numeric"></div>
+                <div class="field"><label for="setGroundH">ارتفاع</label><input type="text" id="setGroundH" inputmode="numeric"></div>
+                <div class="field"><label for="setGroundD">عمق</label><input type="text" id="setGroundD" inputmode="numeric"></div>
+                <div class="field"><label for="setGroundS">تعداد طبقات</label><input type="text" id="setGroundS" inputmode="numeric"></div>
+              </div>
+              <div class="unit-def-col">
+                <h4><span class="ud-dot wall"></span>دیواری</h4>
+                <div class="field"><label for="setWallL">طول</label><input type="text" id="setWallL" inputmode="numeric"></div>
+                <div class="field"><label for="setWallH">ارتفاع</label><input type="text" id="setWallH" inputmode="numeric"></div>
+                <div class="field"><label for="setWallD">عمق</label><input type="text" id="setWallD" inputmode="numeric"></div>
+                <div class="field"><label for="setWallS">تعداد طبقات</label><input type="text" id="setWallS" inputmode="numeric"></div>
+              </div>
+              <div class="unit-def-col">
+                <h4><span class="ud-dot tall"></span>کمد ایستاده</h4>
+                <div class="field"><label for="setTallL">طول</label><input type="text" id="setTallL" inputmode="numeric"></div>
+                <div class="field"><label for="setTallH">ارتفاع</label><input type="text" id="setTallH" inputmode="numeric"></div>
+                <div class="field"><label for="setTallD">عمق</label><input type="text" id="setTallD" inputmode="numeric"></div>
+                <div class="field"><label for="setTallS">تعداد طبقات</label><input type="text" id="setTallS" inputmode="numeric"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>پول، مالیات و نمایش</h3></div>
+          <div class="card-body">
+            <div class="grid2">
+              <div class="field"><label for="setCurrency">واحد پول</label>
+                <select id="setCurrency"><option value="تومان">تومان</option><option value="ریال">ریال</option></select>
+              </div>
+              <div class="field"><label for="setScale">مقیاس نمایش</label>
+                <select id="setScale"><option value="1">بدون تبدیل</option><option value="10">تقسیم بر ۱۰ (تومان)</option><option value="100">تقسیم بر ۱۰۰ (هزار ریال)</option></select>
+              </div>
+            </div>
+            <hr style="border:none;border-top:1px solid var(--border);margin:1rem 0">
+            <div style="display:flex;flex-direction:column;gap:.9rem">
+              <label class="switch"><input type="checkbox" id="swVatSet"><span class="track"></span><span class="sw-label">فعال‌سازی مالیات بر ارزش افزوده (پیش‌فرض)</span></label>
+              <div class="field" style="max-width:12rem"><label for="setVatPct">درصد مالیات</label><input type="text" id="setVatPct" inputmode="numeric" data-no-sep></div>
+              <label class="switch"><input type="checkbox" id="swFaDigits"><span class="track"></span><span class="sw-label">نمایش اعداد فارسی</span></label>
+            </div>
+            <hr style="border:none;border-top:1px solid var(--border);margin:1rem 0">
+            <div class="field">
+              <span class="lbl">پوسته</span>
+              <div class="segmented" id="setTheme">
+                <button type="button" data-theme-v="light" class="active">☀ روشن</button>
+                <button type="button" data-theme-v="dark">🌙 تاریک</button>
+              </div>
+            </div>
+            <div class="field" style="margin-top:.9rem">
+              <label for="setFontSize">اندازه‌ی قلم وب: <b id="setFontSizeVal">۱۴ پیکسل</b></label>
+              <input type="range" id="setFontSize" min="12" max="18" step="1" value="14">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>پشتیبان‌گیری و داده‌ها</h3></div>
+          <div class="card-body">
+            <div style="display:flex;flex-direction:column;gap:.9rem;margin-bottom:1rem">
+              <label class="switch"><input type="checkbox" id="swAutoBackup"><span class="track"></span><span class="sw-label">پشتیبان‌گیری خودکار روزانه</span></label>
+              <div class="field" style="max-width:14rem"><label for="setBackupKeep">تعداد نسخه‌های نگه‌داشتنی</label><input type="text" id="setBackupKeep" inputmode="numeric" data-no-sep></div>
+            </div>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem">
+              <button class="btn primary sm" id="btnBackupNow" type="button">پشتیبان‌گیری اکنون</button>
+              <button class="btn ghost sm" id="btnExportJson" type="button">خروجی JSON</button>
+              <button class="btn ghost sm" id="btnImportJson" type="button">ورود JSON</button>
+              <input type="file" id="fileImportJson" accept=".json,application/json" class="hidden">
+            </div>
+            <div class="table-wrap sticky-head"><table class="data" id="backupsTable" aria-label="نسخه‌های پشتیبان"></table></div>
+            <p class="tiny muted" id="dataDirNote" style="margin-top:.6rem"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-save no-print">
+        <button class="btn ghost" id="btnResetSettings" type="button">بازنشانی پیش‌فرض‌ها</button>
+        <button class="btn primary" id="btnSaveSettings" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          ذخیره‌ی تنظیمات
+        </button>
+      </div>
+    </section>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ==================== مودال‌ها ==================== -->
+<div class="modal-backdrop" id="modalBackdrop" hidden>
+
+  <!-- افزودن/ویرایش متریال -->
+  <div class="modal" id="modal-material" role="dialog" aria-modal="true" aria-labelledby="matModalTitle">
+    <div class="modal-head">
+      <h3 id="matModalTitle">قلم جدید</h3>
+      <button class="icon-btn" data-close type="button" aria-label="بستن">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fields-grid" style="grid-template-columns:repeat(2,1fr)">
+        <div class="field span2"><label for="mfName">نام قلم</label><input type="text" id="mfName" placeholder="مثلاً ام‌دی‌اف سفید صدفی ۱۶ میل"></div>
+        <div class="field"><label for="mfCat">دسته‌بندی</label><select id="mfCat"></select></div>
+        <div class="field"><label for="mfUnit">واحد</label>
+          <select id="mfUnit">
+            <option value="sheet">ورق</option><option value="sqm">متر مربع</option><option value="lm">متر طول</option>
+            <option value="piece">عدد</option><option value="set">ست</option><option value="kg">کیلوگرم</option><option value="job">موردی</option>
+          </select>
+        </div>
+        <div class="field"><label for="mfPrice">قیمت</label><input type="text" id="mfPrice" inputmode="numeric" placeholder="۰"><span class="hint" id="mfPriceHint"></span></div>
+        <div class="field"><label for="mfThick">ضخامت (میل)</label><input type="text" id="mfThick" inputmode="numeric" placeholder="۱۶"></div>
+        <div class="field"><label for="mfSheetW">عرض ورق (سانتی‌متر)</label><input type="text" id="mfSheetW" inputmode="numeric" placeholder="۱۸۳"></div>
+        <div class="field"><label for="mfSheetH">ارتفاع ورق (سانتی‌متر)</label><input type="text" id="mfSheetH" inputmode="numeric" placeholder="۳۶۶"></div>
+        <div class="field span2"><label for="mfWidth">عرض مؤثر (سانتی‌متر) <span class="tiny muted">— برای تبدیل مترطول به مترمربع (صفحه/تاج/پاخور)</span></label><input type="text" id="mfWidth" inputmode="numeric" placeholder="۶۰"></div>
+        <div class="field span2"><label for="mfSupplier">تأمین‌کننده</label><input type="text" id="mfSupplier" placeholder="اختیاری"></div>
+        <div class="field span2"><label for="mfNote">یادداشت</label><input type="text" id="mfNote" placeholder="اختیاری"></div>
+        <div class="field span2"><label class="switch"><input type="checkbox" id="mfStatus" checked><span class="track"></span><span class="sw-label">فعال</span></label></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn primary" id="btnSaveMaterial" type="button">ذخیره‌ی قلم</button>
+      <div class="spacer"></div>
+      <button class="btn ghost" data-close type="button">انصراف</button>
+    </div>
+  </div>
+
+  <!-- تغییر دسته‌جمعی قیمت -->
+  <div class="modal" id="modal-bulk" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3>به‌روزرسانی دسته‌جمعی قیمت‌ها</h3>
+      <button class="icon-btn" data-close type="button" aria-label="بستن">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field" style="margin-bottom:1rem">
+        <span class="lbl">دامنه‌ی اعمال</span>
+        <div class="radio-row">
+          <label class="radio"><input type="radio" name="bulkScope" value="all" checked> همه‌ی اقلام</label>
+          <label class="radio"><input type="radio" name="bulkScope" value="cat"> فقط دسته‌ی انتخاب‌شده</label>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:1rem">
+        <label for="bulkPct">درصد تغییر</label>
+        <div class="input-affix"><input type="text" id="bulkPct" inputmode="numeric" placeholder="مثلاً ۱۰ یا ۵−" data-no-sep><span class="affix">٪</span></div>
+        <div class="pct-chips" style="margin-top:.55rem">
+          <button type="button" class="pct-chip neg" data-pct="-10">−۱۰٪</button>
+          <button type="button" class="pct-chip neg" data-pct="-5">−۵٪</button>
+          <button type="button" class="pct-chip" data-pct="5">+۵٪</button>
+          <button type="button" class="pct-chip" data-pct="10">+۱۰٪</button>
+          <button type="button" class="pct-chip" data-pct="15">+۱۵٪</button>
+          <button type="button" class="pct-chip" data-pct="20">+۲۰٪</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="bulkReason">دلیل <span class="tiny muted">(ثبت در تاریخچه)</span></label>
+        <input type="text" id="bulkReason" placeholder="مثلاً به‌روزرسانی نرخ بازار">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn primary" id="btnApplyBulk" type="button">اعمال تغییر</button>
+      <div class="spacer"></div>
+      <button class="btn ghost" data-close type="button">انصراف</button>
+    </div>
+  </div>
+
+  <!-- سبک جدید -->
+  <div class="modal" id="modal-style" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3 id="styleModalTitle">تعریف سبک</h3>
+      <button class="icon-btn" data-close type="button" aria-label="بستن">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid2">
+        <div class="field" style="grid-column:1/-1"><label for="sfName">نام سبک</label><input type="text" id="sfName" placeholder="مثلاً هایگلاس ترک — یراق بلوم"></div>
+        <div class="field"><label for="sfBody">ورق بدنه</label><select id="sfBody"></select></div>
+        <div class="field"><label for="sfDoor">ورق در</label><select id="sfDoor"></select></div>
+        <div class="field"><label for="sfBack">فیبر پشت</label><select id="sfBack"></select></div>
+        <div class="field"><label for="sfBanding">نوار</label><select id="sfBanding"></select></div>
+        <div class="field"><label for="sfHinge">لولا</label><select id="sfHinge"></select></div>
+        <div class="field"><label for="sfHandle">دستگیره</label><select id="sfHandle"></select></div>
+        <div class="field"><label for="sfLeg">پایه</label><select id="sfLeg"></select></div>
+        <div class="field"><label for="sfShelfPin">خار طبقه</label><select id="sfShelfPin"></select></div>
+        <div class="field"><label for="sfCountertop">صفحه</label><select id="sfCountertop"></select></div>
+        <div class="field"><label for="sfDoorModel">مدل / اجرت در</label><select id="sfDoorModel"></select></div>
+        <div class="field"><label for="sfSlide">ریل کشو</label><select id="sfSlide"></select></div>
+        <div class="field"><label for="sfDrawerSheet">ورق جعبه‌ی کشو</label><select id="sfDrawerSheet"></select></div>
+        <div class="field"><label for="sfCrown">تاج</label><select id="sfCrown"></select></div>
+        <div class="field"><label for="sfUnderlight">زیرچراغ</label><select id="sfUnderlight"></select></div>
+        <div class="field"><label for="sfKickboard">پاخور</label><select id="sfKickboard"></select></div>
+        <div class="field"><label for="sfWaste">پرت ورق ٪</label><input type="text" id="sfWaste" inputmode="numeric" value="۸" data-no-sep></div>
+        <div class="field"><label for="sfOverhead">سربار ٪</label><input type="text" id="sfOverhead" inputmode="numeric" value="۵" data-no-sep></div>
+        <div class="field" style="grid-column:1/-1"><label for="sfNote">یادداشت</label><input type="text" id="sfNote" placeholder="توضیح کوتاه درباره‌ی سبک"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn primary" id="btnSaveStyle" type="button">ذخیره‌ی سبک</button>
+      <div class="spacer"></div>
+      <button class="btn ghost" data-close type="button">انصراف</button>
+    </div>
+  </div>
+
+  <!-- پروژه‌ی جدید -->
+  <div class="modal" id="modal-project" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3>پروژه‌ی جدید</h3>
+      <button class="icon-btn" data-close type="button" aria-label="بستن">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid2">
+        <div class="field span2" style="grid-column:1/-1"><label for="pfTitle">عنوان پروژه</label><input type="text" id="pfTitle" placeholder="مثلاً کابینت آشپزخانه — واحد ۵"></div>
+        <div class="field"><label for="pfCustomer">نام مشتری</label><input type="text" id="pfCustomer"></div>
+        <div class="field"><label for="pfMobile">همراه</label><input type="tel" id="pfMobile" placeholder="۰۹۱۲…"></div>
+        <div class="field"><label for="pfStyle">سبک بخش اول</label><select id="pfStyle"></select></div>
+        <div class="field"><label for="pfStatus">وضعیت</label>
+          <select id="pfStatus"><option value="draft">پیش‌نویس</option><option value="open">در جریان</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn primary" id="btnCreateProject" type="button">ایجاد پروژه</button>
+      <div class="spacer"></div>
+      <button class="btn ghost" data-close type="button">انصراف</button>
+    </div>
+  </div>
+
+  <!-- محاسبه‌ی دقیق -->
+  <div class="modal wide" id="modal-breakdown" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3>محاسبه‌ی دقیق — ریز هزینه‌ها</h3>
+      <button class="icon-btn" data-close type="button" aria-label="بستن">✕</button>
+    </div>
+    <div class="modal-body" id="breakdownBody"></div>
+    <div class="modal-foot">
+      <button class="btn success" id="btnBreakdownInvoice" type="button">صدور فاکتور از این محاسبه</button>
+      <div class="spacer"></div>
+      <button class="btn ghost" data-close type="button">بستن</button>
+    </div>
+  </div>
+
+  <!-- تأیید -->
+  <div class="modal" id="modal-confirm" role="dialog" aria-modal="true" style="width:min(26rem,100%)">
+    <div class="modal-head"><h3 id="confirmTitle">تأیید</h3>
+      <button class="icon-btn" data-close type="button" aria-label="بستن">✕</button>
+    </div>
+    <div class="modal-body"><p id="confirmText" style="font-size:.92rem"></p></div>
+    <div class="modal-foot">
+      <button class="btn danger" id="btnConfirmOk" type="button">حذف</button>
+      <div class="spacer"></div>
+      <button class="btn ghost" data-close type="button">انصراف</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+</body>
+</html>
