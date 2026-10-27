@@ -194,6 +194,117 @@ class TestMigration(unittest.TestCase):
         self.assertTrue(list((Path(self.tmp) / "backups").glob("kabir-pre-update-*.db")))
 
 
+class TestStandaloneUpdateFlow(unittest.TestCase):
+    """
+    شبیه‌سازی کامل سناریوی «کاربر نسخه‌ی قدیمی فقط update.bat را دریافت کرده»:
+    اسکریپت، هسته‌ی update.py را دانلود می‌کند و update.py بدون گیت،
+    نسخه‌ی جدید را به‌صورت ZIP دانلود و روی پوشه‌ی قدیمی نصب می‌کند،
+    سپس پشتیبان + مهاجرت + بازمحاسبه انجام می‌دهد.
+    (اینجا ZIP از درخت کاری همین مخزن ساخته و با file:// سرو می‌شود — آفلاین)
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = Path(tempfile.mkdtemp(prefix="kabir-updflow-"))
+        # --- پوشه‌ی برنامه‌ی «قدیمی» (بدون update.py، بدون .git) ---
+        cls.app = cls.tmp / "app"
+        (cls.app / "kabir").mkdir(parents=True)
+        (cls.app / "main.py").write_text("OLD_VERSION_MARKER = True\n", encoding="utf-8")
+        (cls.app / "kabir" / "__init__.py").write_text(
+            '__version__ = "2.1.0"\n', encoding="utf-8")
+        (cls.app / "requirements.txt").write_text("# old\n", encoding="utf-8")
+        (cls.app / "user-notes.txt").write_text("keep me\n", encoding="utf-8")
+        # --- پایگاه‌داده‌ی قدیمی کاربر ---
+        cls.datadir = cls.tmp / "data"
+        cls.datadir.mkdir()
+        _make_old_db(cls.datadir / "kabir.db")
+        # --- ZIP نسخه‌ی جدید با ساختار گیت‌هاب (پوشه‌ی kabir_app-main) ---
+        import zipfile
+        cls.zip_path = cls.tmp / "repo.zip"
+        repo_root = ROOT
+        skip_dirs = {".git", "__pycache__", ".pytest_cache", ".parity-data", "node_modules"}
+        with zipfile.ZipFile(cls.zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for p in sorted(repo_root.rglob("*")):
+                rel_parts = p.relative_to(repo_root).parts
+                if any(part in skip_dirs for part in rel_parts):
+                    continue
+                if p.is_file():
+                    zf.write(p, str(Path("kabir_app-main") / p.relative_to(repo_root)))
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmp, ignore_errors=True)
+
+    def _run_update(self):
+        env = dict(os.environ)
+        env["KABIR_DATA_DIR"] = str(self.datadir)
+        env["KABIR_UPDATE_ZIP_URL"] = self.zip_path.as_uri()
+        env["PYTHONIOENCODING"] = "utf-8"
+        return subprocess.run(
+            [sys.executable, str(ROOT / "update.py"),
+             "--app-dir", str(self.app), "--skip-deps"],
+            cwd=str(self.tmp), env=env, capture_output=True, text=True, timeout=300,
+        )
+
+    def test_zip_update_installs_new_version_and_migrates(self):
+        proc = self._run_update()
+        self.assertEqual(proc.returncode, 0, msg=proc.stdout[-1500:] + proc.stderr[-1500:])
+
+        # کد جدید نصب شده
+        main_py = (self.app / "main.py").read_text(encoding="utf-8")
+        self.assertNotIn("OLD_VERSION_MARKER", main_py)
+        self.assertTrue((self.app / "update.py").is_file(), "update.py باید نصب شود")
+        self.assertTrue((self.app / "kabir" / "data" / "migrate.py").is_file())
+        self.assertTrue((self.app / "webui" / "index.html").is_file())
+        self.assertIn('2.2.0', (self.app / "kabir" / "__init__.py").read_text(encoding="utf-8"))
+
+        # فایل شخصی کاربر که در ZIP نبود، حذف نشده
+        self.assertEqual((self.app / "user-notes.txt").read_text(), "keep me\n")
+
+        # پایگاه‌داده: پشتیبان + مهاجرت + حفظ داده + بازمحاسبه
+        backups = list((self.datadir / "backups").glob("kabir-pre-update-*.db"))
+        self.assertTrue(backups, "پشتیبان پیش از به‌روزرسانی باید ساخته شود")
+        conn = sqlite3.connect(str(self.datadir / "kabir.db"))
+        try:
+            ver = conn.execute("PRAGMA user_version").fetchone()[0]
+            cols = [r[1] for r in conn.execute("PRAGMA table_info(projects)")]
+            title = conn.execute("SELECT title FROM projects WHERE id=1").fetchone()[0]
+            rates_rev = conn.execute("SELECT rates_rev FROM projects WHERE id=1").fetchone()[0]
+            rev = conn.execute(
+                "SELECT value FROM settings WHERE key='prices_rev'").fetchone()
+        finally:
+            conn.close()
+        self.assertEqual(ver, 4)
+        self.assertIn("rates_rev", cols)
+        self.assertEqual(title, "پروژه‌ی قدیمی")
+        self.assertIsNotNone(rev, "prices_rev باید مقداردهی شود")
+        self.assertEqual(int(rates_rev), int(rev[0]), "پروژه باید بازمحاسبه و هم‌نسخه شود")
+
+    def test_update_is_idempotent(self):
+        # اجرای دوم روی همان پوشه — باید بی‌خطا و بدون تغییر مخرب باشد
+        proc = self._run_update()
+        self.assertEqual(proc.returncode, 0, msg=proc.stdout[-1500:] + proc.stderr[-1500:])
+        conn = sqlite3.connect(str(self.datadir / "kabir.db"))
+        try:
+            title = conn.execute("SELECT title FROM projects WHERE id=1").fetchone()[0]
+        finally:
+            conn.close()
+        self.assertEqual(title, "پروژه‌ی قدیمی")
+
+    def test_bootstrapper_urls_are_valid(self):
+        """URLهای بوت‌استرپ باید به‌درستی در اسکریپت‌ها وجود داشته باشند."""
+        raw = "https://raw.githubusercontent.com/erfanjaster/kabir_app/main/update.py"
+        zipu = "https://github.com/erfanjaster/kabir_app/archive/refs/heads/main.zip"
+        bat = (ROOT / "update.bat").read_text(encoding="ascii")
+        sh = (ROOT / "update.sh").read_text(encoding="utf-8")
+        cmd = (ROOT / "update.command").read_text(encoding="utf-8")
+        py = (ROOT / "update.py").read_text(encoding="utf-8")
+        self.assertIn(raw, bat)
+        self.assertIn(raw, sh)
+        self.assertIn(raw, cmd)
+        self.assertIn(zipu, py)
+
+
 class TestScriptsSanity(unittest.TestCase):
     """اسکریپت‌های ویندوز: بدون نویسه‌ی فارسی (ASCII خالص) و با پایان خط CRLF."""
 
