@@ -6,97 +6,12 @@
    ========================================================================== */
 "use strict";
 
-/* ------------------------------------------------------------- توست و مودال */
-const TOAST_LIFE = 3600;
-function toast(msg, type, action) {
-  type = type || "info";
-  const ic = type === "success" ? ICONS.check : type === "error" ? ICONS.x : type === "warn" ? ICONS.warn : ICONS.info;
-  const box = el("toasts");
-  /* حداکثر ۴ توست هم‌زمان — قدیمی‌ترین حذف می‌شود */
-  while (box.children.length >= 4) box.firstElementChild.remove();
-  const t = document.createElement("div");
-  t.className = "toast " + type;
-  t.setAttribute("role", type === "error" ? "alert" : "status");
-  /* ★ اکشنِ اختیاری (مثل «بازگردانی» بعد از حذف ردیف) — یک کلیکِ نجات‌بخش
-     به‌جای حسرتِ «ای کاش حذف نکرده بودم».                                       */
-  const actHtml = action && action.label
-    ? `<button class="t-action" type="button">${esc(action.label)}</button>` : "";
-  t.innerHTML = `<span class="t-ic">${ic}</span><span>${msg}</span>` + actHtml +
-    `<button class="t-close" type="button" aria-label="بستن پیام">${ICONS.x}</button>` +
-    `<span class="t-bar" aria-hidden="true"></span>`;
-  const kill = () => {
-    if (!t.isConnected) return;
-    t.classList.add("out");
-    setTimeout(() => t.remove(), 260);
-  };
-  if (action && action.label) {
-    t.querySelector(".t-action").addEventListener("click", () => {
-      kill();
-      if (action.cb) action.cb();
-    });
-  }
-  t.querySelector(".t-close").addEventListener("click", kill);
-  box.appendChild(t);
-  setTimeout(kill, action && action.label ? Math.max(TOAST_LIFE, 7000) : TOAST_LIFE);
-}
-
-/* اجرای یک کار ناهمزمان با نمایش اسپینر روی دکمه (حالت تجاری) */
-async function busy(btn, fn, opts) {
-  opts = opts || {};
-  if (!btn) return fn();
-  btn.classList.add("busy");
-  btn.disabled = true;
-  const old = btn.getAttribute("aria-busy");
-  btn.setAttribute("aria-busy", "true");
-  try {
-    return await fn();
-  } finally {
-    btn.classList.remove("busy");
-    btn.disabled = false;
-    if (old === null) btn.removeAttribute("aria-busy");
-    else btn.setAttribute("aria-busy", old);
-    if (opts.doneMsg) toast(opts.doneMsg, "success");
-  }
-}
-
-let _lastFocus = null;
-function openModal(id) {
-  _lastFocus = document.activeElement;
-  el("modalBackdrop").hidden = false;
-  $$(".modal").forEach((m) => m.classList.toggle("open", m.id === "modal-" + id));
-  document.body.style.overflow = "hidden";
-  /* فوکوس روی اولین کنترل قابل‌تعامل — دسترس‌پذیری */
-  const m = el("modal-" + id);
-  const first = m && m.querySelector("input:not([type=hidden]), select, textarea, button:not([data-close])");
-  if (first) setTimeout(() => first.focus(), 60);
-}
-function closeModal() {
-  el("modalBackdrop").hidden = true;
-  $$(".modal").forEach((m) => m.classList.remove("open"));
-  document.body.style.overflow = "";
-  if (_lastFocus && _lastFocus.focus) { _lastFocus.focus(); _lastFocus = null; }
-}
-/* به‌دام‌اندازی فوکوس داخل مودال باز (Tab چرخه‌ای) */
-document.addEventListener("keydown", (e) => {
-  if (e.key !== "Tab") return;
-  const back = el("modalBackdrop");
-  if (!back || back.hidden) return;
-  const m = back.querySelector(".modal.open");
-  if (!m) return;
-  const items = $$("button, input:not([type=hidden]), select, textarea, [tabindex]:not([tabindex='-1'])", m)
-    .filter((n) => !n.disabled && n.offsetParent !== null);
-  if (!items.length) return;
-  const first = items[0], last = items[items.length - 1];
-  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-});
-function confirmAction(text, cb, title, okLabel) {
-  el("confirmText").innerHTML = text;
-  el("confirmTitle").textContent = title || "تأیید عملیات";
-  el("btnConfirmOk").textContent = okLabel || "حذف";
-  state.confirmCb = cb;
-  openModal("confirm");
-}
+/* ------------------------------------------------------------- توست و مودال
+   ★ لایه‌ی «مودال و فرم» به فایلِ اختصاصیِ js/ui-modal.js منتقل شد:
+   توست، busy()، پشته‌ی مودال‌ها، تشخیصِ تغییراتِ ذخیره‌نشده، تله‌ی فوکوس،
+   قراردادِ Enter/Ctrl+S/Esc و مودالِ تأییدِ Promise‑محور.
+   دلیل: یک مکانیزمِ مشترک برای همه‌ی ۱۰ مودال و ۶ فرم، به‌جای ۲۰ نقطه‌ی
+   پراکنده‌ی خروجِ بی‌قید. (نگاه کنید به docs/UX_AUDIT_v1.md — C‑1 تا C‑6)   */
 
 /* ------------------------------------------------------------------ مرتب‌سازی جدول‌ها */
 const SORT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m6 11 6-6 6 6"/></svg>`;
@@ -199,8 +114,11 @@ const PAGES = {
   settings: ["تنظیمات", "اطلاعات فروشگاه، پیش‌فرض‌های محاسبه و پشتیبان‌گیری"],
 };
 
-function navigate(page, sub, silentScroll) {
+/* نامِ داخلی: ناوبریِ «واقعی». تابعِ navigate که بقیه‌ی برنامه صدا می‌کنند
+   یک لایه گاردِ «تغییرات ذخیره‌نشده» دورِ آن دارد (پایین‌تر را ببینید).      */
+function navigateNow(page, sub, silentScroll) {
   state.page = page;
+  MODAL_KEYS.currentPage = page;
   $$(".page").forEach((p) => p.classList.toggle("active", p.id === "page-" + page));
   $$(".nav-btn").forEach((b) => b.classList.toggle("active", b.dataset.page === page));
   const [t, s] = PAGES[page] || PAGES.dashboard;
@@ -213,6 +131,92 @@ function navigate(page, sub, silentScroll) {
     renderInvRowChecks();
     refreshInvoice().catch((err) => toast("خطا در پیش‌نمایش فاکتور: " + esc(err.message), "error"));
   }
+}
+
+/* ------------------------------------------------------ تأیید و گاردهای خروج
+   لایه‌ی اصلی در js/ui-modal.js است (پشته‌ی مودال، Dirty Check، کلیدها).
+   این دو تابع فقط «پل» هستند تا ۱۴ نقطه‌ی فراخوانیِ موجود دست‌نخورده بمانند. */
+
+/** پرسشِ تأییدِ عملیات — لحنِ پیش‌فرض «خطرناک» است (حذف و جایگزینی داده) */
+function askConfirm(text, cb, title, okLabel) {
+  confirmAction(text, cb, { title, okLabel, tone: "danger" });
+}
+
+/** پرسشِ اطلاع‌رسانی که به «ادامه» نیاز دارد — بدونِ رنگِ خطر.
+ *  قبلاً خطای ۴۰۹ سرور هم با دکمه‌ی قرمزِ «حذف» نشان داده می‌شد و کاربر
+ *  شرطی می‌شد که قرمز = ادامه؛ این همان ثباتِ رویه‌ای است که قانون می‌خواهد. */
+function askInfo(text, cb, title, okLabel) {
+  confirmAction(text, cb, { title, okLabel, tone: "neutral" });
+}
+
+/* گاردِ «ویرایشگر پروژه»: اگر داده‌ی ذخیره‌نشده باشد، خروج از صفحه باید
+   یا با ذخیره انجام شود یا با پرسشِ صریح از کاربر.                              */
+let _navLeaving = false;
+let _saveGuardBusy = false;
+/* ★ سیاستِ سخت‌گیرانه (به درخواستِ کارفرما):
+   تا وقتی ویرایشگر داده‌ی ذخیره‌نشده دارد، **هیچ** خروجی بی‌صدا انجام نمی‌شود —
+   نه با کلیکِ منو، نه با Alt+1..6، نه با جست‌وجو. هر بار صریحاً می‌پرسیم و
+   سه کنشِ ثابت می‌دهیم:
+     «ذخیره و رفتن» (سبز، امن)  •  «دور ریختن و رفتن» (قرمز، خطرناک)
+     «ماندن» / Esc              (بازگشت به کار)
+   دلیل: در نرم‌افزارِ صنعتی، «ذخیره‌ی بی‌صدا» همان‌قدر خطرناک است که «دور
+   ریختنِ بی‌صدا» — چون اپراتور نمی‌داند کدام نسخه روی سرور نشسته است.         */
+async function editorExitGuard(ctx) {
+  if (_navLeaving || _saveGuardBusy) return null;
+  if (!state.editingProject || !state.dirty) return null;
+  /* ویرایشگر «داخلِ» صفحه‌ی پروژه‌هاست؛ پس جابه‌جایی در همان صفحه (مثلاً
+     Alt+2) داده‌ای را گم نمی‌کند و نباید مزاحم کاربر شود.                    */
+  const to = ctx && ctx.to;
+  if (!to || to === "projects") return null;
+  _saveGuardBusy = true;
+  try {
+    const leave = await confirmDiscard(
+      "ویرایشگر پروژه تغییراتِ <b>ذخیره‌نشده</b> دارد.<br>" +
+      "پیش از رفتن از این صفحه تکلیفشان را روشن کنید.",
+      {
+        title: "ترکِ ویرایشگر با داده‌ی ذخیره‌نشده",
+        okLabel: "دور ریختن و رفتن",
+        okTone: "danger",
+        altLabel: "ذخیره و رفتن",
+        altTone: "success",
+        cancelLabel: "ماندن و ادامه‌ی ویرایش",
+        onAlt: async () => {
+          const saver = MODAL_KEYS.saveActiveContext || (() => saveProject());
+          const ok = await saver();
+          if (ok === false) return;           /* خطا قبلاً گزارش شده — بمان */
+          forceCloseEditor();
+          _navLeaving = true;
+          try { navigateNow(to); } finally { _navLeaving = false; }
+        },
+      });
+    if (leave) { forceCloseEditor(); return null; }
+    /* «ماندن» → ویرایشگر جلوی چشم کاربر باشد تا ادامه دهد */
+    if (state.page !== "projects") navigateNow("projects");
+    el("projectEditor").scrollIntoView({ block: "start" });
+    return false;
+  } finally { _saveGuardBusy = false; }
+}
+
+/** بستنِ ویرایشگر بدونِ پرسش — فقط از مسیرهایی که تکلیفِ داده روشن شده */
+function forceCloseEditor() {
+  if (state.editingProject) clearDraft(state.editingProject.id);
+  clearTimeout(_draftTimer);
+  state.editingProject = null;
+  state.dirty = false;
+  paintDirtyState2();
+  el("projectEditor").hidden = true;
+  undoReset();
+}
+
+/** ناوبریِ محافظت‌شده: هر کلیکِ منو، Alt+1..6، جست‌وجو و hash از این‌جا می‌گذرد */
+async function navigate(page, sub, silentScroll) {
+  if (state.page === page && !sub) { navigateNow(page, sub, silentScroll); return; }
+  if (anyModalOpen()) await requestCloseModal();     /* مودالِ کثیف = هشدارِ ذخیره */
+  /* گاردها: ویرایشگرِ کثیف، و هر زمینه‌ی دیگری که بعداً ثبت شود */
+  if (!(await allowLeave({ to: page, from: MODAL_KEYS.currentPage }))) return;
+  _navLeaving = true;
+  try { navigateNow(page, sub, silentScroll); }
+  finally { _navLeaving = false; }
 }
 
 /* ============================================================== داشبورد */
@@ -324,6 +328,22 @@ function filteredMaterials() {
     (!q || m.name.includes(q) || (m.supplier || "").includes(q) || catLabel(m.cat).includes(q)));
 }
 
+/* ── ناوبریِ Tab در «ویرایش سریعِ قیمت» ────────────────────────────────────
+   ثبتِ قیمت جدول را از نو می‌رندد و فوکوس را می‌کشد. این متغیر مقصدِ Tab را
+   نگه می‌دارد تا بلافاصله پس از رندر، سلولِ بعدی باز و فوکوس شود — یعنی
+   اپراتور می‌تواند ده‌ها نرخ را پشتِ سر هم و فقط با Tab به‌روز کند.          */
+let _qpNavTarget = null;
+function applyQuickPriceNav() {
+  if (_qpNavTarget === null) return;
+  const id = _qpNavTarget;
+  _qpNavTarget = null;
+  const cell = document.querySelector(`[data-quick-price="${id}"]`);
+  if (!cell) return;
+  if (cell.scrollIntoView) cell.scrollIntoView({ block: "nearest" });
+  /* همان مسیرِ کلیک — تا رفتارِ Tab و ماوس دقیقاً یکی بماند (ثباتِ رویه) */
+  cell.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+}
+
 function renderMaterials() {
   renderChips();
   const rows = applySort(filteredMaterials(), "materials", MAT_SORT);
@@ -359,6 +379,9 @@ function renderMaterials() {
       </tbody>`;
   }
   el("matCount").innerHTML = `${fa(rows.length)} قلم نمایش داده شد${rows.length !== MATERIALS.length ? ` از ${fa(MATERIALS.length)}` : ""}`;
+  /* ناوبریِ Tab باید «پس از» نشستنِ DOMِ تازه اجرا شود؛ اگر پیش از آن باشد،
+     همان innerHTMLِ پایین ویرایشگرِ تازه‌بازشده را پاک می‌کند.              */
+  applyQuickPriceNav();
 }
 
 function renderHistory() {
@@ -769,55 +792,160 @@ const UNIT_MAT_FIELDS = [
   ["shelf_pin_id", "خار طبقه", "shelf_pin"], ["assembly_id", "مونتاژ یونیت", "service"],
 ];
 
+/* ══════════════════════════════════════════════════════════════════════════
+   حفظِ فوکوس و اسکرول در بازسازیِ جدول‌ها
+   --------------------------------------------------------------------------
+   مشکلِ قبلی (K‑5/K‑6): `innerHTML` کل جدول را عوض می‌کند، پس عنصرِ دارای
+   فوکوس نابود می‌شود و مکان‌نما به `body` می‌پرد؛ کاربر باید دوباره ردیفش را
+   پیدا کند. راه‌حل: «هویتِ سلول» (data-scope/data-k/data-ui/data-di/data-ri)
+   را پیش از بازسازی نگه می‌داریم و بعد همان سلول را پیدا و فوکوس می‌کنیم —
+   چون DOM عوض می‌شود ولی هویتِ سلول نه. به‌علاوه جای اسکرولِ هر ظرف هم
+   بازگردانده می‌شود.                                                          */
+const EDITOR_TABLE_IDS = ["tblUnits", "tblDoors", "tblDrawers", "tblFacade", "tblExtras", "tblServices"];
+let _pendingFocus = null;    /* {row, scope, k} — مثلاً پس از «افزودن ردیف» */
+
+function cellIdentity(node) {
+  const ds = node && node.dataset ? node.dataset : null;
+  if (!ds || !ds.scope || !ds.k) return null;
+  return { scope: ds.scope, k: ds.k, ui: ds.ui ?? "", di: ds.di ?? "", ri: ds.ri ?? "" };
+}
+
+function captureCellFocus() {
+  const ae = document.activeElement;
+  const wrap = ae && ae.closest ? ae.closest(".table-wrap") : null;
+  return {
+    ident: cellIdentity(ae),
+    wasSelStart: ae && ae.selectionStart !== undefined && ae.selectionStart !== null ? ae.selectionStart : null,
+    scroll: wrap ? { el: wrap, left: wrap.scrollLeft, top: wrap.scrollTop } : null,
+  };
+}
+
+function findCellNode(ident) {
+  if (!ident) return null;
+  /* نکته: `[data-di=""]` با «نبودِ صفت» فرق دارد — صفتی که چاپ نشده را نباید
+     در گزینش‌گر خواست، وگرنه سلول پیدا نمی‌شود و فوکوس می‌پرد.               */
+  let q = `#projectEditor [data-scope="${ident.scope}"][data-k="${ident.k}"]`;
+  ["ui", "di", "ri"].forEach((k) => {
+    if (ident[k] !== "" && ident[k] !== null && ident[k] !== undefined) q += `[data-${k}="${ident[k]}"]`;
+  });
+  return document.querySelector(q);
+}
+
+function restoreCellFocus(keep) {
+  keep = keep || {};
+  /* اسکرولِ افقی/عمودی هر ظرف سرِ جایش برگردد */
+  EDITOR_TABLE_IDS.forEach((id) => {
+    const t = el(id);
+    if (!t) return;
+    const w = t.closest(".table-wrap");
+    if (w && keep.scroll && keep.scroll.el && keep.scroll.el.classList.contains("grid-head")) {
+      /* ظرفِ همان جدول — اگر همان است، مقدارها را برگردان */
+      if (keep.scroll.el === w) { w.scrollLeft = keep.scroll.left; w.scrollTop = keep.scroll.top; }
+    }
+  });
+  if (keep.scroll && keep.scroll.el && keep.scroll.el.isConnected) {
+    keep.scroll.el.scrollLeft = keep.scroll.left;
+    keep.scroll.el.scrollTop = keep.scroll.top;
+  }
+  const target = _pendingFocus ? document.querySelector(`#projectEditor tr[data-row="${_pendingFocus.row}"]`) : null;
+  let node = null;
+  if (target) {
+    node = (_pendingFocus.scope && _pendingFocus.k)
+      ? target.querySelector(`[data-scope="${_pendingFocus.scope}"][data-k="${_pendingFocus.k}"]`)
+      : target.querySelector("input, select, textarea, button");
+  }
+  if (!node) node = findCellNode(keep.ident);
+  if (!node || node.disabled || !node.isConnected) { _pendingFocus = null; return; }
+  try {
+    node.focus({ preventScroll: true });
+    if (node.select && (node.type === "text")) {
+      if (keep.wasSelStart !== null && keep.wasSelStart !== undefined && node === findCellNode(keep.ident)) {
+        node.setSelectionRange(keep.wasSelStart, keep.wasSelStart);
+      } else node.select();
+    }
+  } catch (e) { /* مرورگرِ بدونِ پشتیبانی */ }
+  _pendingFocus = null;
+}
+
+/** پس از «افزودن/کپی/حذف ردیف» فوکوس را به ردیفِ مربوطه ببر (K‑6) */
+function focusRowAfter(kind, idx, scope, k) {
+  _pendingFocus = { row: "er:" + kind + ":" + idx, scope: scope || null, k: k || null };
+}
+
 function renderEditorTables() {
   const p = state.editingProject;
   const pg = curPage();
   if (!p || !pg) return;
-  const del = (kind, ui, di) =>
-    iconBtn("del", "trash", "حذف", `data-del-row="${kind}" data-ui="${ui ?? ""}" data-di="${di ?? ""}"`);
-  /* کپی ردیف — برای وقتی که چند یونیت شبیه هم داریم و نمی‌خواهیم همه‌ی
-     فیلدهای متریال را از اول انتخاب کنیم. */
-  const dup = (kind, ui, di, ri) =>
-    iconBtn("", "copy", "کپی ردیف", `data-copy-row="${kind}" data-ui="${ui ?? ""}" data-di="${di ?? ""}" data-ri="${ri ?? ""}"`);
-  /* ذخیره‌ی یونیت به‌عنوان الگوی قابل استفاده‌ی مجدد */
+
+  /* ═══ حفظِ فوکوس و اسکرول ═══
+     هر بازسازیِ جدول پیش از این فوکوس و جای اسکرول را می‌کشت (یافته‌ی K‑5):
+     کاربر وسطِ تایپ، با یک تغییرِ انتخاب به ابتدای جدول پرت می‌شد. حالا
+     «هویتِ سلول» (scope/k/ui/di/ri) پیش از بازسازی گرفته و بعد بازگردانده
+     می‌شود — چون DOM عوض می‌شود ولی هویتِ سلول نه.                            */
+  const keep = captureCellFocus();
+
+  /* ── کنش‌های ردیف ──
+     سه تغییر نسبت به قبل (یافته‌های F‑1 و F‑3):
+       ۱) کنش‌ها به «ستونِ اولِ چسبان» آمدند؛ پیش‌تر در آخرین سلولِ یک جدولِ
+          تا ۱۲۰۰ پیکسل بودند و برای هر حذف باید افقی اسکرول می‌شد.
+       ۲) هدف‌ها از ۳۲ به ۳۹ پیکسل رسیدند.
+       ۳) پیش از «حذف» جداکننده آمد تا از «کپیِ» پرتکرار فاصله بگیرد.        */
+  const actBtn = (cls, icon, title, attrs) =>
+    `<button class="row-actions ${cls}" type="button" title="${title}" aria-label="${title}" ${attrs}>${ICONS[icon]}</button>`;
+  const delBtn = (kind, ui, di, ri) =>
+    actBtn("del", "trash", "حذف ردیف", `data-del-row="${kind}" data-ui="${ui ?? ""}" data-di="${di ?? ""}" data-ri="${ri ?? ""}"`);
+  const dupBtn = (kind, ui, di, ri) =>
+    actBtn("", "copy", "کپی ردیف", `data-copy-row="${kind}" data-ui="${ui ?? ""}" data-di="${di ?? ""}" data-ri="${ri ?? ""}"`);
   const tplBtn = (ui) =>
-    iconBtn("", "tpl", "ذخیره به‌عنوان الگو", `data-tpl-save="${ui}"`);
+    actBtn("", "tpl", "ذخیره به‌عنوان الگو", `data-tpl-save="${ui}"`);
+  const SEP = `<span class="row-sep" aria-hidden="true"></span>`;
+  const acts = (inner) => `<div class="row-btns">${inner}</div>`;
+  /* هویتِ ردیف روی خودِ <tr> — برای «پس از بازسازی، فوکوس را به ردیفِ تازه
+     اضافه‌شده ببر» (K‑6) و برای برگرداندنِ فوکوس پس از حذف/کپی.              */
+  /* پیشوندِ «er:» تا هویتِ ردیف‌های ویرایشگر با `data-row` در جاهای دیگر
+     (مثلاً مودالِ ساختِ فاکتور) قاطی نشود.                                  */
+  const rowAttrs = (kind, i) => ` class="erow" data-row="er:${kind}:${i}"`;
+  const withRow = (extra, kind, i) =>
+    `data-row="er:${kind}:${i}" ${extra || ""}`.trim();
 
   /* --- یونیت‌ها --- */
   let uRows = "";
   pg.units.forEach((u, i) => {
     const open = state.expanded.has(`${p.id}:${state.pageIdx}:${i}`);
+    const a = (extra) => withRow(extra, "unit", i);
     uRows += `
-      <tr>
-        <td>${inpT("unit", "label", u.label, `data-ui="${i}"`)}</td>
-        <td><select class="cell-select" data-scope="unit" data-k="unit_type" data-ui="${i}">
+      <tr${rowAttrs("unit", i)}>
+        <td><div class="row-id-cell">
+          ${inpT("unit", "label", u.label, a(`data-ui="${i}"`))}
+          ${acts(`${tplBtn(i)}${dupBtn("unit", i)}${SEP}${delBtn("unit", i)}`)}
+        </div></td>
+        <td><select class="cell-select" data-scope="unit" data-k="unit_type" data-ui="${i}" ${a("")}>
           ${Object.entries(UNIT_TYPES).map(([k, l]) => `<option value="${k}"${u.unit_type === k ? " selected" : ""}>${l}</option>`).join("")}
         </select></td>
-        <td>${inp("unit", "length_cm", u.length_cm, `data-ui="${i}"`, U_CM, "w-dim")}</td>
-        <td>${inp("unit", "height_cm", u.height_cm, `data-ui="${i}"`, U_CM, "w-dim")}</td>
-        <td>${inp("unit", "depth_cm", u.depth_cm, `data-ui="${i}"`, U_CM, "w-dim")}</td>
-        <td>${inp("unit", "qty", u.qty, `data-ui="${i}"`, U_QTY, "w-qty")}</td>
-        <td>${inp("unit", "shelves", u.shelves, `data-ui="${i}"`, U_QTY, "w-qty")}</td>
+        <td>${inp("unit", "length_cm", u.length_cm, a(`data-ui="${i}"`), U_CM, "w-dim")}</td>
+        <td>${inp("unit", "height_cm", u.height_cm, a(`data-ui="${i}"`), U_CM, "w-dim")}</td>
+        <td>${inp("unit", "depth_cm", u.depth_cm, a(`data-ui="${i}"`), U_CM, "w-dim")}</td>
+        <td>${inp("unit", "qty", u.qty, a(`data-ui="${i}"`), U_QTY, "w-qty")}</td>
+        <td>${inp("unit", "shelves", u.shelves, a(`data-ui="${i}"`), U_QTY, "w-qty")}</td>
         <td><span class="cell-badges">
-              <button type="button" class="count-badge badge-btn" data-goto-tab="doors" data-ui="${i}" title="پرش به ردیف‌های درِ همین یونیت در تب «درها»">در ${fa(u.doors.reduce((a, d) => a + (+d.qty || 0), 0) * (+u.qty || 1))}</button>
-              <button type="button" class="count-badge badge-btn" data-goto-tab="drawers" data-ui="${i}" title="پرش به ردیف‌های کشوی همین یونیت در تب «کشوها»">کشو ${fa(u.drawers.reduce((a, d) => a + (+d.qty || 0), 0) * (+u.qty || 1))}</button>
+              <button type="button" class="count-badge badge-btn" data-goto-tab="doors" data-ui="${i}" title="پرش به ردیف‌های درِ همین یونیت در تب «درها»">در ${fa(u.doors.reduce((s, d) => s + (+d.qty || 0), 0) * (+u.qty || 1))}</button>
+              <button type="button" class="count-badge badge-btn" data-goto-tab="drawers" data-ui="${i}" title="پرش به ردیف‌های کشوی همین یونیت در تب «کشوها»">کشو ${fa(u.drawers.reduce((s, d) => s + (+d.qty || 0), 0) * (+u.qty || 1))}</button>
             </span></td>
-        <td><button class="expander${open ? " open" : ""}" type="button" data-expand="${i}" title="متریال و یراق یونیت">${ICONS.chev}</button></td>
-        <td><div class="row-btns">${tplBtn(i)}${dup("unit", i)}${del("unit", i)}</div></td>
+        <td><button class="expander${open ? " open" : ""}" type="button" data-expand="${i}" title="متریال و یراق یونیت" aria-expanded="${open ? "true" : "false"}">${ICONS.chev}</button></td>
       </tr>`;
     if (open) {
       uRows += `
-      <tr class="unit-detail-row"><td colspan="10">
+      <tr class="unit-detail-row" data-detail-of="unit:${i}"><td colspan="9">
         <div class="unit-detail">
           ${UNIT_MAT_FIELDS.map(([k, label, cat]) => `
             <div class="field"><label>${label}</label>
-              ${matSelect(cat, u[k], `data-scope="unit" data-k="${k}" data-ui="${i}"`)}
+              ${matSelect(cat, u[k], `data-scope="unit" data-k="${k}" data-ui="${i}" ${a("")}`)}
             </div>`).join("")}
-          <div class="field"><label>تعداد پایه در یونیت</label>${inp("unit", "legs_per_unit", u.legs_per_unit, `data-ui="${i}"`, U_QTY, "w-qty")}</div>
-          <div class="field"><label>خار در هر طبقه</label>${inp("unit", "pins_per_shelf", u.pins_per_shelf, `data-ui="${i}"`, U_QTY, "w-qty")}</div>
+          <div class="field"><label>تعداد پایه در یونیت</label>${inp("unit", "legs_per_unit", u.legs_per_unit, a(`data-ui="${i}"`), U_QTY, "w-qty")}</div>
+          <div class="field"><label>خار در هر طبقه</label>${inp("unit", "pins_per_shelf", u.pins_per_shelf, a(`data-ui="${i}"`), U_QTY, "w-qty")}</div>
           <div class="ud-checks">
-            <label class="check"><input type="checkbox" data-scope="unit" data-k="has_top_panel" data-ui="${i}"${u.has_top_panel !== false ? " checked" : ""}> سقف یونیت</label>
-            <label class="check"><input type="checkbox" data-scope="unit" data-k="has_bottom_panel" data-ui="${i}"${u.has_bottom_panel !== false ? " checked" : ""}> کف یونیت</label>
+            <label class="check"><input type="checkbox" data-scope="unit" data-k="has_top_panel" data-ui="${i}" ${a("")}${u.has_top_panel !== false ? " checked" : ""}> سقف یونیت</label>
+            <label class="check"><input type="checkbox" data-scope="unit" data-k="has_bottom_panel" data-ui="${i}" ${a("")}${u.has_bottom_panel !== false ? " checked" : ""}> کف یونیت</label>
             <span class="tiny muted">مساحت بدنه‌ی این یونیت: <b>${fmt(unitArea(u) * (+u.qty || 1), true)}</b> م² (بدون فیبر پشت)</span>
           </div>
         </div>
@@ -825,75 +953,86 @@ function renderEditorTables() {
     }
   });
   el("tblUnits").innerHTML = `
-    <thead><tr><th>برچسب</th><th>نوع</th><th>طول (سم)</th><th>ارتفاع (سم)</th><th>عمق (سم)</th><th>تعداد (عدد)</th><th>طبقات (عدد)</th><th>در/کشو</th><th>جزئیات</th><th></th></tr></thead>
-    <tbody>${uRows || `<tr><td colspan="10"><div class="empty">یونیتی تعریف نشده — «＋ افزودن یونیت» را بزنید.</div></td></tr>`}</tbody>`;
+    <thead><tr><th class="th-row">ردیف</th><th>نوع</th><th>طول (سم)</th><th>ارتفاع (سم)</th><th>عمق (سم)</th><th>تعداد (عدد)</th><th>طبقات (عدد)</th><th>در/کشو</th><th>جزئیات</th></tr></thead>
+    <tbody>${uRows || `<tr><td colspan="9"><div class="empty">یونیتی تعریف نشده — «＋ افزودن یونیت» را بزنید.</div></td></tr>`}</tbody>`;
 
   /* --- درها (سطح بخش، وابسته به یونیت) --- */
   let dRows = "";
   pg.units.forEach((u, ui) => u.doors.forEach((dr, di) => {
+    const a = (extra) => withRow(extra, "door", `${ui}:${di}`);
     dRows += `
-      <tr>
-        <td><select class="cell-select" data-scope="doormove" data-ui="${ui}" data-di="${di}">
-          ${pg.units.map((x, i2) => `<option value="${i2}"${i2 === ui ? " selected" : ""}>${esc(x.label || `یونیت ${i2 + 1}`)}</option>`).join("")}
-        </select></td>
-        <td>${inpT("door", "label", dr.label, `data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${inp("door", "qty", dr.qty, `data-ui="${ui}" data-di="${di}"`, U_LEAF, "w-qty")}</td>
-        <td>${inp("door", "w_cm", dr.w_cm, `data-ui="${ui}" data-di="${di}"`, U_CM, "w-dim")}</td>
-        <td>${inp("door", "h_cm", dr.h_cm, `data-ui="${ui}" data-di="${di}"`, U_CM, "w-dim")}</td>
+      <tr${rowAttrs("door", `${ui}:${di}`)}>
+        <td><div class="row-id-cell">
+          <select class="cell-select" data-scope="doormove" data-ui="${ui}" data-di="${di}" ${a("")}
+                  aria-label="یونیتِ 소속ِ این در" title="در به کدام یونیت تعلق دارد">
+            ${pg.units.map((x, i2) => `<option value="${i2}"${i2 === ui ? " selected" : ""}>${esc(x.label || `یونیت ${i2 + 1}`)}</option>`).join("")}
+          </select>
+          ${acts(`${dupBtn("door", ui, di)}${SEP}${delBtn("door", ui, di)}`)}
+        </div></td>
+        <td>${inpT("door", "label", dr.label, a(`data-ui="${ui}" data-di="${di}"`))}</td>
+        <td>${inp("door", "qty", dr.qty, a(`data-ui="${ui}" data-di="${di}"`), U_LEAF, "w-qty")}</td>
+        <td>${inp("door", "w_cm", dr.w_cm, a(`data-ui="${ui}" data-di="${di}"`), U_CM, "w-dim")}</td>
+        <td>${inp("door", "h_cm", dr.h_cm, a(`data-ui="${ui}" data-di="${di}"`), U_CM, "w-dim")}</td>
         <td>${doorSheetCell(u, dr, ui, di)}</td>
-        <td>${matSelect("door_model", dr.door_model_id, `data-scope="door" data-k="door_model_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${matSelect("hinge", dr.hinge_id, `data-scope="door" data-k="hinge_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${matSelect("handle", dr.handle_id, `data-scope="door" data-k="handle_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${matSelect("service", dr.assembly_id, `data-scope="door" data-k="assembly_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${matSelect("service", dr.packaging_id, `data-scope="door" data-k="packaging_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td><div class="row-btns">${dup("door", ui, di)}${del("door", ui, di)}</div></td>
+        <td>${matSelect("door_model", dr.door_model_id, `data-scope="door" data-k="door_model_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
+        <td>${matSelect("hinge", dr.hinge_id, `data-scope="door" data-k="hinge_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
+        <td>${matSelect("handle", dr.handle_id, `data-scope="door" data-k="handle_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
+        <td>${matSelect("service", dr.assembly_id, `data-scope="door" data-k="assembly_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
+        <td>${matSelect("service", dr.packaging_id, `data-scope="door" data-k="packaging_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
       </tr>`;
   }));
   el("tblDoors").innerHTML = `
-    <thead><tr><th>یونیت</th><th>برچسب</th><th>لنگه (عدد)</th><th>عرض (سم)</th><th>ارتفاع (سم)</th><th>ورق در</th><th>مدل/اجرت</th><th>لولا</th><th>دستگیره</th><th>مونتاژ</th><th>بسته‌بندی</th><th></th></tr></thead>
-    <tbody>${dRows || `<tr><td colspan="12"><div class="empty">دری تعریف نشده است.</div></td></tr>`}</tbody>`;
+    <thead><tr><th class="th-row">یونیت</th><th>برچسب</th><th>لنگه (عدد)</th><th>عرض (سم)</th><th>ارتفاع (سم)</th><th>ورق در</th><th>مدل/اجرت</th><th>لولا</th><th>دستگیره</th><th>مونتاژ</th><th>بسته‌بندی</th></tr></thead>
+    <tbody>${dRows || `<tr><td colspan="11"><div class="empty">دری تعریف نشده است.</div></td></tr>`}</tbody>`;
 
   /* --- کشوها --- */
   let wRows = "";
   pg.units.forEach((u, ui) => u.drawers.forEach((dw, di) => {
+    const a = (extra) => withRow(extra, "drawer", `${ui}:${di}`);
     wRows += `
-      <tr>
-        <td><select class="cell-select" data-scope="drawermove" data-ui="${ui}" data-di="${di}">
-          ${pg.units.map((x, i2) => `<option value="${i2}"${i2 === ui ? " selected" : ""}>${esc(x.label || `یونیت ${i2 + 1}`)}</option>`).join("")}
-        </select></td>
-        <td>${inpT("drawer", "label", dw.label, `data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${inp("drawer", "qty", dw.qty, `data-ui="${ui}" data-di="${di}"`, U_QTY, "w-qty")}</td>
-        <td>${inp("drawer", "w_cm", dw.w_cm, `data-ui="${ui}" data-di="${di}"`, U_CM, "w-dim")}</td>
-        <td>${inp("drawer", "h_cm", dw.h_cm, `data-ui="${ui}" data-di="${di}"`, U_CM, "w-dim")}</td>
-        <td>${inp("drawer", "d_cm", dw.d_cm, `data-ui="${ui}" data-di="${di}"`, U_CM, "w-dim")}</td>
-        <td>${matSelect("drawer_slide", dw.slide_id, `data-scope="drawer" data-k="slide_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${matSelect("drawer_sheet", dw.sheet_id, `data-scope="drawer" data-k="sheet_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${matSelect("door_sheet", dw.front_id, `data-scope="drawer" data-k="front_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${matSelect("handle", dw.handle_id, `data-scope="drawer" data-k="handle_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td><div class="row-btns">${dup("drawer", ui, di)}${del("drawer", ui, di)}</div></td>
+      <tr${rowAttrs("drawer", `${ui}:${di}`)}>
+        <td><div class="row-id-cell">
+          <select class="cell-select" data-scope="drawermove" data-ui="${ui}" data-di="${di}" ${a("")}
+                  aria-label="یونیتِ 소속ِ این کشو" title="کشو به کدام یونیت تعلق دارد">
+            ${pg.units.map((x, i2) => `<option value="${i2}"${i2 === ui ? " selected" : ""}>${esc(x.label || `یونیت ${i2 + 1}`)}</option>`).join("")}
+          </select>
+          ${acts(`${dupBtn("drawer", ui, di)}${SEP}${delBtn("drawer", ui, di)}`)}
+        </div></td>
+        <td>${inpT("drawer", "label", dw.label, a(`data-ui="${ui}" data-di="${di}"`))}</td>
+        <td>${inp("drawer", "qty", dw.qty, a(`data-ui="${ui}" data-di="${di}"`), U_QTY, "w-qty")}</td>
+        <td>${inp("drawer", "w_cm", dw.w_cm, a(`data-ui="${ui}" data-di="${di}"`), U_CM, "w-dim")}</td>
+        <td>${inp("drawer", "h_cm", dw.h_cm, a(`data-ui="${ui}" data-di="${di}"`), U_CM, "w-dim")}</td>
+        <td>${inp("drawer", "d_cm", dw.d_cm, a(`data-ui="${ui}" data-di="${di}"`), U_CM, "w-dim")}</td>
+        <td>${matSelect("drawer_slide", dw.slide_id, `data-scope="drawer" data-k="slide_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
+        <td>${matSelect("drawer_sheet", dw.sheet_id, `data-scope="drawer" data-k="sheet_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
+        <td>${matSelect("door_sheet", dw.front_id, `data-scope="drawer" data-k="front_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
+        <td>${matSelect("handle", dw.handle_id, `data-scope="drawer" data-k="handle_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
       </tr>`;
   }));
   el("tblDrawers").innerHTML = `
-    <thead><tr><th>یونیت</th><th>برچسب</th><th>تعداد (عدد)</th><th>عرض (سم)</th><th>ارتفاع (سم)</th><th>عمق (سم)</th><th>ریل</th><th>ورق جعبه</th><th>تیره‌ی کشو</th><th>دستگیره</th><th></th></tr></thead>
-    <tbody>${wRows || `<tr><td colspan="11"><div class="empty">کشویی تعریف نشده است.</div></td></tr>`}</tbody>`;
+    <thead><tr><th class="th-row">یونیت</th><th>برچسب</th><th>تعداد (عدد)</th><th>عرض (سم)</th><th>ارتفاع (سم)</th><th>عمق (سم)</th><th>ریل</th><th>ورق جعبه</th><th>تیره‌ی کشو</th><th>دستگیره</th></tr></thead>
+    <tbody>${wRows || `<tr><td colspan="10"><div class="empty">کشویی تعریف نشده است.</div></td></tr>`}</tbody>`;
 
   /* --- درنما --- */
   if (pg.detail_mode === "detailed") {
     el("tblFacade").innerHTML = `
-      <thead><tr><th>عنوان</th><th>تعداد (عدد)</th><th>عرض (سم)</th><th>ارتفاع (سم)</th><th>قیمت هر م² (${CUR.name})</th><th>مساحت (م²)</th><th>جمع (${CUR.name})</th><th></th></tr></thead>
+      <thead><tr><th class="th-row">ردیف</th><th>تعداد (عدد)</th><th>عرض (سم)</th><th>ارتفاع (سم)</th><th>قیمت هر م² (${CUR.name})</th><th>مساحت (م²)</th><th>جمع (${CUR.name})</th></tr></thead>
       <tbody>${pg.detail_rows.map((r, i) => {
         const area = (+r.qty || 0) * ((+r.w_cm || 0) / 100) * ((+r.h_cm || 0) / 100);
-        return `<tr>
-          <td>${inpT("facade", "label", r.label, `data-ri="${i}"`)}</td>
-          <td>${inp("facade", "qty", r.qty, `data-ri="${i}"`, U_QTY, "w-qty")}</td>
-          <td>${inp("facade", "w_cm", r.w_cm, `data-ri="${i}"`, U_CM, "w-dim")}</td>
-          <td>${inp("facade", "h_cm", r.h_cm, `data-ri="${i}"`, U_CM, "w-dim")}</td>
-          <td>${inp("facade", "price_per_sqm", r.price_per_sqm, `data-ri="${i}"`, uMoney(), "w-money")}</td>
+        const a = (extra) => withRow(extra, "facade", i);
+        return `<tr${rowAttrs("facade", i)}>
+          <td><div class="row-id-cell">
+            ${inpT("facade", "label", r.label, a(`data-ri="${i}"`))}
+            ${acts(`${dupBtn("facade", null, null, i)}${SEP}${delBtn("facade", null, i)}`)}
+          </div></td>
+          <td>${inp("facade", "qty", r.qty, a(`data-ri="${i}"`), U_QTY, "w-qty")}</td>
+          <td>${inp("facade", "w_cm", r.w_cm, a(`data-ri="${i}"`), U_CM, "w-dim")}</td>
+          <td>${inp("facade", "h_cm", r.h_cm, a(`data-ri="${i}"`), U_CM, "w-dim")}</td>
+          <td>${inp("facade", "price_per_sqm", r.price_per_sqm, a(`data-ri="${i}"`), uMoney(), "w-money")}</td>
           <td class="num f-area" data-ri="${i}">${fmt(area, 1)}</td>
           <td class="num f-sum" data-ri="${i}">${fmt(scaled(area * (+r.price_per_sqm || 0)))}</td>
-          <td><div class="row-btns">${dup("facade", null, null, i)}${del("facade", null, i)}</div></td>
         </tr>`;
-      }).join("") || `<tr><td colspan="8"><div class="empty">ردیفی نیست — «＋ افزودن ردیف درنما» را بزنید.</div></td></tr>`}
+      }).join("") || `<tr><td colspan="7"><div class="empty">ردیفی نیست — «＋ افزودن ردیف درنما» را بزنید.</div></td></tr>`}
       </tbody>`;
   } else {
     el("tblFacade").innerHTML = "";
@@ -901,19 +1040,24 @@ function renderEditorTables() {
 
   /* --- اضافات --- */
   el("tblExtras").innerHTML = `
-    <thead><tr><th>عنوان</th><th>تعداد (عدد)</th><th>واحد</th><th>فی (${CUR.name})</th><th>جمع (${CUR.name})</th><th>در فاکتور</th><th></th></tr></thead>
-    <tbody>${pg.extras.map((r, i) => `
-      <tr>
-        <td>${inpT("extra", "label", r.label, `data-ri="${i}" style="min-width:11rem"`)}</td>
-        <td>${inp("extra", "qty", r.qty, `data-ri="${i}"`, U_QTY, "w-qty")}</td>
-        <td><select class="cell-select" data-scope="extra" data-k="unit" data-ri="${i}">
+    <thead><tr><th class="th-row">ردیف</th><th>تعداد (عدد)</th><th>واحد</th><th>فی (${CUR.name})</th><th>جمع (${CUR.name})</th><th>در فاکتور</th></tr></thead>
+    <tbody>${pg.extras.map((r, i) => {
+      const a = (extra) => withRow(extra, "extra", i);
+      return `
+      <tr${rowAttrs("extra", i)}>
+        <td><div class="row-id-cell">
+          ${inpT("extra", "label", r.label, a(`data-ri="${i}" style="min-width:11rem"`))}
+          ${acts(`${dupBtn("extra", null, null, i)}${SEP}${delBtn("extra", null, i)}`)}
+        </div></td>
+        <td>${inp("extra", "qty", r.qty, a(`data-ri="${i}"`), U_QTY, "w-qty")}</td>
+        <td><select class="cell-select" data-scope="extra" data-k="unit" data-ri="${i}" ${a("")}>
           ${Object.entries(UNITS).map(([k, l]) => `<option value="${k}"${r.unit === k ? " selected" : ""}>${l}</option>`).join("")}
         </select></td>
-        <td>${inp("extra", "price", r.price, `data-ri="${i}"`, uMoney(), "w-money")}</td>
+        <td>${inp("extra", "price", r.price, a(`data-ri="${i}"`), uMoney(), "w-money")}</td>
         <td class="num x-sum" data-ri="${i}">${fmt(scaled((+r.qty || 0) * (+r.price || 0)))}</td>
-        <td><label class="check" style="justify-content:center"><input type="checkbox" data-scope="extra" data-k="visible" data-ri="${i}"${r.visible !== false ? " checked" : ""}></label></td>
-        <td><div class="row-btns">${dup("extra", null, null, i)}${del("extra", null, i)}</div></td>
-      </tr>`).join("") || `<tr><td colspan="7"><div class="empty">قلمی نیست.</div></td></tr>`}
+        <td><label class="check" style="justify-content:center"><input type="checkbox" data-scope="extra" data-k="visible" data-ri="${i}" ${a("")}${r.visible !== false ? " checked" : ""}></label></td>
+      </tr>`;
+    }).join("") || `<tr><td colspan="6"><div class="empty">قلمی نیست.</div></td></tr>`}
     </tbody>`;
 
   /* --- خدمات --- */
@@ -923,16 +1067,21 @@ function renderEditorTables() {
       return `<option value="${esc(n)}">${esc(n)}${sv && sv.price ? ` — ${fmt(sv.price)}` : ""}</option>`;
     }).join("");
   el("tblServices").innerHTML = `
-    <thead><tr><th>شرح خدمت</th><th>مبنا</th><th>نرخ (${CUR.name})</th><th></th></tr></thead>
-    <tbody>${pg.services.map((s, i) => `
-      <tr>
-        <td>${inpT("service", "label", s.label, `data-ri="${i}" style="min-width:13rem"`)}</td>
-        <td><select class="cell-select" data-scope="service" data-k="basis" data-ri="${i}">
+    <thead><tr><th class="th-row">شرح خدمت</th><th>مبنا</th><th>نرخ (${CUR.name})</th></tr></thead>
+    <tbody>${pg.services.map((s, i) => {
+      const a = (extra) => withRow(extra, "service", i);
+      return `
+      <tr${rowAttrs("service", i)}>
+        <td><div class="row-id-cell">
+          ${inpT("service", "label", s.label, a(`data-ri="${i}" style="min-width:13rem"`))}
+          ${acts(`${dupBtn("service", null, null, i)}${SEP}${delBtn("service", null, i)}`)}
+        </div></td>
+        <td><select class="cell-select" data-scope="service" data-k="basis" data-ri="${i}" ${a("")}>
           ${Object.entries(SERVICE_BASIS).map(([k, l]) => `<option value="${k}"${s.basis === k ? " selected" : ""}>${l}</option>`).join("")}
         </select></td>
-        <td>${inp("service", "price", s.price, `data-ri="${i}"`, uMoney(), "w-money")}</td>
-        <td><div class="row-btns">${dup("service", null, null, i)}${del("service", null, i)}</div></td>
-      </tr>`).join("") || `<tr><td colspan="4"><div class="empty">خدمتی نیست — از کتابخانه اضافه کنید.</div></td></tr>`}
+        <td>${inp("service", "price", s.price, a(`data-ri="${i}"`), uMoney(), "w-money")}</td>
+      </tr>`;
+    }).join("") || `<tr><td colspan="3"><div class="empty">خدمتی نیست — از کتابخانه اضافه کنید.</div></td></tr>`}
     </tbody>`;
 
   /* شمارنده‌ی تب‌ها */
@@ -945,6 +1094,8 @@ function renderEditorTables() {
   el("cntExtras").textContent = fa(pg.extras.length);
   el("cntServices").textContent = fa(pg.services.length);
   renderDimRibbon();
+
+  restoreCellFocus(keep);
 }
 
 function updateComputedCells() {
@@ -1018,17 +1169,30 @@ function invPayload(p) {
 }
 
 let _calcTimer = null;
+function paintDirtyState2() {
+  const on = !!state.dirty;
+  const b = el("btnSaveProject");
+  if (b) b.classList.toggle("dirty", on);
+  /* نشانِ «ذخیره‌نشده» در نوارِ فرمان و در نوارِ جمع — بازخوردِ مداوم بدونِ
+     مزاحمت: فقط وقتی لازم است دیده می‌شود.                                     */
+  const chip = el("ebDirty");
+  if (chip) chip.hidden = !on;
+  const hint = el("tbSaveHint");
+  if (hint) hint.hidden = !on;
+  const bar = el("editorBar");
+  if (bar) bar.classList.toggle("is-dirty", on);
+}
 function markDirty(undoKey) {
   if (!state.dirty) {
     state.dirty = true;
   }
-  $$("#btnSaveProject, #btnTotalSave").forEach((b) => b && b.classList.add("dirty"));
+  paintDirtyState2();
   undoCommit(undoKey);          /* هر تغییر = یک گام در تاریخچه‌ی واگرد */
   scheduleDraftSave();          /* پیش‌نویسِ خودکار برای نسیدنِ کار */
 }
 function clearDirty() {
   state.dirty = false;
-  $$("#btnSaveProject, #btnTotalSave").forEach((b) => b && b.classList.remove("dirty"));
+  paintDirtyState2();
 }
 
 /* ================================================================== واگرد
@@ -1077,7 +1241,7 @@ function undoApplySnap() {
     p.pages = d.pages || [];
     state.pageIdx = Math.min(Math.max(0, +d.pageIdx || 0), Math.max(0, p.pages.length - 1));
     state.dirty = true;
-    $$("#btnSaveProject, #btnTotalSave").forEach((b) => b && b.classList.add("dirty"));
+    paintDirtyState2();
     renderSectionPills(); renderSectionBar(); renderEditorTables();
     scheduleRecalc(50);
     scheduleDraftSave();
@@ -1174,8 +1338,59 @@ async function recalcTotals() {
   }
   renderDimRibbon();
   updateComputedCells();
+  updateTbSummary();
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   کشوی «تنظیمات مالی» در نوارِ جمع
+   --------------------------------------------------------------------------
+   پیش‌تر نوارِ جمع ۸ ورودی مالی را یک‌جا و همیشه باز نشان می‌داد؛ یعنی نیمی از
+   ارتفاعِ صفحه صرفِ چیزهایی می‌شد که در ۹۰٪ مواقع دست‌نخورده می‌مانند
+   (یافته‌ی F‑2). حالا نوار فقط «خلاصه» دارد و ورودی‌ها پشتِ یک کشو هستند.
+   ولی خلاصه نباید پنهان‌کاری کند: آنچه فعال است همان‌جا دیده می‌شود.        */
+function tbSummaryParts() {
+  const parts = [];
+  const mode = el("tbProfitMode") ? el("tbProfitMode").value : "markup";
+  const pct = parseNum(el("tbProfitPct") ? el("tbProfitPct").value : "");
+  if (pct) parts.push((mode === "margin" ? "مارجین " : "سود ") + fa(pct) + "٪");
+  const im = el("tbInstallMode") ? el("tbInstallMode").value : "none";
+  const iv = parseNum(el("tbInstallVal") ? el("tbInstallVal").value : "");
+  if (im !== "none" && iv) {
+    const lbl = { fixed: "نصب ", per_meter: "نصب متری ", percent: "نصب " }[im] || "نصب ";
+    parts.push(lbl + fa(iv) + (im === "percent" ? "٪" : ""));
+  }
+  const dp = parseNum(el("tbDiscPct") ? el("tbDiscPct").value : "");
+  const da = parseNum(el("tbDiscAmt") ? el("tbDiscAmt").value : "");
+  if (dp) parts.push("تخفیف " + fa(dp) + "٪");
+  else if (da) parts.push("تخفیف " + fmtInp(da));
+  if (el("tbVat") && el("tbVat").checked) {
+    parts.push("مالیات " + fa(parseNum(el("tbVatPct") ? el("tbVatPct").value : "") || 10) + "٪");
+  }
+  const ef = parseNum(el("tbExtraFixed") ? el("tbExtraFixed").value : "");
+  if (ef) parts.push("ثابت " + fmtInp(ef));
+  const dep = parseNum(el("tbDepositAmt") ? el("tbDepositAmt").value : "");
+  const depp = parseNum(el("tbDepositPct") ? el("tbDepositPct").value : "");
+  if (dep) parts.push("پیش‌پرداخت " + fmtInp(dep));
+  else if (depp) parts.push("پیش‌پرداخت " + fa(depp) + "٪");
+  const rs = +(el("tbRoundStep") ? el("tbRoundStep").value : 0);
+  if (rs) parts.push("رُند به " + fmtInp(rs));
+  return parts;
+}
+function updateTbSummary() {
+  const host = el("tbSummary");
+  if (!host) return;
+  const parts = tbSummaryParts();
+  host.textContent = parts.length ? parts.join(" • ") : "بدون تعدیل";
+  host.title = parts.length ? parts.join(" • ") : "هیچ تعدیلِ مالی فعال نیست";
+}
+function setTbDrawer(open, persist) {
+  const d = el("tbDrawer"), b = el("btnTbDrawer");
+  if (!d || !b) return;
+  d.hidden = !open;
+  b.setAttribute("aria-expanded", open ? "true" : "false");
+  b.classList.toggle("open", !!open);
+  if (persist !== false) { try { localStorage.setItem("kabir.tbDrawer", open ? "1" : "0"); } catch (e) {} }
+}
 function readTotalbarInto(p) {
   p.profit_mode = el("tbProfitMode").value;
   p.profit_percent = parseNum(el("tbProfitPct").value);
@@ -1216,6 +1431,38 @@ function readEditorFieldsInto(p) {
 }
 
 function openProjectEditor(id, withDraft) {
+  /* ★ اگر کاربر وسطِ ویرایشِ پروژه‌ی دیگری باشد، بازکردنِ یک پروژه‌ی جدید
+     نباید بی‌صدا کارِ قبلی را دور بریزد (نقضِ «جلوگیری از از دست رفتن داده»).
+     مسیرِ async: ابتدا ذخیره‌ی بی‌صدا، و در صورتِ شکست، پرسشِ صریح.            */
+  const cur = state.editingProject;
+  if (cur && Number(cur.id) !== Number(id) && state.dirty && !withDraft) {
+    (async () => {
+      /* سیاستِ سخت‌گیرانه: حتی جابه‌جایی بین دو پروژه هم بی‌صدا نیست */
+      const go = async () => { forceCloseEditor(); openProjectEditor(id, withDraft); };
+      const act = await confirmDiscard(
+        `پروژه‌ی «<b>${esc(cur.title)}</b>» تغییراتِ <b>ذخیره‌نشده</b> دارد.<br>` +
+        "پیش از بازکردنِ پروژه‌ی دیگر تکلیفشان را روشن کنید.",
+        {
+          title: "جابه‌جایی با داده‌ی ذخیره‌نشده",
+          okLabel: "دور ریختن و بازکردن",
+          okTone: "danger",
+          altLabel: "ذخیره و بازکردن",
+          altTone: "success",
+          cancelLabel: "ماندن روی همین پروژه",
+          onAlt: async () => {
+            const saver = MODAL_KEYS.saveActiveContext || (() => saveProject(true));
+            const ok = await saver();
+            if (ok !== false) await go();
+          },
+        });
+      if (act) await go();
+      else {
+        if (state.page !== "projects") navigateNow("projects");
+        el("projectEditor").scrollIntoView({ block: "start" });
+      }
+    })();
+    return;
+  }
   let p = PROJECTS.find((x) => x.id === Number(id));
   if (!p) return;
   /* ★ بازیابی پیش‌نویسِ ذخیره‌نشده (بعد از بسته‌شدنِ مرورگر/قطع برق) */
@@ -1231,7 +1478,10 @@ function openProjectEditor(id, withDraft) {
   if (!withDraft) state.pageIdx = 0;
   state.expanded.clear();
   el("projectEditor").hidden = false;
-  el("edCode").value = p.code || "—";
+  /* کد و عنوانِ پروژه حالا در نوارِ فرمانِ چسبان دیده می‌شوند تا کاربر هنگام
+     اسکرول در جدولِ بلند همیشه بداند «روی کدام پروژه» کار می‌کند.             */
+  if (el("edCodeChip")) el("edCodeChip").textContent = p.code || "—";
+  if (el("ebTitle")) el("ebTitle").textContent = p.title || "—";
   el("edTitle").value = p.title || "";
   el("edStatus").value = p.status || "draft";
   el("edStatusBadge").textContent = STATUS_LABEL[p.status] || p.status;
@@ -1253,6 +1503,13 @@ function openProjectEditor(id, withDraft) {
   if (el("tbDepositPct")) el("tbDepositPct").value = p.deposit_percent ? fa(p.deposit_percent) : "";
   if (el("tbDepositAmt")) el("tbDepositAmt").value = p.deposit_amount ? fmtInp(p.deposit_amount) : "";
   if (el("tbRoundStep")) el("tbRoundStep").value = "0";
+  /* وضعیتِ کشوی مالی سلیقه‌ی کاربر است، نه ویژگیِ پروژه → از localStorage */
+  {
+    let openD = true;
+    try { openD = localStorage.getItem("kabir.tbDrawer") !== "0"; } catch (e) {}
+    setTbDrawer(openD, false);
+  }
+  updateTbSummary();
   clearDirty();
   renderSectionPills();
   renderSectionBar();
@@ -1280,16 +1537,25 @@ function openProjectEditor(id, withDraft) {
 }
 
 function closeProjectEditor() {
-  const doClose = () => {
-    if (state.editingProject) clearDraft(state.editingProject.id);
-    clearTimeout(_draftTimer);
-    state.editingProject = null;
-    el("projectEditor").hidden = true;
-    undoReset();
-  };
-  if (state.dirty && API.ok) {
-    confirmAction("تغییرات ذخیره‌نشده دارید. بدون ذخیره بستن؟", doClose, "بستن ویرایشگر", "بستن");
-  } else doClose();
+  /* سه کنشِ ثابت (همان قراردادِ لایه‌ی مودال): ذخیره و بستن / ماندن / دور ریختن.
+     کنشِ خطرناک عمداً قرمز و در کنارِ کنشِ امنِ سبز است تا انتخابِ درست آسان باشد. */
+  if (!state.dirty) { forceCloseEditor(); return; }
+  confirmDiscard(
+    "ویرایشگر پروژه تغییراتِ <b>ذخیره‌نشده</b> دارد.<br>پیش از بستن تکلیفشان را روشن کنید.",
+    {
+      title: "بستنِ ویرایشگر",
+      okLabel: "دور ریختن و بستن",
+      okTone: "danger",
+      altLabel: "ذخیره و بستن",
+      altTone: "success",
+      cancelLabel: "ماندن و ادامه‌ی ویرایش",
+      onAlt: async () => {
+        const ok = await saveProject();
+        if (ok !== false) { forceCloseEditor(); toast("ذخیره شد و ویرایشگر بسته شد", "success"); }
+      },
+    }).then((discard) => {
+      if (discard) { forceCloseEditor(); toast("تغییرات ذخیره‌نشده دور ریخته شد", "warn"); }
+    });
 }
 
 async function saveProject(silentToast) {
@@ -1635,6 +1901,9 @@ function renderSearchDrop(q) {
 /* ------------------------------------------------------ ذخیره‌ی حالت نمایشی */
 function demoSave() {
   if (API.ok) return;
+  /* درزِ آزمون: «ذخیره‌ی واقعی» در حالت نمایشی هم باید قابلِ شمردن باشد تا
+     تست‌ها بتوانند «دور ریختن» را از «ذخیره‌ی بی‌صدا» تشخیص دهند.            */
+  try { window.__demoSaveCount = (window.__demoSaveCount || 0) + 1; } catch (e) {}
   try {
     localStorage.setItem("kabir-demo-db", JSON.stringify({
       materials: MATERIALS, styles: STYLES, projects: PROJECTS,
@@ -1678,9 +1947,12 @@ function openTemplateSaveModal(unitIdx) {
 }
 
 async function saveUnitTemplate() {
-  if (!_tplPendingUnit) return;
+  if (!_tplPendingUnit) return false;
+  clearFieldErrors(el("modal-tpl-save"));
   const name = el("tplName").value.trim();
-  if (!name) { toast("نام الگو را وارد کنید", "warn"); return; }
+  if (!validateForm([
+    ["tplName", (v) => !!v.trim(), "نام الگو را وارد کنید — در فهرستِ الگوها با همین نام می‌آید."],
+  ])) return false;
   const note = el("tplNote").value.trim();
   const data = JSON.parse(JSON.stringify(_tplPendingUnit));
   data.label = name;
@@ -1688,16 +1960,17 @@ async function saveUnitTemplate() {
     try {
       const r = await API.req("POST", "/api/unit-templates", { name, note, data });
       UNIT_TEMPLATES = r.templates || [];
-    } catch (e) { toast("ذخیره‌ی الگو ناموفق: " + esc(e.message), "error"); return; }
+    } catch (e) { toast("ذخیره‌ی الگو ناموفق: " + esc(e.message), "error"); return false; }
   } else {
     const id = Math.max(0, ...UNIT_TEMPLATES.map((t) => +t.id || 0)) + 1;
     UNIT_TEMPLATES.push({ id, name, note, data, sort_order: UNIT_TEMPLATES.length });
     demoSave();
   }
   _tplPendingUnit = null;
-  closeModal();
   renderTemplateSelect();
+  renderTemplatesTable();
   toast(`الگوی «${esc(name)}» ذخیره شد`, "success");
+  return true;
 }
 
 function useTemplate() {
@@ -1956,18 +2229,20 @@ function quickPayload() {
 
 async function buildQuickProject() {
   const q = quickPayload();
+  clearFieldErrors(el("modal-quick"));
   if (q.ground_lm <= 0 && q.wall_lm <= 0) {
-    toast("حداقل یکی از متراژهای زمینی یا دیواری را وارد کنید", "warn"); return;
+    setFieldError("qkGround", "حداقل یکی از متراژهای زمینی یا دیواری لازم است.");
+    setFieldError("qkWall", "حداقل یکی از متراژهای زمینی یا دیواری لازم است.");
+    focusFirstError(el("modal-quick"));
+    return false;
   }
-  const btn = el("btnQuickBuild");
-  btn.disabled = true;
   try {
     if (API.ok) {
       const r = await API.req("POST", "/api/quick-project", q);
       const np = normalizeProject(r.project);
       PROJECTS.unshift(np);
       renderProjects(); fillInvoiceProjects(); renderDashboard();
-      closeModal();
+      closeModal("quick");
       openProjectEditor(np.id);
       const c = r.calc || {};
       toast(`پروژه ساخته شد — مبلغ برآوردی: ${fmt(scaled(c.final_price || 0))} ${CUR.name} • ابعاد را با اندازه‌ی واقعی چک کنید`, "success");
@@ -1993,15 +2268,22 @@ async function buildQuickProject() {
       p.pages = [pg];
       PROJECTS.unshift(p); demoSave();
       renderProjects(); fillInvoiceProjects(); renderDashboard();
-      closeModal();
+      closeModal("quick");
       openProjectEditor(p.id);
       toast("پروژه ساخته شد (حالت نمایشی)", "success");
     }
+    return true;
   } catch (e) {
     toast("خطا: " + esc(e.message), "error");
-  } finally {
-    btn.disabled = false;
+    return false;
   }
+}
+
+/* واسطه‌ی ثبتِ «قیمت‌گیری سریع» برای لایه‌ی مودال — اگر مودال بسته نشده باشد
+   یعنی ساختِ پروژه ناموفق بوده و فرم باید باز بماند.                          */
+async function buildQuickProjectGuarded() {
+  await buildQuickProject();
+  return !isModalOpen("quick");
 }
 
 /* ============================================================== سیم‌کشی */
@@ -2084,27 +2366,43 @@ function wire() {
     }
   });
 
-  /* --- میان‌برها --- */
+  /* --- میان‌برها و لایه‌ی مودال -------------------------------------------------
+     یک هندلرِ سراسری با اولویتِ روشن:
+       ۱) اگر مودالی باز است → Escape/Enter/Ctrl+S/Tab فقط به لایه‌ی مودال می‌رسد
+          (contract در js/ui-modal.js: handleModalKeys).
+       ۲) وگرنه → میان‌برهای صفحه: جست‌وجو، ناوبری، ذخیره، واگرد.
+     نکته: ناوبری دیگر بی‌قید نیست؛ navigate() گاردِ «تغییرات ذخیره‌نشده» دارد.  */
+  wireModalLayer();
+  registerExitGuard(editorExitGuard);
+
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      closeModal();
-      el("searchDrop").hidden = true;
-      document.body.classList.remove("nav-open");
-    }
-    if (e.key === "/" && !/input|textarea|select/i.test(document.activeElement.tagName)) {
+    /* جست‌وجوی سراسری با «/» — فقط وقتی تایپ نمی‌کنید و مودالی باز نیست */
+    if (e.key === "/" && !anyModalOpen() && !isTypingTarget(document.activeElement)) {
       e.preventDefault(); gs.focus();
+      return;
     }
-    if (e.altKey && /^[1-6]$/.test(e.key)) {
-      navigate(Object.keys(PAGES)[Number(e.key) - 1]);
+    if (anyModalOpen()) {
+      if (handleModalKeys(e)) return;         /* رویداد مصرف شد */
+    } else {
+      /* Ctrl+S در زمینه‌ی صفحه (بدونِ مودال) */
+      if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === "s") {
+        if (handleModalKeys(e)) return;
+      }
+      if (e.key === "Escape") {
+        el("searchDrop").hidden = true;
+        document.body.classList.remove("nav-open");
+        return;
+      }
     }
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && state.editingProject && state.page === "projects") {
+    if (e.altKey && !e.ctrlKey && !e.metaKey && /^[1-6]$/.test(e.key)) {
       e.preventDefault();
-      saveProject();
+      navigate(Object.keys(PAGES)[Number(e.key) - 1]);
+      return;
     }
     /* ★ واگرد/بازانجامِ ویرایشگر — وقتی فوکوس داخل فیلد متنی نیست
        (داخل فیلد، واگردِ خودِ مرورگر برای تایپ کار می‌کند). */
     if ((e.ctrlKey || e.metaKey) && state.editingProject &&
-        !el("projectEditor").hidden && el("modalBackdrop").hidden) {
+        !el("projectEditor").hidden && !anyModalOpen()) {
       const ae = document.activeElement;
       const inText = ae && /input|textarea/i.test(ae.tagName) && ae.type !== "checkbox";
       if (!inText && (e.key.toLowerCase() === "z" || e.key.toLowerCase() === "y")) {
@@ -2113,17 +2411,28 @@ function wire() {
       }
     }
   });
+
+  /* ★ بستنِ تب/مرورگر: هم در حالت متصل و هم نمایشی هشدار می‌دهیم.
+     قبلاً در حالت نمایشی بی‌صدا کارِ کاربر می‌رفت.                            */
   window.addEventListener("beforeunload", (e) => {
-    if (state.dirty && API.ok) { e.preventDefault(); e.returnValue = ""; }
+    if (state.dirty || anyModalDirty()) { e.preventDefault(); e.returnValue = ""; }
   });
 
-  /* --- مودال‌ها --- */
-  el("modalBackdrop").addEventListener("click", (e) => { if (e.target === el("modalBackdrop")) closeModal(); });
-  $$("[data-close]").forEach((b) => b.addEventListener("click", closeModal));
-  el("btnConfirmOk").addEventListener("click", () => {
-    closeModal();
-    if (state.confirmCb) { state.confirmCb(); state.confirmCb = null; }
+  /* ثبتِ «شناسنامه‌ی» هر مودالِ دارای فرم: چه چیزی ثبت می‌کند، با کدام دکمه،
+     چه برچسبی در هشدارِ «تغییرات ذخیره‌نشده» داشته باشد و راهنمای کلیدش چه باشد.
+     توابع با «ارجاع» پاس داده می‌شوند نه با نام روی window — چون اسکریپت‌ها
+     strict اجرا می‌شوند و در strict تابعِ سطح‌بالا به window نمی‌چسبد.          */
+  registerModalForms({
+    saveMaterialForm, applyBulkPrices, saveStyleForm, createProjectForm,
+    buildQuickProjectGuarded, saveUnitTemplate,
   });
+
+  /* کنشِ «ثبت» با Enter/Ctrl+S در زمینه‌ی صفحه (وقتی مودالی باز نیست) */
+  MODAL_KEYS.contextSave = () => {
+    if (state.editingProject && !el("projectEditor").hidden && state.page === "projects") return saveProject();
+    if (state.page === "settings") return el("btnSaveSettings").click();
+    return null;
+  };
 
   /* ---------------- داشبورد ---------------- */
   el("btnDashHistory").addEventListener("click", async () => {
@@ -2219,7 +2528,7 @@ function wire() {
         afterMaterialsChanged();
         toast("متریال حذف شد" + (nRecalc ? ` — قیمت ${fa(nRecalc)} پروژه بازمحاسبه شد` : ""), "success");
       };
-      confirmAction(`«<b>${esc(m.name)}</b>» برای همیشه حذف شود؟`, async () => {
+      askConfirm(`«<b>${esc(m.name)}</b>» برای همیشه حذف شود؟`, async () => {
         if (!API.ok) {
           MATERIALS.splice(MATERIALS.indexOf(m), 1);
           demoSave();
@@ -2234,7 +2543,7 @@ function wire() {
           if (err && err.status === 409) {
             /* ★ قلم در پروژه‌ها استفاده شده — سرور بدون تأییدِ صریح حذف نمی‌کند
                (حذفِ بی‌صدا یعنی قیمت پروژه‌ها بی‌خبر ارزان می‌شد!) */
-            confirmAction(esc(err.message), async () => {
+            askInfo(esc(err.message), async () => {
               try {
                 const resp2 = await API.req("DELETE", `/api/materials/${m.id}`, { force: true });
                 MATERIALS = resp2.materials;
@@ -2305,9 +2614,35 @@ function wire() {
           toast(`«${esc(m.name)}»: ${fmt(old)} ← <b>${fmt(nv)}</b> ${CUR.name}`, "success");
         }
       };
+      /* ناوبریِ کیبوردیِ «نرخِ صبحِ بازار»:
+         اپراتور صبح ده‌ها قیمت را پشتِ سر هم به‌روز می‌کند. پس Tab باید مثلِ
+         یک جدولِ ورودِ داده کار کند: ثبت + رفتن به قیمتِ بعدی. Shift+Tab به
+         قبلی، Enter ثبت و ماندن، Escape انصراف. بدونِ این، بعدِ هر ثبت کل
+         جدول از نو رندر می‌شد و فوکوس به body می‌پرید — یعنی هر قلم یک
+         «برگشت به اولِ صفحه» هزینه داشت (یافته‌ی K‑3).                        */
+      /* مقصدِ Tab را «پیش از» ثبت نگه می‌داریم: ثبت جدول را از نو رندر
+         می‌کند، پس سلولِ فعلی از DOM بیرون می‌رود و باید مقصد را از روی
+         فهرستِ «پیش از رندر» پیدا کنیم.                                       */
+      const planNext = (dir) => {
+        const cells = [...document.querySelectorAll("[data-quick-price]")];
+        const here = cells.findIndex((c) => +c.dataset.quickPrice === +m.id);
+        if (here < 0) return null;
+        const i = here + dir;
+        return (i >= 0 && i < cells.length) ? +cells[i].dataset.quickPrice : null;
+      };
+      const moveTo = async (dir) => {
+        const target = planNext(dir);
+        _qpNavTarget = target;
+        if (target === null) {
+          toast(dir > 0 ? "به آخرین قیمتِ فهرست رسیدید" : "به اولین قیمتِ فهرست رسیدید", "info");
+          _qpNavTarget = null;
+        }
+        await commit();
+      };
       inp2.addEventListener("keydown", (ev) => {
         if (ev.key === "Enter") { ev.preventDefault(); commit(); }
-        else if (ev.key === "Escape") { ev.preventDefault(); cancel(); }
+        else if (ev.key === "Escape") { ev.preventDefault(); _qpNavTarget = null; cancel(); }
+        else if (ev.key === "Tab") { ev.preventDefault(); moveTo(ev.shiftKey ? -1 : 1); }
         ev.stopPropagation();
       });
       inp2.addEventListener("blur", () => setTimeout(commit, 120));
@@ -2316,10 +2651,17 @@ function wire() {
   });
 
   el("mfUnit").addEventListener("change", setMfPriceHint);
-  el("btnSaveMaterial").addEventListener("click", () => busy(el("btnSaveMaterial"), async () => {
+
+  /* ★ ثبتِ فرمِ متریال — هم با کلیک، هم با Enter/Ctrl+S (از لایه‌ی مودال).
+     خطای اعتبارسنجی کنارِ خودِ فیلد نشان داده می‌شود و فوکوس روی اولین
+     فیلدِ خطادار می‌رود؛ دیگر لازم نیست کاربر دنبالِ توست بگردد.             */
+  async function saveMaterialForm() {
+    clearFieldErrors(el("modal-material"));
     const payload = matPayload();
-    if (!payload.name) { toast("نام قلم را وارد کنید", "error"); return; }
-    if (payload.price <= 0) { toast("قیمت معتبر وارد کنید", "error"); return; }
+    if (!validateForm([
+      ["mfName", (v) => !!v.trim(), "نام قلم را وارد کنید — بدون نام، در فهرست‌ها پیدا نمی‌شود."],
+      ["mfPrice", (v) => parseNum(v) > 0, "قیمت باید عددی بزرگ‌تر از صفر باشد."],
+    ])) return false;
     let resp = null;
     if (API.ok) {
       try {
@@ -2327,7 +2669,7 @@ function wire() {
           ? await API.req("PUT", `/api/materials/${state.editingMaterial.id}`, payload)
           : await API.req("POST", "/api/materials", payload);
         MATERIALS = resp.materials;
-      } catch (err) { toast("ذخیره ناموفق: " + esc(err.message), "error"); return; }
+      } catch (err) { toast("ذخیره ناموفق: " + esc(err.message), "error"); return false; }
     } else {
       if (state.editingMaterial) {
         const m = state.editingMaterial;
@@ -2340,14 +2682,15 @@ function wire() {
       }
       demoSave();
     }
-    closeModal();
     /* اگر قیمت تغییر کرده باشد، سرور همه‌ی پروژه‌ها را بازمحاسبه کرده است */
     const nRecalc = ingestPriceRefresh(resp);
     afterMaterialsChanged();
     toast(state.editingMaterial
       ? "تغییرات قلم ذخیره شد" + (nRecalc ? ` — قیمت ${fa(nRecalc)} پروژه هم با نرخ جدید به‌روز شد` : "")
       : "قلم جدید ذخیره شد", "success");
-  }));
+    return true;      /* لایه‌ی مودال خودش می‌بندد و نشانِ «ذخیره‌نشده» را پاک می‌کند */
+  }
+  el("btnSaveMaterial").addEventListener("click", () => submitModal("material"));
   function afterMaterialsChanged() {
     renderMaterials();
     fillStyleSelects();
@@ -2377,9 +2720,12 @@ function wire() {
     chip.classList.add("active");
     el("bulkPct").value = fa(chip.dataset.pct);
   }));
-  el("btnApplyBulk").addEventListener("click", () => busy(el("btnApplyBulk"), async () => {
+  async function applyBulkPrices() {
+    clearFieldErrors(el("modal-bulk"));
     const pct = parseNum(el("bulkPct").value);
-    if (!pct) { toast("درصد تغییر را وارد کنید", "error"); return; }
+    if (!validateForm([
+      ["bulkPct", (v) => parseNum(v) !== 0, "درصد تغییر را وارد کنید (مثلاً ۱۰ یا ۵−)."],
+    ])) return false;
     const scope = ($("input[name=bulkScope]:checked") || {}).value;
     const reason = el("bulkReason").value.trim() || "به‌روزرسانی نرخ بازار";
     const cat = scope === "cat" && state.matCat !== "all" ? state.matCat : null;
@@ -2388,15 +2734,14 @@ function wire() {
         const resp = await API.req("POST", "/api/materials/bulk", { cat, percent: pct, reason });
         MATERIALS = resp.materials;
         HISTORY = resp.history || HISTORY;
-        closeModal();
         /* پروژه‌ها هم با نرخ جدید بازمحاسبه شده‌اند — نتایج ادغام شود */
         const nRecalc = ingestPriceRefresh(resp);
         afterMaterialsChanged();
         renderHistory();
         toast(`قیمت ${fa(resp.count)} قلم به‌روز شد (${pct > 0 ? "+" : ""}${fmt(pct, true)}٪)` +
           (nRecalc ? ` — قیمت ${fa(nRecalc)} پروژه هم خودکار با نرخ جدید بازمحاسبه شد` : ""), "success");
-      } catch (err) { toast("خطا: " + esc(err.message), "error"); }
-      return;
+      } catch (err) { toast("خطا: " + esc(err.message), "error"); return false; }
+      return true;
     }
     let count = 0;
     MATERIALS.forEach((m) => {
@@ -2409,11 +2754,12 @@ function wire() {
       }
     });
     demoSave();
-    closeModal();
     afterMaterialsChanged();
     renderHistory();
     toast(`قیمت ${fa(count)} قلم به‌روز شد (${pct > 0 ? "+" : ""}${fmt(pct, true)}٪)`, "success");
-  }));
+    return true;
+  }
+  el("btnApplyBulk").addEventListener("click", () => submitModal("bulk"));
   /* ---------------- سبک‌ها ---------------- */
   function openStyleModal(st) {
     if (!st && STYLES.length >= 20) { toast("حداکثر ۲۰ سبک مجاز است", "warn"); return; }
@@ -2442,26 +2788,30 @@ function wire() {
     return { name: el("sfName").value.trim(), note: el("sfNote").value.trim(), data };
   }
 
-  el("btnSaveStyle").addEventListener("click", () => busy(el("btnSaveStyle"), async () => {
+  async function saveStyleForm() {
+    clearFieldErrors(el("modal-style"));
     const payload = stylePayload();
-    if (!payload.name) { toast("نام سبک را وارد کنید", "error"); return; }
+    if (!validateForm([
+      ["sfName", (v) => !!v.trim(), "نام سبک را وارد کنید — در فهرستِ بخش‌ها با همین نام پیدا می‌شود."],
+    ])) return false;
     if (API.ok) {
       try {
         const resp = state.editingStyle
           ? await API.req("PUT", `/api/styles/${state.editingStyle.id}`, payload)
           : await API.req("POST", "/api/styles", payload);
         STYLES = resp.styles;
-      } catch (err) { toast("ذخیره ناموفق: " + esc(err.message), "error"); return; }
+      } catch (err) { toast("ذخیره ناموفق: " + esc(err.message), "error"); return false; }
     } else {
       if (state.editingStyle) Object.assign(state.editingStyle, payload);
       else STYLES.push(Object.assign({ id: Math.max(0, ...STYLES.map((s) => s.id)) + 1 }, payload));
       demoSave();
     }
-    closeModal();
     renderStyles();
     if (state.editingProject) renderSectionBar();
     toast("سبک ذخیره شد", "success");
-  }));
+    return true;
+  }
+  el("btnSaveStyle").addEventListener("click", () => submitModal("style"));
   el("stylesGrid").addEventListener("click", async (e) => {
     const btn = e.target.closest("button[data-use-style],button[data-edit-style],button[data-copy-style],button[data-del-style],button[data-new-style]");
     if (!btn) return;
@@ -2486,7 +2836,7 @@ function wire() {
       renderStyles();
       toast("سبک کپی شد", "success");
     } else if (btn.dataset.delStyle !== undefined) {
-      confirmAction(`سبک «<b>${esc(st.name)}</b>» حذف شود؟`, async () => {
+      askConfirm(`سبک «<b>${esc(st.name)}</b>» حذف شود؟`, async () => {
         if (API.ok) {
           try { STYLES = (await API.req("DELETE", `/api/styles/${id}`)).styles; }
           catch (err) { toast("خطا: " + esc(err.message), "error"); return; }
@@ -2524,9 +2874,12 @@ function wire() {
     openModal("project");
   }
 
-  el("btnCreateProject").addEventListener("click", () => busy(el("btnCreateProject"), async () => {
+  async function createProjectForm() {
+    clearFieldErrors(el("modal-project"));
     const title = el("pfTitle").value.trim();
-    if (!title) { toast("عنوان پروژه را وارد کنید", "error"); return; }
+    if (!validateForm([
+      ["pfTitle", (v) => !!v.trim(), "عنوان پروژه را وارد کنید — در فهرست و فاکتور با همین عنوان دیده می‌شود."],
+    ])) return false;
     const styleId = Number(el("pfStyle").value) || 0;
     const body = {
       title, customer: el("pfCustomer").value.trim(), mobile: el("pfMobile").value.trim(),
@@ -2535,7 +2888,7 @@ function wire() {
     let np;
     if (API.ok) {
       try { np = normalizeProject((await API.req("POST", "/api/projects", body)).project); }
-      catch (err) { toast("ایجاد ناموفق: " + esc(err.message), "error"); return; }
+      catch (err) { toast("ایجاد ناموفق: " + esc(err.message), "error"); return false; }
     } else {
       const id = Math.max(0, ...PROJECTS.map((p) => p.id)) + 1;
       np = normalizeProject({
@@ -2551,11 +2904,13 @@ function wire() {
       demoSave();
     }
     if (!PROJECTS.includes(np)) PROJECTS.unshift(np);
-    closeModal();
+    closeModal("project");
     renderProjects(); renderDashboard(); fillInvoiceProjects();
     openProjectEditor(np.id);
     toast("پروژه‌ی جدید ایجاد شد — یونیت‌ها را وارد کنید", "success");
-  }));
+    return true;
+  }
+  el("btnCreateProject").addEventListener("click", () => submitModal("project"));
   el("projectsTable").addEventListener("click", async (e) => {
     const open = e.target.closest("[data-open-project]");
     const inv = e.target.closest("[data-invoice-project]");
@@ -2570,7 +2925,7 @@ function wire() {
       toast("فاکتور برای پروژه بارگذاری شد");
     } else if (del) {
       const p = PROJECTS.find((x) => x.id === +del.dataset.delProject);
-      confirmAction(`پروژه‌ی «<b>${esc(p.title)}</b>» و همه‌ی داده‌های آن حذف شود؟`, async () => {
+      askConfirm(`پروژه‌ی «<b>${esc(p.title)}</b>» و همه‌ی داده‌های آن حذف شود؟`, async () => {
         if (API.ok) {
           try { await API.req("DELETE", `/api/projects/${p.id}`); }
           catch (err) { toast("حذف ناموفق: " + esc(err.message), "error"); return; }
@@ -2588,6 +2943,12 @@ function wire() {
   el("btnDupProject").addEventListener("click", () => busy(el("btnDupProject"), async () => {
     const p = state.editingProject;
     if (!p) return;
+    /* ★ قبلاً کپی از «نسخه‌ی روی سرور» ساخته می‌شد و تغییراتِ ذخیره‌نشده‌ی
+       کاربر بی‌صدا از دست می‌رفت. حالا اول ذخیره، بعد کپی.                      */
+    if (state.dirty) {
+      const ok = await saveProject(true);
+      if (!ok) { toast("ابتدا تغییرات را ذخیره کنید، بعد پروژه را کپی کنید", "warn"); return; }
+    }
     let np;
     if (API.ok) {
       try { np = normalizeProject((await API.req("POST", `/api/projects/${p.id}/duplicate`)).project); }
@@ -2624,7 +2985,7 @@ function wire() {
       e.stopPropagation();
       const p = state.editingProject;
       const i = +x.dataset.secDel;
-      confirmAction(`بخش «<b>${esc(p.pages[i].name)}</b>» و همه‌ی یونیت‌هایش حذف شود؟`, () => {
+      askConfirm(`بخش «<b>${esc(p.pages[i].name)}</b>» و همه‌ی یونیت‌هایش حذف شود؟`, () => {
         p.pages.splice(i, 1);
         state.pageIdx = Math.max(0, state.pageIdx - (i <= state.pageIdx ? 1 : 0));
         markDirty();
@@ -2666,17 +3027,39 @@ function wire() {
     markDirty();
     scheduleRecalc();
   });
+  /* ★ حذفِ یک کلیکِ اضافه: این عملیات کاملاً برگشت‌پذیر است (Undo دارد و
+     پیش‌نویسِ خودکار هم ذخیره می‌شود)، پس مودالِ تأییدِ خطرناک‌نما لازم نبود.
+     به‌جایش بلافاصله اعمال می‌شود و در توست، «بازگردانی» یک‌کلیکی دارد.        */
   el("btnApplyStyle").addEventListener("click", () => {
     const pg = curPage();
     if (!pg) return;
     if (!pg.style_id) { toast("ابتدا یک سبک انتخاب کنید", "warn"); return; }
     const st = STYLES.find((s) => s.id === Number(pg.style_id));
-    confirmAction(`متریالِ سبک «<b>${esc(st.name)}</b>» روی همه‌ی یونیت‌ها، درها و کشوهای این بخش اعمال شود؟`, () => {
-      applyStyleToPage(pg, pg.style_id);
-      markDirty();
-      renderSectionBar(); renderEditorTables(); scheduleRecalc(50);
-      toast(`سبک «${esc(st.name)}» روی بخش اعمال شد`, "success");
-    }, "اعمال سبک", "اعمال");
+    const before = undoSnapshot();          /* وضعیتِ پیش از اعمال — برای بازگردانی */
+    applyStyleToPage(pg, pg.style_id);
+    markDirty();
+    renderSectionBar(); renderEditorTables(); scheduleRecalc(50);
+    toast(`متریالِ سبک «<b>${esc(st.name)}</b>» روی همه‌ی یونیت‌ها، درها و کشوهای این بخش اعمال شد`,
+      "success", {
+        label: "بازگردانی",
+        cb: () => {
+          if (UNDO.applying) return;
+          const p = state.editingProject;
+          if (!p || !before) { doUndo(); return; }
+          UNDO.applying = true;
+          try {
+            const d = JSON.parse(before);
+            p.pages = d.pages || [];
+            state.pageIdx = Math.min(Math.max(0, +d.pageIdx || 0), Math.max(0, p.pages.length - 1));
+            state.dirty = true;
+            paintDirtyState2();
+            renderSectionPills(); renderSectionBar(); renderEditorTables();
+            scheduleRecalc(50); scheduleDraftSave();
+          } finally { UNDO.applying = false; }
+          updateUndoButtons();
+          toast("اعمالِ سبک بازگردانده شد", "info");
+        },
+      });
   });
   ["secWaste", "secOverhead", "secCounterLm", "secWallLen", "facadeTotalSqm", "facadeTotalPrice"].forEach((id) =>
     el(id) && el(id).addEventListener("input", () => { readSectionBarInto(); markDirty("sec." + id); renderDimRibbon(); scheduleRecalc(); }));
@@ -2726,11 +3109,15 @@ function wire() {
     if (!p || !pg) return;
     const kind = b.dataset.add;
     const d = styleDataOf(pg);
+    const keep = captureCellFocus();
+    let focusKind = null, focusIdx = null;
     if (kind === "units" || (kind && kind.startsWith("unit:"))) {
       const type = kind.startsWith("unit:") ? kind.slice("unit:".length) : "ground";
       const u = defaultUnit(type);
       applyStyleToUnit(u, d);
       pg.units.push(u);
+      focusKind = "unit"; focusIdx = pg.units.length - 1;
+      state.lastUnitIdx = focusIdx;
     } else if (kind === "doors") {
       if (!pg.units.length) { toast("ابتدا یک یونیت بسازید", "warn"); return; }
       const dr = defaultDoor();
@@ -2742,6 +3129,7 @@ function wire() {
       if (d.assembly_door) dr.assembly_id = midByName(d.assembly_door);
       if (d.packaging_door) dr.packaging_id = midByName(d.packaging_door);
       pg.units[state.lastUnitIdx || 0].doors.push(dr);
+      focusKind = "door"; focusIdx = (state.lastUnitIdx || 0) + ":" + (pg.units[state.lastUnitIdx || 0].doors.length - 1);
     } else if (kind === "drawers") {
       if (!pg.units.length) { toast("ابتدا یک یونیت بسازید", "warn"); return; }
       const dw = defaultDrawer();
@@ -2751,19 +3139,27 @@ function wire() {
       if (d.handle) dw.handle_id = midByName(d.handle);
       if (d.banding) dw.banding_id = midByName(d.banding);
       pg.units[state.lastUnitIdx || 0].drawers.push(dw);
+      focusKind = "drawer"; focusIdx = (state.lastUnitIdx || 0) + ":" + (pg.units[state.lastUnitIdx || 0].drawers.length - 1);
     } else if (kind === "facade") {
       if (pg.detail_mode !== "detailed") {
         pg.detail_mode = "detailed";
         renderSectionBar();
       }
       pg.detail_rows.push({ label: "ردیف درنما", qty: 1, w_cm: 100, h_cm: 60, price_per_sqm: 300000 });
+      focusKind = "facade"; focusIdx = pg.detail_rows.length - 1;
     } else if (kind === "extras") {
       pg.extras.push({ label: "قلم جدید", qty: 1, unit: "piece", price: 500000, visible: true });
+      focusKind = "extra"; focusIdx = pg.extras.length - 1;
     } else if (kind === "services") {
       pg.services.push({ label: "خدمت جدید", basis: "fixed", qty: 1, price: 300000 });
+      focusKind = "service"; focusIdx = pg.services.length - 1;
     }
     markDirty();
+    /* فوکوس مستقیم روی ردیفِ تازه — کاربر بدونِ یک کلیکِ اضافه تایپ را شروع
+       می‌کند (یافته‌ی K‑6: پیش‌تر پس از «افزودن» مکان‌نما گم می‌شد).          */
+    if (focusKind !== null) focusRowAfter(focusKind, focusIdx);
     renderEditorTables();
+    if (!focusKind) restoreCellFocus(keep);
     scheduleRecalc(50);
     toast("ردیف اضافه شد — مقادیر را ویرایش کنید");
   }));
@@ -2891,6 +3287,7 @@ function wire() {
     /* کپی ردیف — دقیقاً کنار ردیف فعلی قرار می‌گیرد */
     const c = e.target.closest("[data-copy-row]");
     if (c) {
+      const keepF = captureCellFocus();
       const kind = c.dataset.copyRow;
       const ui = c.dataset.ui !== "" ? +c.dataset.ui : null;
       const di = c.dataset.di !== "" ? +c.dataset.di : null;
@@ -2921,7 +3318,16 @@ function wire() {
         const src = pg.services[ri]; if (!src) return;
         pg.services.splice(ri + 1, 0, clone(src));
       }
-      markDirty(); renderEditorTables(); scheduleRecalc(50);
+      /* فوکوس به ردیفِ کپی‌شده برود تا بلافاصله قابل ویرایش باشد */
+      const focusOf = {
+        unit: ["unit", ui + 1], door: ["door", ui + ":" + (di + 1)], drawer: ["drawer", ui + ":" + (di + 1)],
+        facade: ["facade", ri + 1], extra: ["extra", ri + 1], service: ["service", ri + 1],
+      }[kind];
+      markDirty();
+      if (focusOf) focusRowAfter(focusOf[0], focusOf[1]);
+      renderEditorTables();
+      if (!focusOf) restoreCellFocus(keepF);
+      scheduleRecalc(50);
       toast(msg, "success");
       return;
     }
@@ -2934,6 +3340,8 @@ function wire() {
       const kind = d.dataset.delRow;
       const ui = d.dataset.ui !== "" ? +d.dataset.ui : null;
       const di = d.dataset.di !== "" ? +d.dataset.di : null;
+      const riD = d.dataset.ri !== "" ? +d.dataset.ri : null;
+      const keepF = captureCellFocus();
       /* ★ حذفِ قابلِ بازگردانی: ردیف را نگه می‌داریم تا با یک کلیکِ «بازگردانی»
          در توست، سرِ جایش برگردد — حذفِ اشتباهِ یک یونیتِ پرمتریال دیگر
          یعنی دوباره‌کاریِ ده‌دقیقه‌ای.                                        */
@@ -2941,19 +3349,34 @@ function wire() {
       if (kind === "unit") { arr = pg.units; idx = ui; }
       else if (kind === "door") { arr = pg.units[ui] && pg.units[ui].doors; idx = di; }
       else if (kind === "drawer") { arr = pg.units[ui] && pg.units[ui].drawers; idx = di; }
-      else if (kind === "facade") { arr = pg.detail_rows; idx = di; }
-      else if (kind === "extra") { arr = pg.extras; idx = di; }
-      else if (kind === "service") { arr = pg.services; idx = di; }
+      else if (kind === "facade") { arr = pg.detail_rows; idx = riD !== null ? riD : di; }
+      else if (kind === "extra") { arr = pg.extras; idx = riD !== null ? riD : di; }
+      else if (kind === "service") { arr = pg.services; idx = riD !== null ? riD : di; }
       if (arr && idx !== null && idx >= 0 && idx < arr.length) removed = arr.splice(idx, 1)[0];
       const labelOf = { unit: "یونیت", door: "در", drawer: "کشو", facade: "ردیف درنما", extra: "قلم", service: "خدمت" };
+      /* هویتِ ردیفِ «بعدی» — چون پس از حذف، شاخص‌ها یکی به عقب می‌آیند */
+      const nextIdOf = {
+        unit: () => ["unit", Math.min(idx, pg.units.length - 1)],
+        door: () => ["door", ui + ":" + Math.min(idx, (pg.units[ui] && pg.units[ui].doors.length || 1) - 1)],
+        drawer: () => ["drawer", ui + ":" + Math.min(idx, (pg.units[ui] && pg.units[ui].drawers.length || 1) - 1)],
+        facade: () => ["facade", Math.min(idx, pg.detail_rows.length - 1)],
+        extra: () => ["extra", Math.min(idx, pg.extras.length - 1)],
+        service: () => ["service", Math.min(idx, pg.services.length - 1)],
+      }[kind];
       markDirty();
+      const nxt = nextIdOf ? nextIdOf() : null;
+      if (nxt && nxt[1] >= 0) focusRowAfter(nxt[0], nxt[1]);
       renderEditorTables();
+      if (!nxt || nxt[1] < 0) restoreCellFocus(keepF);
       scheduleRecalc(50);
       toast(`ردیفِ «${esc(labelOf[kind] || "")}» حذف شد`, "info", removed && arr ? {
         label: "بازگردانی",
         cb: () => {
           arr.splice(Math.min(idx, arr.length), 0, removed);
           markDirty();
+          /* ردیفِ برگشته زیرِ انگشت بماند — کاربر معمولاً می‌خواهد ویرایشش کند */
+          const backKey = (kind === "door" || kind === "drawer") ? (ui + ":" + idx) : idx;
+          focusRowAfter(kind, backKey);
           renderEditorTables();
           scheduleRecalc(50);
           toast("ردیف برگشت", "success");
@@ -3017,13 +3440,23 @@ function wire() {
     }
   });
 
-  /* ★ دکمه‌های همسانِ نوار جمع (چسبانِ پایین) — «ذخیره» و «برش‌نامه» همیشه
-     در دسترس‌اند، حتی وقتی کاربر وسطِ جدولِ یونیت‌هاست و تا بالای صفحه
-     فاصله دارد. همان کارِ دکمه‌های سرِ کارت، بدونِ اسکرول.                  */
-  const btnTotalSave = el("btnTotalSave");
-  if (btnTotalSave) btnTotalSave.addEventListener("click", () => busy(btnTotalSave, () => saveProject()));
-  const btnTotalWorkshop = el("btnTotalWorkshop");
-  if (btnTotalWorkshop) btnTotalWorkshop.addEventListener("click", () => openWorkshopModal());
+  /* ★ ثباتِ رویه: «ذخیره» و «برش‌نامه» فقط یک جای ثابت دارند — نوارِ فرمانِ
+     چسبانِ بالای ویرایشگر. پیش‌تر هر دو در نوارِ جمع هم تکرار می‌شدند؛ یعنی
+     دو دکمه‌ی هم‌وزن برای یک کنش، که هم قانونِ فیتز را می‌شکست و هم یادگیریِ
+     جایِ دکمه را. نوارِ جمع حالا فقط «عدد» و «تنظیمات مالی» دارد.            */
+
+  /* کشوی تنظیمات مالی — جمع‌شده تا ارتفاعِ صفحه خرجِ ورودی‌های کم‌مصرف نشود */
+  const btnTbDrawer = el("btnTbDrawer");
+  if (btnTbDrawer) {
+    let saved = null;
+    try { saved = localStorage.getItem("kabir.tbDrawer"); } catch (e) {}
+    setTbDrawer(saved === null ? true : saved === "1", false);
+    btnTbDrawer.addEventListener("click", () => {
+      const d = el("tbDrawer");
+      setTbDrawer(!!d && d.hidden);
+      updateTbSummary();
+    });
+  }
 
   /* ★ واگرد/بازانجامِ تغییراتِ ویرایشگر (Ctrl+Z / Ctrl+Shift+Z) */
   const btnUndo = el("btnUndo");
@@ -3032,7 +3465,7 @@ function wire() {
   if (btnRedo) btnRedo.addEventListener("click", () => { doRedo(); });
 
   el("btnBreakdownInvoice").addEventListener("click", async () => {
-    closeModal();
+    await requestCloseModal("breakdown");   /* فقط همین لایه بسته می‌شود، نه همه */
     await gotoInvoiceForCurrent();
   });
   el("btnGoInvoice").addEventListener("click", gotoInvoiceForCurrent);
@@ -3161,7 +3594,7 @@ function wire() {
     } else if (d) {
       const id = +d.dataset.delArch;
       const a = ARCHIVE.find((x) => x.id === id);
-      confirmAction(`فاکتور <b class="ltr">${esc(a.number)}</b> از بایگانی حذف شود؟`, async () => {
+      askConfirm(`فاکتور <b class="ltr">${esc(a.number)}</b> از بایگانی حذف شود؟`, async () => {
         if (API.ok) {
           try { ARCHIVE = (await API.req("DELETE", `/api/invoices/${id}`)).invoices; }
           catch (err) { toast("خطا: " + esc(err.message), "error"); return; }
@@ -3191,7 +3624,7 @@ function wire() {
     toast("تنظیمات ذخیره شد", "success");
   }));
   el("btnResetSettings").addEventListener("click", () =>
-    confirmAction("پیش‌فرض‌های محاسبه (سود، پرت، سربار، نصب، مالیات و ابعاد پیش‌فرض یونیت‌ها) به حالت اولیه برگردانده شود؟", () => {
+    askConfirm("پیش‌فرض‌های محاسبه (سود، پرت، سربار، نصب، مالیات و ابعاد پیش‌فرض یونیت‌ها) به حالت اولیه برگردانده شود؟", () => {
       el("setProfitPct").value = fa(FACTORY_NUM_SETTINGS.setProfitPct);
       el("setOverhead").value = fa(FACTORY_NUM_SETTINGS.setOverhead);
       el("setWaste").value = fa(FACTORY_NUM_SETTINGS.setWaste);
@@ -3227,7 +3660,7 @@ function wire() {
     el("fileImportJson").value = "";
     if (!f) return;
     if (!API.ok) { toast("ورود JSON در حالت نمایشی فعال نیست", "warn"); return; }
-    confirmAction(`محتوای «<b>${esc(f.name)}</b>» جایگزین داده‌های فعلی شود؟`, async () => {
+    askConfirm(`محتوای «<b>${esc(f.name)}</b>» جایگزین داده‌های فعلی شود؟`, async () => {
       try {
         const text = await f.text();
         const resp = await API.req("POST", "/api/backups/import", { content: text });
@@ -3244,7 +3677,7 @@ function wire() {
     if (!API.ok) { toast("مدیریت پشتیبان‌ها در حالت نمایشی فعال نیست", "warn"); return; }
     if (r) {
       const name = r.dataset.restoreBk;
-      confirmAction(`بازیابی از «<b class="ltr">${esc(name)}</b>»؟<br>داده‌های فعلی جایگزین می‌شوند (ابتدا پشتیبانِ وضعیت فعلی گرفته می‌شود).`, async () => {
+      askConfirm(`بازیابی از «<b class="ltr">${esc(name)}</b>»؟<br>داده‌های فعلی جایگزین می‌شوند (ابتدا پشتیبانِ وضعیت فعلی گرفته می‌شود).`, async () => {
         try {
           const resp = await API.req("POST", "/api/backups/restore", { name });
           ingestBootstrap(resp);
@@ -3255,7 +3688,7 @@ function wire() {
       }, "بازیابی نسخه‌ی پشتیبان", "بازیابی");
     } else if (d) {
       const name = d.dataset.delBk;
-      confirmAction(`«<b class="ltr">${esc(name)}</b>» حذف شود؟`, async () => {
+      askConfirm(`«<b class="ltr">${esc(name)}</b>» حذف شود؟`, async () => {
         try {
           BACKUPS = (await API.req("DELETE", "/api/backups", { name })).backups;
           renderBackups();
@@ -3305,7 +3738,7 @@ function wire() {
     renderTemplatesTable(); openModal("templates");
   });
   const btnTplSave = el("btnTplSave");
-  if (btnTplSave) btnTplSave.addEventListener("click", () => busy(btnTplSave, saveUnitTemplate));
+  if (btnTplSave) btnTplSave.addEventListener("click", () => submitModal("tpl-save"));
   const tplTable = el("tplTable");
   if (tplTable) tplTable.addEventListener("click", (e) => {
     const use = e.target.closest("[data-tpl-use]");
@@ -3320,7 +3753,7 @@ function wire() {
     const del = e.target.closest("[data-tpl-del]");
     if (del) {
       const t = UNIT_TEMPLATES.find((x) => +x.id === +del.dataset.tplDel);
-      confirmAction(`الگوی «<b>${esc(t ? t.name : "")}</b>» حذف شود؟`,
+      askConfirm(`الگوی «<b>${esc(t ? t.name : "")}</b>» حذف شود؟`,
         () => deleteTemplate(del.dataset.tplDel), "حذف الگو");
     }
   });
@@ -3352,18 +3785,71 @@ function wire() {
   ["tbDepositPct", "tbDepositAmt"].forEach((id) => {
     const n = el(id);
     if (!n) return;
-    n.addEventListener("input", () => { markDirty("tb." + id); scheduleRecalc(); refreshTbUnits(); });
-    n.addEventListener("change", () => { markDirty("tb." + id); scheduleRecalc(); refreshTbUnits(); });
+    n.addEventListener("input", () => { markDirty("tb." + id); scheduleRecalc(); refreshTbUnits(); updateTbSummary(); });
+    n.addEventListener("change", () => { markDirty("tb." + id); scheduleRecalc(); refreshTbUnits(); updateTbSummary(); });
   });
+
+  /* --- گامِ رُندکردن: فقط خلاصه را تازه می‌کند (تا وقتی «رند کن» زده نشود
+         مبلغی عوض نمی‌شود؛ پس «dirty» نمی‌شود و کاربر الکی هشدار نمی‌گیرد) --- */
+  {
+    const rs = el("tbRoundStep");
+    if (rs) rs.addEventListener("change", updateTbSummary);
+  }
 
   /* --- قیمت‌گیری سریع --- */
   const btnQk = el("btnQuickQuote");
   if (btnQk) btnQk.addEventListener("click", openQuickModal);
+  /* ثبت با کلیکِ دکمه، با Enter و با Ctrl+S — هر سه از یک مسیر (submitModal)
+     تا رفتار و پیام‌ها دقیقاً یکسان بماند.                                    */
   const btnQkBuild = el("btnQuickBuild");
-  if (btnQkBuild) btnQkBuild.addEventListener("click", buildQuickProject);
-  ["qkGround", "qkWall", "qkDrawers", "qkTall"].forEach((id) => {
-    const n = el(id);
-    if (n) n.addEventListener("keydown", (e) => { if (e.key === "Enter") buildQuickProject(); });
+  if (btnQkBuild) btnQkBuild.addEventListener("click", () => submitModal("quick"));
+}
+
+/* ==========================================================================
+   شناسنامه‌ی مودال‌های دارای فرم
+   --------------------------------------------------------------------------
+   برای هر مودال: چه چیزی ثبت می‌کند (save)، با کدام دکمه (saveBtn)، چه
+   برچسبی در هشدارِ «تغییرات ذخیره‌نشده» داشته باشد (label) و متنِ راهنمای
+   کلید چه باشد (hint). این تنها جایی است که باید برای افزودنِ فرمِ جدید
+   دست خورد — بقیه‌ی رفتار (Esc، کلیک بیرون، Enter، تله‌ی فوکوس) خودکار است.
+   ========================================================================== */
+const MODAL_FORMS = {
+  material: { label: "فرمِ متریال", save: "saveMaterialForm", saveBtn: "btnSaveMaterial",
+              hint: "Enter = ذخیره‌ی قلم" },
+  bulk:     { label: "تغییر دسته‌جمعی قیمت‌ها", save: "applyBulkPrices", saveBtn: "btnApplyBulk",
+              hint: "Enter = اعمال تغییر روی قیمت‌ها" },
+  style:    { label: "فرمِ سبک", save: "saveStyleForm", saveBtn: "btnSaveStyle",
+              hint: "Enter = ذخیره‌ی سبک" },
+  project:  { label: "پروژه‌ی جدید", save: "createProjectForm", saveBtn: "btnCreateProject",
+              hint: "Enter = ایجاد پروژه" },
+  quick:    { label: "قیمت‌گیری سریع", save: "buildQuickProjectGuarded", saveBtn: "btnQuickBuild",
+              hint: "Enter = ساخت پروژه و دیدن قیمت" },
+  "tpl-save": { label: "الگوی یونیت", save: "saveUnitTemplate", saveBtn: "btnTplSave",
+              hint: "Enter = ذخیره‌ی الگو" },
+  /* مودال‌های بدونِ فرم: خروجشان بی‌خطر است، ولی برچسب برای هشدارها لازم است */
+  breakdown: { label: "ریز محاسبه" },
+  workshop:  { label: "بسته‌ی کارگاهی", alwaysDirty: false },
+  templates: { label: "فهرست الگوها" },
+};
+
+function registerModalForms(fns) {
+  fns = fns || {};
+  Object.keys(MODAL_FORMS).forEach((id) => {
+    const cfg = MODAL_FORMS[id];
+    const saveFn = cfg.save ? (fns[cfg.save] || (typeof window !== "undefined" ? window[cfg.save] : null)) : null;
+    registerModal(id, {
+      label: cfg.label,
+      saveBtn: cfg.saveBtn || null,
+      save: saveFn ? () => saveFn() : null,
+    });
+    /* راهنمای کلید پایینِ مودال — کشف‌پذیریِ Enter برای کاربرِ کیبوردی */
+    const foot = document.querySelector("#modal-" + id + " .modal-foot");
+    if (foot && cfg.hint && !foot.querySelector(".kbd-hint")) {
+      const h = document.createElement("span");
+      h.className = "kbd-hint";
+      h.innerHTML = "<kbd>Enter</kbd> " + esc(cfg.hint.replace(/^Enter = /, ""));
+      foot.insertBefore(h, foot.firstChild);
+    }
   });
 }
 

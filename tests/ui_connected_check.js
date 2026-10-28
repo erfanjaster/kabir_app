@@ -78,7 +78,7 @@ function sqliteExec(sql) {
   /* fetch نسبی → مطلق (node fetch فقط مطلق قبول می‌کند) */
   window.fetch = (u, o) => fetch(typeof u === "string" ? new URL(u, BASE) : u, o);
 
-  const jsCode = ["data.js", "engine.js", "ui.js"]
+  const jsCode = ["data.js", "engine.js", "ui-modal.js", "ui.js"]
     .map((f) => fs.readFileSync(path.join(ROOT, "webui/js", f), "utf8"))
     .join("\n") + `
 ;window.__k = {

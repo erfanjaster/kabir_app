@@ -38,6 +38,7 @@ sandbox.globalThis = sandbox;
 const code =
   fs.readFileSync(path.join(ROOT, "webui/js/data.js"), "utf8") + "\n" +
   fs.readFileSync(path.join(ROOT, "webui/js/engine.js"), "utf8") + "\n" +
+  fs.readFileSync(path.join(ROOT, "webui/js/ui-modal.js"), "utf8") + "\n" +
   fs.readFileSync(path.join(ROOT, "webui/js/ui.js"), "utf8") + "\n" +
   `;loadDemoData();
    window.__t = { calcProjectLocal, buildCutListLocal, buildWorkshopLocal, doorLeafFitsSheet,

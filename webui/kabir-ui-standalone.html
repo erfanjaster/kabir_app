@@ -1737,13 +1737,27 @@ tr.unit-detail-row > td { background: var(--surface-2); padding: 0.95rem 1rem; t
   box-shadow: var(--shadow-lg);
 }
 
+/* وضعیتِ «ذخیره‌نشده»: کلِ دکمه کهربایی می‌شود + یک تپشِ ملایمِ یک‌بار.
+   نقطه‌ی کوچکِ قبلی در کارِ ۸ ساعته دیده نمی‌شد (بازخورد باید بی‌صدا اما
+   غیرقابلِ نادیده‌گیری باشد).                                                 */
+#btnSaveProject.dirty {
+  background: linear-gradient(180deg, #f0b45f, #dd9a3c);
+  border-color: #c9862c;
+  color: #2b1c05;
+  box-shadow: 0 6px 20px -8px rgba(221, 154, 60, 0.85);
+}
+#btnSaveProject.dirty:hover { filter: brightness(1.05); }
+#btnSaveProject.dirty .btn-kbd { border-color: rgba(43, 28, 5, 0.35); color: #2b1c05; }
 #btnSaveProject.dirty::before {
-  content: "•";
-  color: #e0a458;
-  font-size: 1.6rem;
-  line-height: 0;
-  margin-inline-end: 0.25rem;
-  vertical-align: middle;
+  content: "●";
+  font-size: 0.7rem;
+  line-height: 1;
+  margin-inline-end: 0.3rem;
+  animation: dirtyPulse 1.6s ease-in-out 2;
+}
+@keyframes dirtyPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) {
+  #btnSaveProject.dirty::before { animation: none; }
 }
 
 @media print {
@@ -1756,7 +1770,7 @@ tr.unit-detail-row > td { background: var(--surface-2); padding: 0.95rem 1rem; t
 @media print {
   @page { size: A4; margin: 10mm; }
   body { display: block; background: #fff; }
-  .sidebar, .topbar, .scrim, .toasts, .modal-backdrop,
+  .sidebar, .topbar, .scrim, .toasts, .modal-backdrop, .editor-bar,
   .inv-options, .no-print, .totalbar, .toolbar, .chips, .settings-save { display: none !important; }
   .content { padding: 0; }
   .invoice-layout { display: block; }
@@ -2221,6 +2235,372 @@ tr.hl-row > td { animation: rowFlash 2.6s ease both; }
   #tblUnits tr:hover td:first-child,
   #tblDoors tr:hover td:first-child,
   #tblDrawers tr:hover td:first-child { background: var(--surface-2); }
+}
+
+/* ==========================================================================
+   ۲۴) لایه‌ی مودال و فرم — ارگونومیِ کاربرِ دائمی
+   --------------------------------------------------------------------------
+   سه اصل در این بخش:
+   ۱) کنشِ اصلی همیشه بزرگ‌تر و در دسترس‌ترین نقطه (قانونِ فیتز).
+   ۲) کنشِ خطرناک «دور ریختن» عمداً کوچک، کم‌رنگ و در دورترین گوشه.
+   ۳) پشته‌ی مودال‌ها با سایه و تورِ تاریک‌تر دیده می‌شود تا کاربر بداند
+      «کجای کار است» و لایه‌ی زیرین هنوز زنده است.
+   ========================================================================== */
+
+/* --- قفلِ اسکرولِ پس‌زمینه + تورِ پشته --- */
+body.modal-open { overflow: hidden; }
+.modal-backdrop.stacked-2 { background: rgba(15, 18, 17, 0.62); }
+.modal-backdrop.stacked-3 { background: rgba(15, 18, 17, 0.72); }
+/* لایه‌ی زیرین کمی کم‌رنگ‌تر می‌شود تا سلسله‌مرتبِ لایه‌ها دیده شود */
+.modal-backdrop .modal.open.beneath { filter: saturate(0.8) brightness(0.98); }
+
+.modal.narrow { width: min(30rem, 100%); }
+
+/* --- دکمه‌ی بزرگ: هدفِ اصلیِ انگشت/موس --- */
+.btn.btn-lg {
+  height: 2.9rem;
+  padding: 0 1.35rem;
+  font-size: 0.93rem;
+  font-weight: 800;
+  border-radius: var(--radius-sm);
+  gap: 0.5rem;
+}
+.btn.btn-lg svg { width: 1.15rem; height: 1.15rem; }
+
+/* --- کنشِ خطرناکِ «دور»: کوچک، کم‌رنگ، با فاصله‌ی زیاد از کنش‌های اصلی --- */
+.btn.danger-far {
+  background: transparent;
+  color: var(--text-3);
+  border: 1px solid transparent;
+  border-bottom: 1px dashed var(--border-strong);
+  border-radius: var(--radius-xs);
+  font-size: 0.78rem;
+  font-weight: 600;
+  height: 2rem;
+  padding: 0 0.5rem;
+  margin-inline-start: 1.4rem;   /* فاصله‌ی فیزیکی از «انصراف» تا کلیکِ اشتباه */
+}
+.btn.danger-far:hover {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+}
+.btn.danger-far:focus-visible { box-shadow: 0 0 0 3px rgba(179, 38, 30, 0.28); }
+
+/* --- پاورقیِ مودال‌های محافظ: کنش‌های امن راست، خطرناک چپِ دور --- */
+.modal-foot.guard-foot { align-items: center; gap: 0.55rem; }
+.modal-foot .btn.btn-lg + .btn.btn-lg { margin-inline-start: 0.15rem; }
+
+/* --- سربرگِ هشدار --- */
+.modal-head.warn-head { background: var(--warning-soft); border-bottom-color: color-mix(in srgb, var(--warning) 22%, transparent); }
+.modal-head .warn-ic {
+  display: grid; place-items: center;
+  width: 2rem; height: 2rem; flex-shrink: 0;
+  border-radius: 50%;
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 16%, transparent);
+}
+.modal-head .warn-ic svg { width: 1.15rem; height: 1.15rem; }
+[data-theme="dark"] .modal-head.warn-head { background: color-mix(in srgb, var(--warning) 14%, var(--surface-2)); }
+
+/* --- نشانِ «پر شده» روی مودال: کاربر می‌داند خروج بی‌هشدار نیست --- */
+.modal.is-dirty .modal-head::after {
+  content: "ذخیره‌نشده";
+  margin-inline-start: 0.55rem;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--warning);
+  background: var(--warning-soft);
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+  border-radius: 999px;
+  padding: 0.06rem 0.55rem;
+  line-height: 1.7;
+  white-space: nowrap;
+}
+
+/* --- خطای اعتبارسنجی کنارِ خودِ فیلد (نه فقط توستِ دور از چشم) --- */
+.field-err {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--danger);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.7;
+}
+input.invalid, select.invalid, textarea.invalid {
+  border-color: var(--danger) !important;
+  background: var(--danger-soft);
+}
+input.invalid:focus, select.invalid:focus, textarea.invalid:focus {
+  box-shadow: 0 0 0 3px rgba(179, 38, 30, 0.2) !important;
+}
+
+/* --- مودالِ تأیید: کنشِ اصلی بزرگ و واضح --- */
+#modal-confirm .modal-foot { padding-block: 1rem; }
+#modal-confirm .btn.danger {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+  box-shadow: 0 6px 18px -8px rgba(179, 38, 30, 0.7);
+}
+#modal-confirm .btn.danger:hover { filter: brightness(1.08); }
+#modal-confirm .btn.ghost { min-width: 6.5rem; justify-content: center; }
+
+/* --- راهنمای میان‌بر داخل مودال: کشف‌پذیریِ Enter --- */
+.modal-foot .kbd-hint {
+  font-size: 0.7rem;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.modal-foot .kbd-hint kbd {
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 0.02rem 0.35rem;
+  background: var(--surface);
+  color: var(--text-2);
+}
+
+/* --- موبایل: کنش‌ها تمام‌عرض و به‌ترتیبِ اهمیت --- */
+@media (max-width: 640px) {
+  .modal-foot.guard-foot { flex-wrap: wrap; }
+  .modal-foot.guard-foot .btn { flex: 1 1 auto; justify-content: center; }
+  .btn.danger-far { flex: 1 1 100%; margin-inline-start: 0; margin-top: 0.35rem; }
+  .modal-backdrop { padding: 0.75rem; }
+}
+
+/* --- چاپ: لایه‌ی محافظ هرگز چاپ نشود --- */
+@media print {
+  #modal-unsaved { display: none !important; }
+}
+
+/* ==========================================================================
+   ۲۵) ویرایشگر پروژه — ارگونومیِ کاربرِ دائمی
+   --------------------------------------------------------------------------
+   چهار مشکلِ ممیزی (F‑1، F‑2، F‑3، F‑4) این‌جا حل می‌شوند:
+   • نوارِ فرمانِ چسبان → کنش‌های پرتکرار بدونِ اسکرول در دسترس‌اند.
+   • نوارِ جمع باریک + کشوی مالی → ~۱۴۰ پیکسل فضای بیشتر برای جدولِ داده.
+   • سرستون و ستونِ اولِ چسبان → کاربر همیشه می‌داند در کدام ستون است.
+   • دکمه‌های ردیف در ستونِ اول (نه انتهای یک جدولِ ۱۲۰۰ پیکسلی) و بزرگ‌تر،
+     با جداکننده پیش از «حذف».
+   ========================================================================== */
+
+:root { --topbar-h: 3.9rem; }
+
+/* --- نوارِ فرمانِ چسبان ------------------------------------------------- */
+.editor-bar {
+  position: sticky;
+  top: var(--topbar-h);
+  z-index: 24;                       /* زیرِ نوارِ عنوان (۳۰)، بالای کارت‌ها */
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.9rem;
+  margin-bottom: 0.8rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-md);
+}
+.eb-title { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.eb-name {
+  font-weight: 800;
+  font-size: 0.95rem;
+  max-width: 22rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.eb-dirty {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--warning);
+  background: var(--warning-soft);
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+  border-radius: 999px;
+  padding: 0.02rem 0.6rem;
+  white-space: nowrap;
+}
+.eb-actions {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+.eb-sep {
+  width: 1px;
+  height: 1.5rem;
+  background: var(--border-strong);
+  margin-inline: 0.35rem;
+  flex-shrink: 0;
+}
+/* کلیدِ میان‌بر روی خودِ دکمه — کشف‌پذیری بدونِ خواندنِ راهنما */
+.btn-kbd {
+  font-family: inherit;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.4;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 4px;
+  padding: 0 0.25rem;
+  margin-inline-start: 0.45rem;
+  opacity: 0.85;
+}
+
+/* --- نوارِ جمع: ردیفِ باریکِ «نتیجه + کنش» ------------------------------ */
+.totalbar .tb-slim {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem 1.1rem;
+  padding: 0.5rem 0.9rem;
+  flex-wrap: wrap;
+}
+.tb-drawer-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: var(--radius-xs);
+  padding: 0.32rem 0.7rem;
+  min-height: 2.5rem;
+  cursor: pointer;
+  text-align: start;
+  transition: background 0.13s ease, border-color 0.13s ease;
+}
+.tb-drawer-toggle:hover { background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.4); }
+.tb-drawer-toggle:focus-visible { box-shadow: 0 0 0 3px rgba(74, 214, 194, 0.35); outline: none; }
+.tb-chev { width: 0.95rem; height: 0.95rem; transition: transform 0.18s ease; flex-shrink: 0; }
+.tb-drawer-toggle[aria-expanded="true"] .tb-chev { transform: rotate(180deg); }
+.tb-drawer-title { font-size: 0.78rem; font-weight: 800; white-space: nowrap; }
+.tb-summary {
+  font-size: 0.7rem;
+  color: rgba(230, 242, 239, 0.72);
+  border-inline-start: 1px solid rgba(255, 255, 255, 0.2);
+  padding-inline-start: 0.55rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 30rem;
+}
+.totalbar .tb-slim .tb-figures { flex: 1 1 auto; }
+.totalbar .tb-slim .tb-actions { margin-inline-start: auto; align-items: center; }
+.tb-save-hint {
+  font-size: 0.72rem;
+  color: #ffd9a8;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+.tb-save-hint kbd {
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  border: 1px solid rgba(255, 217, 168, 0.5);
+  border-radius: 4px;
+  padding: 0 0.3rem;
+  color: #ffd9a8;
+}
+
+/* --- کشوی تنظیمات مالی ------------------------------------------------- */
+.tb-drawer {
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.16);
+  padding: 0.7rem 0.9rem 0.8rem;
+}
+.tb-drawer .tb-fields { flex: 1 1 auto; }
+.tb-drawer .tb-round { border: 0; padding: 0; width: auto; }
+
+/* --- جدول‌های ویرایشگر: سرستون و ستونِ اولِ چسبان ----------------------- */
+.table-wrap.grid-head {
+  max-height: 56vh;
+  overflow: auto;
+  overscroll-behavior: contain;     /* اسکرولِ صفحه را وقتی به انتها رسید نمی‌دزدد */
+}
+.table-wrap.grid-head thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  box-shadow: inset 0 -1px 0 var(--border-strong), 0 2px 6px -4px rgba(0, 0, 0, 0.4);
+}
+.table-wrap.grid-head thead th:first-child { z-index: 6; }   /* گوشه‌ی تقاطع */
+.table-wrap.grid-head th:first-child,
+.table-wrap.grid-head td:first-child {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 2;
+  background: var(--surface);
+  box-shadow: -6px 0 10px -8px rgba(0, 0, 0, 0.45);
+}
+.table-wrap.grid-head tbody tr:hover td:first-child { background: var(--surface-2); }
+.table-wrap.grid-head td:first-child:focus-within { background: var(--surface-2); }
+
+/* --- سلولِ شناسه‌ی ردیف: برچسب + کنش‌ها در یک خانه‌ی چسبان -------------- */
+.row-id-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  justify-content: flex-start;
+}
+.row-id-cell .cell-input { flex: 1 1 auto; }
+.row-id-cell .row-btns { flex-shrink: 0; }
+
+/* هدفِ بزرگ‌تر (≥۴۰ پیکسل) + جداکننده پیش از کنشِ خطرناک */
+.row-btns { gap: 0.35rem; }
+.row-btns .row-actions {
+  width: 2.45rem;
+  height: 2.45rem;
+  padding: 0;
+  opacity: 1;
+  color: var(--text-2);
+  border: 1px solid transparent;
+}
+.row-btns .row-actions svg { width: 1.1rem; height: 1.1rem; }
+.row-btns .row-actions:hover { border-color: var(--border-strong); }
+.row-btns .row-actions.del { color: var(--text-3); }
+.row-btns .row-actions.del:hover { background: var(--danger-soft); color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
+/* جداکننده: فاصله‌ی فیزیکی میان «کپی» (پرتکرار) و «حذف» (خطرناک) */
+.row-sep {
+  width: 1px;
+  height: 1.5rem;
+  background: var(--border-strong);
+  margin-inline: 0.35rem;
+  flex-shrink: 0;
+}
+
+/* سلول‌های ورودی بزرگ‌تر — خطای کمتر در کارِ طولانی */
+.cell-input { min-height: 2.35rem; padding-block: 0.36rem; }
+.cell-select { min-height: 2.35rem; padding-block: 0.36rem; }
+.unit-detail select, .unit-detail input { min-height: 2.35rem; }
+
+/* --- واکنش‌گرایی -------------------------------------------------------- */
+@media (max-width: 1100px) {
+  .editor-bar { gap: 0.6rem; }
+  .eb-name { max-width: 12rem; }
+  .tb-summary { max-width: 14rem; }
+}
+@media (max-width: 900px) {
+  .editor-bar { position: static; box-shadow: var(--shadow-sm); }
+  .eb-actions { margin-inline-start: 0; width: 100%; }
+  .eb-actions .btn { flex: 1 1 auto; justify-content: center; }
+  .btn-kbd { display: none; }
+}
+@media (max-width: 720px) {
+  .table-wrap.grid-head { max-height: none; }
+  .totalbar .tb-slim { padding: 0.55rem 0.7rem; }
+  .tb-summary { display: none; }
 }
 
 </style>
@@ -4213,19 +4593,46 @@ function quickUnitsLocal(opts) {
 }
 
 /* ==========================================================================
-   کبیر ۲ — ui.js
-   رندرها، ویرایشگر پروژه، فاکتور، تنظیمات و سیم‌کشی رویدادها.
-   حالت متصل: داده از API (kabir/web/server.py) و محاسبه با موتور واقعی.
-   حالت نمایشی: داده‌های نمونه و موتور محلی (engine.js) — بدون سرور.
+   کبیر — ui-modal.js
+   --------------------------------------------------------------------------
+   لایه‌ی مشترک «مودال و فرم» برای کل نرم‌افزار.
+
+   این فایل پاسخ مستقیم به سه قانون مطلق توسعه است:
+
+   ۱) جلوگیری از از دست رفتن داده (Data Loss)
+      — هیچ مودالی با کلیکِ بیرون، Esc یا «انصراف» بسته نمی‌شود مگر اینکه
+        «تمیز» باشد (هیچ فیلدی نسبت به لحظه‌ی بازشدن تغییر نکرده باشد).
+      — اگر کثیف باشد، لایه‌ی «تغییرات ذخیره‌نشده» با سه کنش باز می‌شود:
+        ذخیره و بستن / ادامه‌ی ویرایش / دور ریختن (دور ریختن دور و کوچک).
+
+   ۲) کیبورد نخست
+      — Enter یا Ctrl+Enter = ثبتِ فرمِ باز (بدونِ نیاز به موس).
+      — Ctrl+S = ثبتِ زمینه‌ی فعال (مودالِ باز، وگرنه صفحه).
+      — Esc = فقط بالاترین لایه، و فقط با رعایتِ شرطِ ۱.
+      — Tab همیشه داخل بالاترین مودال می‌چرخد (تله‌ی فوکوسِ واقعی: مودال‌های
+        بسته «inert» می‌شوند تا فوکوس هرگز به DOMِ نامرئی فرار نکند).
+
+   ۳) ثبات رویه + پشته‌ی مودال
+      — مودال‌ها در یک پشته (MODALS.stack) نگه داشته می‌شوند؛ بازکردنِ یک
+        مودال از داخل مودال دیگر (مثلاً «تأیید حذف الگو» از داخل «لیست
+        الگوها») دیگر کل لایه را فرو نمی‌ریزد: هر کنشِ خروج فقط یک لایه
+        را برمی‌دارد.
+      — جای کنش‌ها در همه‌ی مودال‌ها یکسان می‌ماند: کنشِ اصلی راست،
+        «انصراف» چپ، کنشِ خطرناک جدا و در دورترین نقطه.
+
+   این فایل هیچ DOM‑رندری نمی‌سازد؛ فقط «لایه‌ی کنترل» است تا با ui.js
+   (رندرها و سیم‌کشی) و data.js (ابزارها) جدا بماند و قابل تست باشد.
    ========================================================================== */
 "use strict";
 
-/* ------------------------------------------------------------- توست و مودال */
+/* ------------------------------------------------------------------ توست */
 const TOAST_LIFE = 3600;
+
 function toast(msg, type, action) {
   type = type || "info";
   const ic = type === "success" ? ICONS.check : type === "error" ? ICONS.x : type === "warn" ? ICONS.warn : ICONS.info;
   const box = el("toasts");
+  if (!box) return;
   /* حداکثر ۴ توست هم‌زمان — قدیمی‌ترین حذف می‌شود */
   while (box.children.length >= 4) box.firstElementChild.remove();
   const t = document.createElement("div");
@@ -4273,44 +4680,665 @@ async function busy(btn, fn, opts) {
   }
 }
 
-let _lastFocus = null;
-function openModal(id) {
-  _lastFocus = document.activeElement;
-  el("modalBackdrop").hidden = false;
-  $$(".modal").forEach((m) => m.classList.toggle("open", m.id === "modal-" + id));
-  document.body.style.overflow = "hidden";
-  /* فوکوس روی اولین کنترل قابل‌تعامل — دسترس‌پذیری */
-  const m = el("modal-" + id);
-  const first = m && m.querySelector("input:not([type=hidden]), select, textarea, button:not([data-close])");
-  if (first) setTimeout(() => first.focus(), 60);
+/* ==========================================================================
+   پشته‌ی مودال‌ها
+   ========================================================================== */
+const MODALS = {
+  stack: [],            /* [{ id, focus, snapshot, saveBtn, savedDirty }] */
+  backdrop: null,
+  confirmCb: null,
+  confirmDismiss: null,
+  confirmAlt: null,
+  registry: {},         /* per-modal: { label, save, saveBtn, alwaysDirty, dirty } */
+};
+
+const MODAL_GUARD_ID = "unsaved";   /* خودِ لایه‌ی هشدار هرگز guard نمی‌خواهد */
+
+const FOCUSABLE = [
+  'a[href]', 'button:not([disabled])', 'input:not([disabled]):not([type=hidden])',
+  'select:not([disabled])', 'textarea:not([disabled])', '[tabindex]:not([tabindex="-1"])',
+].join(",");
+
+function modalBackdrop() {
+  if (!MODALS.backdrop) MODALS.backdrop = el("modalBackdrop");
+  return MODALS.backdrop;
 }
-function closeModal() {
-  el("modalBackdrop").hidden = true;
-  $$(".modal").forEach((m) => m.classList.remove("open"));
-  document.body.style.overflow = "";
-  if (_lastFocus && _lastFocus.focus) { _lastFocus.focus(); _lastFocus = null; }
+function modalNode(id) { return el("modal-" + id); }
+function topFrame() { return MODALS.stack.length ? MODALS.stack[MODALS.stack.length - 1] : null; }
+function topModalId() { const f = topFrame(); return f ? f.id : null; }
+function isModalOpen(id) { return MODALS.stack.some((f) => f.id === id); }
+function anyModalOpen() { return MODALS.stack.length > 0; }
+
+/* ------------------------------------------------------------------ ثبتِ پیکربندی مودال
+   ui.js هنگام راه‌اندازی برای هر مودالِ دارای فرم یک «شناسنامه» ثبت می‌کند:
+     label      → نامی که در هشدارِ «تغییرات ذخیره‌نشده» نشان داده می‌شود
+     save       → تابعِ ثبت (async)؛ اگر `false` برگرداند مودال باز می‌ماند
+     saveBtn    → id دکمه‌ی اصلی (برای اسپینر و بزرگ‌نماییِ فیتز)
+     alwaysDirty→ مودالی که محتوایش با فرمِ ثابت سنجیده نمی‌شود (مثل برش‌نامه)
+   ------------------------------------------------------------------------ */
+function registerModal(id, cfg) { MODALS.registry[id] = Object.assign({}, MODALS.registry[id], cfg); }
+function modalCfg(id) { return MODALS.registry[id] || {}; }
+
+/* ==========================================================================
+   تشخیص کثیفی فرم (Dirty State Check)
+   --------------------------------------------------------------------------
+   در لحظه‌ی بازشدن، «اثر انگشت» همه‌ی کنترل‌های فرم گرفته می‌شود (value /
+   checked / selected + ترتیب گزینه‌ها). هر کنترل بدونِ id هم با مسیرِ DOM
+   شناسایی می‌شود تا ردیف‌های پویا (مثل جدولِ الگوها) از قلم نیفتند.
+   مقایسه با اثر انگشت = دقیق، ارزان و بدونِ نیاز به نگهداریِ مدلِ دوم.
+   ========================================================================== */
+function formControls(root) {
+  return Array.from(root.querySelectorAll("input, select, textarea"))
+    .filter((n) => n.type !== "hidden" && !n.closest("[data-no-dirty]"));
 }
-/* به‌دام‌اندازی فوکوس داخل مودال باز (Tab چرخه‌ای) */
-document.addEventListener("keydown", (e) => {
-  if (e.key !== "Tab") return;
-  const back = el("modalBackdrop");
-  if (!back || back.hidden) return;
-  const m = back.querySelector(".modal.open");
-  if (!m) return;
-  const items = $$("button, input:not([type=hidden]), select, textarea, [tabindex]:not([tabindex='-1'])", m)
-    .filter((n) => !n.disabled && n.offsetParent !== null);
-  if (!items.length) return;
-  const first = items[0], last = items[items.length - 1];
-  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-});
-function confirmAction(text, cb, title, okLabel) {
+
+function controlKey(n, i) {
+  if (n.id) return "#" + n.id;
+  if (n.name) return "@" + n.name + ":" + i;
+  return "$" + i;
+}
+
+function fingerprint(root) {
+  const fp = {};
+  formControls(root).forEach((n, i) => {
+    const k = controlKey(n, i);
+    if (n.type === "checkbox" || n.type === "radio") fp[k] = n.checked ? "1" : "0";
+    else if (n.tagName === "SELECT") {
+      /* ترتیب و تعداد گزینه‌ها هم مقایسه می‌شود: پرشدنِ یک select با داده‌ی
+         تازه، خودش یک «تغییر» است که نباید بی‌خبر بسته شود. */
+      fp[k] = n.value + "|" + Array.from(n.options).map((o) => o.value).join(",");
+    } else fp[k] = String(n.value);
+  });
+  return fp;
+}
+
+function equalFingerprint(a, b) {
+  const ka = Object.keys(a), kb = Object.keys(b);
+  if (ka.length !== kb.length) return false;
+  for (const k of ka) if (a[k] !== b[k]) return false;
+  return true;
+}
+
+/** تعداد کنترل‌های تغییریافته — برای نمایشِ «۳ فیلد پر کرده‌اید» در هشدار */
+function countDiff(a, b) {
+  let n = 0;
+  const keys = new Set(Object.keys(a).concat(Object.keys(b)));
+  for (const k of keys) if (a[k] !== b[k]) n += 1;
+  return n;
+}
+
+function isModalDirty(id) {
+  const frame = MODALS.stack.find((f) => f.id === id);
+  const cfg = modalCfg(id);
+  if (!frame) return !!cfg.dirty;
+  if (cfg.alwaysDirty) return !!cfg.dirty;
+  const node = modalNode(id);
+  if (!node || !frame.snapshot) return false;
+  return !equalFingerprint(frame.snapshot, fingerprint(node));
+}
+
+function markModalDirty(id, on) {
+  const cfg = MODALS.registry[id] || (MODALS.registry[id] = {});
+  cfg.dirty = on === undefined ? true : !!on;
+  const frame = MODALS.stack.find((f) => f.id === id);
+  if (frame) frame.savedDirty = cfg.dirty;
+  paintDirtyState();
+}
+
+function anyModalDirty() { return MODALS.stack.some((f) => isModalDirty(f.id)); }
+
+/* نشانِ بصریِ «پر شده» روی خودِ مودال — کاربر می‌داند که خروج بی‌هشدار نیست */
+function paintDirtyState() {
+  const back = modalBackdrop();
+  if (!back) return;
+  const top = topModalId();
+  const dirty = top ? isModalDirty(top) : false;
+  back.classList.toggle("has-dirty", dirty);
+  MODALS.stack.forEach((f) => {
+    const n = modalNode(f.id);
+    if (n) n.classList.toggle("is-dirty", isModalDirty(f.id));
+  });
+}
+
+/* ==========================================================================
+   باز و بسته کردن
+   ========================================================================== */
+
+/** مودال‌هایی که در پشته نیستند از دسترسِ Tab و صفحه‌خوان بیرون می‌روند.
+ *  بدون این، فوکوس با Tab به DOMِ نامرئی فرار می‌کرد (باگِ واقعیِ نسخه‌ی قبل). */
+function syncInert() {
+  const back = modalBackdrop();
+  if (!back) return;
+  Array.from(back.querySelectorAll(".modal")).forEach((m) => {
+    const id = m.id.replace(/^modal-/, "");
+    const inStack = MODALS.stack.some((f) => f.id === id);
+    m.classList.toggle("open", inStack);
+    if (inStack) { m.removeAttribute("aria-hidden"); m.removeAttribute("inert"); }
+    else { m.setAttribute("aria-hidden", "true"); if ("inert" in m) m.inert = true; else m.setAttribute("inert", ""); }
+  });
+  back.hidden = MODALS.stack.length === 0;
+  if (MODALS.stack.length === 0) back.removeAttribute("aria-hidden");
+  else back.setAttribute("aria-hidden", "false");
+  /* عمقِ لایه‌ها: مودالِ بالایی سایه‌ی بیشتری می‌گیرد تا سلسله‌مراتب دیده شود */
+  MODALS.stack.forEach((f, i) => {
+    const n = modalNode(f.id);
+    if (!n) return;
+    n.style.zIndex = String(100 + i * 2);
+    /* لایه‌های زیرین کمی کم‌رنگ‌تر — کاربر می‌فهمد کجای پشته است */
+    n.classList.toggle("beneath", i < MODALS.stack.length - 1);
+  });
+}
+
+function lockScroll(on) {
+  document.body.classList.toggle("modal-open", !!on);
+  document.body.style.overflow = on ? "hidden" : "";
+}
+
+function focusablesOf(root) {
+  return Array.from(root.querySelectorAll(FOCUSABLE))
+    .filter((n) => !n.disabled && n.offsetParent !== null && n.tabIndex !== -1);
+}
+
+function focusFirst(node) {
+  const auto = node.querySelector("[data-autofocus]");
+  const target = auto || node.querySelector('input:not([type=hidden]):not([readonly]), textarea, select') ||
+    node.querySelector("button:not([data-close])") || node.querySelector("button");
+  if (target) { try { target.focus(); if (target.select && target.type === "text") target.select(); } catch (e) { /* noop */ } }
+  else { node.setAttribute("tabindex", "-1"); try { node.focus(); } catch (e) { /* noop */ } }
+}
+
+/**
+ * بازکردنِ یک مودال — همیشه روی پشته سوار می‌شود (نه جایگزینِ کل لایه).
+ * @param {string} id        شناسه بدونِ پیشوند (مثلاً "material")
+ * @param {object} [opts]    { dirty: boolean, focus: Element }
+ */
+function openModal(id, opts) {
+  opts = opts || {};
+  const node = modalNode(id);
+  if (!node) { console.warn("[modal] ناشناخته:", id); return false; }
+  const back = modalBackdrop();
+  if (!back) return false;
+
+  /* اگر همین مودال از قبل باز است، فقط بالای پشته می‌آید (جلوگیری از تکرار) */
+  const existing = MODALS.stack.findIndex((f) => f.id === id);
+  if (existing >= 0) {
+    const fr = MODALS.stack.splice(existing, 1)[0];
+    MODALS.stack.push(fr);
+  } else {
+    MODALS.stack.push({
+      id,
+      focus: opts.focus || document.activeElement,
+      snapshot: id === MODAL_GUARD_ID ? null : fingerprint(node),
+      savedDirty: false,
+    });
+  }
+
+  if (id !== MODAL_GUARD_ID) markModalDirty(id, !!opts.dirty);
+  syncInert();
+  lockScroll(true);
+  back.classList.add("stacked-" + Math.min(3, MODALS.stack.length));
+  /* فوکوس پس از یک فریم تا انیمیشنِ باز شدن پرش نداشته باشد */
+  setTimeout(() => { if (topModalId() === id) focusFirst(node); }, 50);
+  return true;
+}
+
+/**
+ * بستنِ «بدونِ پرسش» — فقط برای مسیرهای کد که خودشان تکلیفِ داده را روشن
+ * کرده‌اند (ثبتِ موفق، یا لایه‌ی «دور ریختن»). کنش‌های کاربر باید
+ * requestCloseModal() را صدا بزنند.
+ */
+function closeModal(id) {
+  if (!MODALS.stack.length) { syncInert(); lockScroll(false); return false; }
+  let idx = id ? MODALS.stack.findIndex((f) => f.id === id) : MODALS.stack.length - 1;
+  if (idx < 0) return false;
+  const frame = MODALS.stack.splice(idx, 1)[0];
+  const cfg = MODALS.registry[frame.id] || {};
+  if (cfg.onClose) { try { cfg.onClose(false); } catch (e) { /* noop */ } }
+
+  if (!MODALS.stack.length) {
+    lockScroll(false);
+    const back = modalBackdrop();
+    if (back) back.className = "modal-backdrop";
+    /* فوکوس به همان‌جا که کاربر بود برمی‌گردد — حافظه‌ی عضلانی و Tabِ پیوسته */
+    const f = frame.focus;
+    if (f && f.isConnected && f.focus) { try { f.focus(); } catch (e) { /* noop */ } }
+  } else {
+    const top = topFrame();
+    const n = modalNode(top.id);
+    if (n) setTimeout(() => focusFirst(n), 30);
+  }
+  syncInert();
+  paintDirtyState();
+  return true;
+}
+
+/** بستنِ همه‌ی لایه‌ها (خروج از برنامه‌ی کاری، ناوبریِ صفحه) */
+function closeAllModals() {
+  while (MODALS.stack.length) closeModal();
+}
+
+/**
+ * بسته‌شدن به‌دستِ کاربر (✕ / «انصراف» / Esc / کلیکِ بیرون).
+ * اگر فرم کثیف باشد، لایه‌ی «تغییرات ذخیره‌نشده» باز می‌شود.
+ * @returns {Promise<boolean>} آیا واقعاً بسته شد؟
+ */
+async function requestCloseModal(id) {
+  const target = id || topModalId();
+  if (!target) return false;
+  if (target !== MODAL_GUARD_ID && isModalDirty(target)) {
+    const act = await askUnsaved(target);
+    if (act === "stay") return false;
+    if (act === "save") {
+      const ok = await submitModal(target);
+      return ok;                     /* ثبت ناموفق = مودال باز می‌ماند */
+    }
+    /* "discard" */
+    closeModal(target);
+    toast("تغییرات ذخیره‌نشده دور ریخته شد", "warn");
+    return true;
+  }
+  const cfg = modalCfg(target);
+  if (cfg.onClose) { try { cfg.onClose(true); } catch (e) { /* noop */ } }
+  return closeModal(target);
+}
+
+/* ==========================================================================
+   ثبتِ فرم (Submit)
+   — Enter / Ctrl+Enter / Ctrl+S / کلیک روی کنشِ اصلی همه از همین‌جا می‌روند
+     تا «یک راه برای ثبت» وجود داشته باشد (ثباتِ رویه).
+   ========================================================================== */
+async function submitModal(id) {
+  const target = id || topModalId();
+  if (!target) return false;
+  const cfg = modalCfg(target);
+  if (!cfg.save) {
+    /* مودالِ بدونِ فرم (برش‌نامه، ریز قیمت‌ها، تأیید) → همان بستن */
+    return requestCloseModal(target);
+  }
+  const btn = cfg.saveBtn ? el(cfg.saveBtn) : null;
+  if (btn && btn.classList.contains("busy")) return false;   /* جلوگیری از ثبتِ دوباره */
+  let ok = false;
+  try {
+    ok = await busy(btn || null, () => cfg.save());
+  } catch (e) {
+    toast("خطا در ثبت: " + esc(e && e.message ? e.message : String(e)), "error");
+    return false;
+  }
+  /* قرارداد: `false` یعنی «نگه دار» (اعتبارسنجی رد شد). `undefined` یعنی موفق. */
+  if (ok === false) return false;
+  markModalDirty(target, false);
+  closeModal(target);
+  return true;
+}
+
+/* ==========================================================================
+   لایه‌ی «تغییرات ذخیره‌نشده دارید»
+   --------------------------------------------------------------------------
+   سه کنش، با جای ثابت در همه‌ی فرم‌های نرم‌افزار:
+     راست (در دسترس‌ترین نقطه در RTL): «ادامه‌ی ویرایش» = امن‌ترین کنش
+     وسط: «ذخیره و بستن» = فقط وقتی فرم ثبت‌شدنی داشته باشد
+     چپِ دور، کوچک و کم‌رنگ: «دور ریختن تغییرات» = خطرناک، عمداً پرت
+   ========================================================================== */
+let _unsavedResolve = null;
+
+function askUnsaved(id) {
+  return new Promise((resolve) => {
+    const cfg = modalCfg(id);
+    const node = modalNode(MODAL_GUARD_ID);
+    if (!node) { resolve("stay"); return; }
+    if (_unsavedResolve) _unsavedResolve("stay");
+
+    const frame = MODALS.stack.find((f) => f.id === id);
+    const n = frame && frame.snapshot ? countDiff(frame.snapshot, fingerprint(modalNode(id))) : 0;
+    const label = cfg.label || "این فرم";
+
+    el("unsavedTitle").textContent = "تغییرات ذخیره‌نشده دارید";
+    el("unsavedText").innerHTML =
+      `«<b>${esc(label)}</b>» بسته نشده است` +
+      (n ? ` — <b>${fa(n)}</b> فیلد تغییر کرده.` : ".") +
+      ` اگر ببندید، این اطلاعات از بین می‌رود.`;
+
+    const saveBtn = el("btnUnsavedSave");
+    saveBtn.hidden = !cfg.save;
+    saveBtn.textContent = cfg.saveLabel || "ذخیره و بستن";
+
+    MODALS.confirmCb = null;
+    _unsavedResolve = resolve;
+    openModal(MODAL_GUARD_ID, { dirty: false });
+  });
+}
+
+function resolveUnsaved(action) {
+  const r = _unsavedResolve;
+  _unsavedResolve = null;
+  closeModal(MODAL_GUARD_ID);
+  if (r) r(action);
+}
+
+/**
+ * پرسشِ تأییدِ عمومی که Promise برمی‌گرداند (برای گاردهای ناوبری).
+ * @param {object} [opts] { title, okLabel, okTone, cancelLabel, altLabel, altTone, onAlt }
+ *        `altLabel` یک کنشِ سومِ امن‌تر اضافه می‌کند (مثلاً «ذخیره و رفتن»).
+ */
+function confirmDiscard(message, opts) {
+  opts = opts || {};
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = (v) => { if (!settled) { settled = true; resolve(v); } };
+    confirmAction(message, () => done(true), {
+      title: opts.title || "تغییرات ذخیره‌نشده",
+      okLabel: opts.okLabel || "دور ریختن",
+      okTone: opts.okTone || "danger",
+      cancelLabel: opts.cancelLabel || "ماندن و ادامه‌ی ویرایش",
+      onDismiss: () => done(false),
+      altLabel: opts.altLabel || null,
+      altTone: opts.altTone || "success",
+      onAlt: opts.onAlt ? () => { done(false); opts.onAlt(); } : null,
+    });
+  });
+}
+
+/* ==========================================================================
+   مودالِ تأیید (confirm)
+   — حالا Promise‑محور است و «رد کردن» هم یک نتیجه‌ی صریح دارد، پس دیگر
+     state.confirmCb معلق نمی‌ماند.
+   ========================================================================== */
+function confirmAction(text, cb, opts) {
+  opts = opts || {};
+  if (typeof opts === "string") opts = { title: opts, okLabel: arguments[3] };  /* سازگاری با امضای قدیمی */
+  const node = modalNode("confirm");
   el("confirmText").innerHTML = text;
-  el("confirmTitle").textContent = title || "تأیید عملیات";
-  el("btnConfirmOk").textContent = okLabel || "حذف";
-  state.confirmCb = cb;
-  openModal("confirm");
+  el("confirmTitle").textContent = opts.title || "تأیید عملیات";
+  const ok = el("btnConfirmOk");
+  ok.textContent = opts.okLabel || "تأیید";
+  /* لحنِ دکمه: danger (پیش‌فرض) / neutral / success — تا «قرمز» همیشه معنیِ
+     خطر بدهد و کاربر شرطی نشود که قرمز = ادامه (یافته‌ی S‑1 ممیزی).        */
+  const tone = opts.okTone || (opts.tone === "neutral" ? "primary" : "danger");
+  ok.className = "btn " + tone + " btn-lg";
+  ok.setAttribute("data-autofocus", "");
+  const cancel = el("btnConfirmCancel");
+  if (cancel) cancel.textContent = opts.cancelLabel || "انصراف";
+  /* کنشِ سومِ اختیاری (مثلاً «ذخیره و رفتن») — امن‌تر از کنشِ خطرناک،
+     پس کنارِ آن و هم‌اندازه‌ی آن قرار می‌گیرد تا انتخابِ درست آسان باشد.      */
+  const alt = el("btnConfirmAlt");
+  if (alt) {
+    alt.hidden = !opts.altLabel;
+    if (opts.altLabel) {
+      alt.textContent = opts.altLabel;
+      alt.className = "btn " + (opts.altTone || "success") + " btn-lg";
+    }
+    MODALS.confirmAlt = opts.onAlt || null;
+  }
+  MODALS.confirmCb = cb || null;
+  MODALS.confirmDismiss = opts.onDismiss || null;
+  registerModal("confirm", {
+    label: opts.title || "تأیید عملیات",
+    onClose: (dismissed) => {
+      const d = MODALS.confirmDismiss;
+      MODALS.confirmCb = null;
+      MODALS.confirmDismiss = null;
+      MODALS.confirmAlt = null;
+      /* رد کردنِ تأیید (Esc/✕/انصراف) = نتیجه‌ی «نه» — دیگر حالتِ معلق نداریم */
+      if (dismissed && d) { try { d(); } catch (e) { /* noop */ } }
+    },
+  });
+  openModal("confirm", { dirty: false });
 }
+
+function runConfirmAlt() {
+  const alt = MODALS.confirmAlt;
+  MODALS.confirmCb = null;
+  MODALS.confirmDismiss = null;
+  MODALS.confirmAlt = null;
+  closeModal("confirm");
+  if (alt) { try { alt(); } catch (e) { toast("خطا: " + esc(e.message), "error"); } }
+}
+
+function runConfirm() {
+  const cb = MODALS.confirmCb;
+  MODALS.confirmCb = null;
+  MODALS.confirmDismiss = null;
+  MODALS.confirmAlt = null;
+  closeModal("confirm");
+  if (cb) { try { cb(); } catch (e) { toast("خطا: " + esc(e.message), "error"); } }
+}
+
+/* ==========================================================================
+   تله‌ی فوکوس (Tab) — فقط داخل بالاترین لایه
+   ========================================================================== */
+function handleTab(e) {
+  const top = topFrame();
+  if (!top) return;
+  const node = modalNode(top.id);
+  if (!node) return;
+  const items = focusablesOf(node);
+  if (!items.length) { e.preventDefault(); return; }
+  const first = items[0], last = items[items.length - 1];
+  const ae = document.activeElement;
+  /* اگر فوکوس بیرونِ مودال است (مثلاً روی body) → به اولِ مودال برگردان */
+  if (!node.contains(ae)) { e.preventDefault(); first.focus(); return; }
+  if (e.shiftKey && ae === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && ae === last) { e.preventDefault(); first.focus(); }
+}
+
+/* ==========================================================================
+   صفحه‌کلید: قراردادِ سراسری
+   ========================================================================== */
+const MODAL_KEYS = {
+  /** میان‌برِ ثبت در زمینه‌ی صفحه (وقتی مودالی باز نیست) — ui.js پر می‌کند */
+  contextSave: null,
+  /** صفحه‌ی جاری — با هر ناوبری به‌روز می‌شود */
+  currentPage: null,
+  /** درزِ تست/گسترش: تابعِ ذخیره‌ای که گاردها صدا می‌زنند (ui.js جایگزین می‌کند) */
+  saveActiveContext: null,
+  /** گاردهای خروج: قبل از ناوبری/جایگزینیِ رکورد صدا زده می‌شوند.
+   *  هر گارد باید `null` (بدونِ مانع) یا Promise<boolean> (true = برو) برگرداند. */
+  exitGuards: [],
+};
+
+function registerExitGuard(fn) {
+  if (typeof fn === "function" && MODAL_KEYS.exitGuards.indexOf(fn) < 0) MODAL_KEYS.exitGuards.push(fn);
+}
+
+/**
+ * آیا خروج از زمینه‌ی فعلی مجاز است؟ (داده‌ی ذخیره‌نشده = پرسش از کاربر)
+ * @param {{to?:string, from?:string}} [ctx] مقصد و مبدأی که گاردها می‌بینند.
+ *        بدونِ مقصد، گارد باید «بدونِ قید» تصمیم بگیرد (مسیرهای غیرِ ناوبری).
+ */
+async function allowLeave(ctx) {
+  ctx = ctx || {};
+  for (const g of MODAL_KEYS.exitGuards) {
+    let r;
+    try { r = await g(ctx); } catch (e) { r = null; }
+    if (r === false) return false;
+  }
+  return true;
+}
+
+function isTypingTarget(t) {
+  if (!t || !t.tagName) return false;
+  return /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
+}
+
+/**
+ * تنها هندلرِ سراسریِ Escape/Enter/Ctrl+S برای لایه‌ی مودال.
+ * ui.js این را از هندلرِ کلیدیِ خودش صدا می‌زند.
+ * @returns {boolean} اگر رویداد مصرف شد (دیگر نباید به چیز دیگری برسد)
+ */
+function handleModalKeys(e) {
+  const key = e.key;
+  const top = topModalId();
+
+  /* --- Ctrl+S: ثبتِ زمینه‌ی فعال (مودالِ باز، وگرنه صفحه) --- */
+  if ((e.ctrlKey || e.metaKey) && String(key).toLowerCase() === "s") {
+    if (top) {
+      e.preventDefault();
+      if (top !== MODAL_GUARD_ID) submitModal(top);
+      return true;
+    }
+    if (MODAL_KEYS.contextSave) { e.preventDefault(); MODAL_KEYS.contextSave(); return true; }
+    return false;
+  }
+
+  if (!top) return false;
+
+  /* --- Ctrl+Enter همیشه ثبت می‌کند --- */
+  if ((e.ctrlKey || e.metaKey) && key === "Enter") {
+    e.preventDefault();
+    if (top === MODAL_GUARD_ID) resolveUnsaved("save");
+    else if (top === "confirm") runConfirm();
+    else submitModal(top);
+    return true;
+  }
+
+  /* --- Enter: ثبتِ فرم (در textarea و روی دکمه نه) --- */
+  if (key === "Enter" && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+    const t = e.target;
+    if (t && t.tagName === "TEXTAREA") return false;
+    if (t && t.tagName === "BUTTON") return false;         /* کلیکِ خودش انجام می‌شود */
+    if (t && t.type === "file") return false;
+    const cfg = modalCfg(top);
+    if (!cfg.save && top !== MODAL_GUARD_ID && top !== "confirm") return false;
+    e.preventDefault();
+    if (top === MODAL_GUARD_ID) resolveUnsaved("save");
+    else if (top === "confirm") runConfirm();
+    else submitModal(top);
+    return true;
+  }
+
+  /* --- Esc: فقط بالاترین لایه، با شرطِ کثیفی --- */
+  if (key === "Escape") {
+    e.preventDefault();
+    if (top === MODAL_GUARD_ID) resolveUnsaved("stay");
+    else requestCloseModal(top);
+    return true;
+  }
+
+  if (key === "Tab") { handleTab(e); return true; }
+  return false;
+}
+
+/* کلیکِ بیرون: فقط اگر واقعاً روی «پرده» باشد و فقط بالاترین لایه را هدف بگیرد */
+function handleBackdropClick(e) {
+  if (e.target !== modalBackdrop()) return;
+  if (!MODALS.stack.length) return;
+  requestCloseModal(topModalId());
+}
+
+/** سیم‌کشیِ یک‌باره‌ی لایه‌ی مودال (از init صدا زده می‌شود) */
+function wireModalLayer() {
+  const back = modalBackdrop();
+  if (back && !back.dataset.wired) {
+    back.dataset.wired = "1";
+    back.addEventListener("mousedown", handleBackdropClick);
+  }
+  /* همه‌ی دکمه‌های [data-close] — از جمله آن‌هایی که بعداً رندر می‌شوند */
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest && e.target.closest("[data-close]");
+    if (!b) return;
+    e.preventDefault();
+    requestCloseModal();
+  });
+  /* نشانِ «ذخیره‌نشده» روی سربرگِ مودال با هر تغییرِ فرم زنده بماند */
+  if (back) {
+    ["input", "change"].forEach((ev) =>
+      back.addEventListener(ev, () => { if (MODALS.stack.length) paintDirtyState(); }));
+  }
+  /* لایه‌ی «تغییرات ذخیره‌نشده» */
+  const st = el("btnUnsavedStay");
+  if (st) st.addEventListener("click", () => resolveUnsaved("stay"));
+  const sv = el("btnUnsavedSave");
+  if (sv) sv.addEventListener("click", () => resolveUnsaved("save"));
+  const ds = el("btnUnsavedDiscard");
+  if (ds) ds.addEventListener("click", () => resolveUnsaved("discard"));
+  /* مودالِ تأیید */
+  const ok = el("btnConfirmOk");
+  if (ok) ok.addEventListener("click", runConfirm);
+  const altBtn = el("btnConfirmAlt");
+  if (altBtn) altBtn.addEventListener("click", runConfirmAlt);
+  syncInert();
+}
+
+/* ==========================================================================
+   اعتبارسنجیِ فرم — پیام کنارِ خودِ فیلد، نه فقط توست
+   (توست در پایینِ صفحه دیده می‌شود؛ کاربر باید بداند «کدام» فیلد ایراد دارد)
+   ========================================================================== */
+function setFieldError(id, msg) {
+  const n = el(id);
+  if (!n) return;
+  const f = n.closest(".field");
+  n.classList.toggle("invalid", !!msg);
+  n.setAttribute("aria-invalid", msg ? "true" : "false");
+  if (!f) return;
+  let e = f.querySelector(".field-err");
+  if (msg) {
+    if (!e) {
+      e = document.createElement("span");
+      e.className = "field-err";
+      e.setAttribute("role", "alert");
+      f.appendChild(e);
+    }
+    e.textContent = msg;
+  } else if (e) e.remove();
+}
+
+function clearFieldErrors(root) {
+  (root || document).querySelectorAll(".field-err").forEach((n) => n.remove());
+  (root || document).querySelectorAll(".invalid").forEach((n) => {
+    n.classList.remove("invalid");
+    n.setAttribute("aria-invalid", "false");
+  });
+}
+
+/** اولین فیلدِ خطادار را فوکوس و اسکرول می‌کند */
+function focusFirstError(root) {
+  const n = (root || document).querySelector(".invalid");
+  if (!n) return false;
+  try { n.scrollIntoView({ block: "center", behavior: "smooth" }); n.focus(); } catch (e) { /* noop */ }
+  return true;
+}
+
+/**
+ * اجرای اعتبارسنجی: هر [id, test, message] که test مقدارِ فیلد را بگیرد.
+ * @returns {boolean} true یعنی فرم معتبر است
+ */
+function validateForm(rules) {
+  let ok = true, firstBad = null;
+  rules.forEach((r) => {
+    const n = el(r[0]);
+    const pass = !!r[1](n ? n.value : "");
+    setFieldError(r[0], pass ? "" : r[2]);
+    if (!pass) { ok = false; if (!firstBad) firstBad = n; }
+  });
+  if (!ok && firstBad) {
+    try { firstBad.scrollIntoView({ block: "center", behavior: "smooth" }); firstBad.focus(); } catch (e) { /* noop */ }
+  }
+  return ok;
+}
+
+/* صادرات برای تست (در مرورگر بی‌اثر است) */
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    fingerprint, equalFingerprint, countDiff, MODALS, MODAL_KEYS,
+    openModal, closeModal, requestCloseModal, submitModal, confirmAction,
+    handleModalKeys, allowLeave, registerModal, registerExitGuard, isModalDirty,
+  };
+}
+
+/* ==========================================================================
+   کبیر ۲ — ui.js
+   رندرها، ویرایشگر پروژه، فاکتور، تنظیمات و سیم‌کشی رویدادها.
+   حالت متصل: داده از API (kabir/web/server.py) و محاسبه با موتور واقعی.
+   حالت نمایشی: داده‌های نمونه و موتور محلی (engine.js) — بدون سرور.
+   ========================================================================== */
+"use strict";
+
+/* ------------------------------------------------------------- توست و مودال
+   ★ لایه‌ی «مودال و فرم» به فایلِ اختصاصیِ js/ui-modal.js منتقل شد:
+   توست، busy()، پشته‌ی مودال‌ها، تشخیصِ تغییراتِ ذخیره‌نشده، تله‌ی فوکوس،
+   قراردادِ Enter/Ctrl+S/Esc و مودالِ تأییدِ Promise‑محور.
+   دلیل: یک مکانیزمِ مشترک برای همه‌ی ۱۰ مودال و ۶ فرم، به‌جای ۲۰ نقطه‌ی
+   پراکنده‌ی خروجِ بی‌قید. (نگاه کنید به docs/UX_AUDIT_v1.md — C‑1 تا C‑6)   */
 
 /* ------------------------------------------------------------------ مرتب‌سازی جدول‌ها */
 const SORT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m6 11 6-6 6 6"/></svg>`;
@@ -4413,8 +5441,11 @@ const PAGES = {
   settings: ["تنظیمات", "اطلاعات فروشگاه، پیش‌فرض‌های محاسبه و پشتیبان‌گیری"],
 };
 
-function navigate(page, sub, silentScroll) {
+/* نامِ داخلی: ناوبریِ «واقعی». تابعِ navigate که بقیه‌ی برنامه صدا می‌کنند
+   یک لایه گاردِ «تغییرات ذخیره‌نشده» دورِ آن دارد (پایین‌تر را ببینید).      */
+function navigateNow(page, sub, silentScroll) {
   state.page = page;
+  MODAL_KEYS.currentPage = page;
   $$(".page").forEach((p) => p.classList.toggle("active", p.id === "page-" + page));
   $$(".nav-btn").forEach((b) => b.classList.toggle("active", b.dataset.page === page));
   const [t, s] = PAGES[page] || PAGES.dashboard;
@@ -4427,6 +5458,92 @@ function navigate(page, sub, silentScroll) {
     renderInvRowChecks();
     refreshInvoice().catch((err) => toast("خطا در پیش‌نمایش فاکتور: " + esc(err.message), "error"));
   }
+}
+
+/* ------------------------------------------------------ تأیید و گاردهای خروج
+   لایه‌ی اصلی در js/ui-modal.js است (پشته‌ی مودال، Dirty Check، کلیدها).
+   این دو تابع فقط «پل» هستند تا ۱۴ نقطه‌ی فراخوانیِ موجود دست‌نخورده بمانند. */
+
+/** پرسشِ تأییدِ عملیات — لحنِ پیش‌فرض «خطرناک» است (حذف و جایگزینی داده) */
+function askConfirm(text, cb, title, okLabel) {
+  confirmAction(text, cb, { title, okLabel, tone: "danger" });
+}
+
+/** پرسشِ اطلاع‌رسانی که به «ادامه» نیاز دارد — بدونِ رنگِ خطر.
+ *  قبلاً خطای ۴۰۹ سرور هم با دکمه‌ی قرمزِ «حذف» نشان داده می‌شد و کاربر
+ *  شرطی می‌شد که قرمز = ادامه؛ این همان ثباتِ رویه‌ای است که قانون می‌خواهد. */
+function askInfo(text, cb, title, okLabel) {
+  confirmAction(text, cb, { title, okLabel, tone: "neutral" });
+}
+
+/* گاردِ «ویرایشگر پروژه»: اگر داده‌ی ذخیره‌نشده باشد، خروج از صفحه باید
+   یا با ذخیره انجام شود یا با پرسشِ صریح از کاربر.                              */
+let _navLeaving = false;
+let _saveGuardBusy = false;
+/* ★ سیاستِ سخت‌گیرانه (به درخواستِ کارفرما):
+   تا وقتی ویرایشگر داده‌ی ذخیره‌نشده دارد، **هیچ** خروجی بی‌صدا انجام نمی‌شود —
+   نه با کلیکِ منو، نه با Alt+1..6، نه با جست‌وجو. هر بار صریحاً می‌پرسیم و
+   سه کنشِ ثابت می‌دهیم:
+     «ذخیره و رفتن» (سبز، امن)  •  «دور ریختن و رفتن» (قرمز، خطرناک)
+     «ماندن» / Esc              (بازگشت به کار)
+   دلیل: در نرم‌افزارِ صنعتی، «ذخیره‌ی بی‌صدا» همان‌قدر خطرناک است که «دور
+   ریختنِ بی‌صدا» — چون اپراتور نمی‌داند کدام نسخه روی سرور نشسته است.         */
+async function editorExitGuard(ctx) {
+  if (_navLeaving || _saveGuardBusy) return null;
+  if (!state.editingProject || !state.dirty) return null;
+  /* ویرایشگر «داخلِ» صفحه‌ی پروژه‌هاست؛ پس جابه‌جایی در همان صفحه (مثلاً
+     Alt+2) داده‌ای را گم نمی‌کند و نباید مزاحم کاربر شود.                    */
+  const to = ctx && ctx.to;
+  if (!to || to === "projects") return null;
+  _saveGuardBusy = true;
+  try {
+    const leave = await confirmDiscard(
+      "ویرایشگر پروژه تغییراتِ <b>ذخیره‌نشده</b> دارد.<br>" +
+      "پیش از رفتن از این صفحه تکلیفشان را روشن کنید.",
+      {
+        title: "ترکِ ویرایشگر با داده‌ی ذخیره‌نشده",
+        okLabel: "دور ریختن و رفتن",
+        okTone: "danger",
+        altLabel: "ذخیره و رفتن",
+        altTone: "success",
+        cancelLabel: "ماندن و ادامه‌ی ویرایش",
+        onAlt: async () => {
+          const saver = MODAL_KEYS.saveActiveContext || (() => saveProject());
+          const ok = await saver();
+          if (ok === false) return;           /* خطا قبلاً گزارش شده — بمان */
+          forceCloseEditor();
+          _navLeaving = true;
+          try { navigateNow(to); } finally { _navLeaving = false; }
+        },
+      });
+    if (leave) { forceCloseEditor(); return null; }
+    /* «ماندن» → ویرایشگر جلوی چشم کاربر باشد تا ادامه دهد */
+    if (state.page !== "projects") navigateNow("projects");
+    el("projectEditor").scrollIntoView({ block: "start" });
+    return false;
+  } finally { _saveGuardBusy = false; }
+}
+
+/** بستنِ ویرایشگر بدونِ پرسش — فقط از مسیرهایی که تکلیفِ داده روشن شده */
+function forceCloseEditor() {
+  if (state.editingProject) clearDraft(state.editingProject.id);
+  clearTimeout(_draftTimer);
+  state.editingProject = null;
+  state.dirty = false;
+  paintDirtyState2();
+  el("projectEditor").hidden = true;
+  undoReset();
+}
+
+/** ناوبریِ محافظت‌شده: هر کلیکِ منو، Alt+1..6، جست‌وجو و hash از این‌جا می‌گذرد */
+async function navigate(page, sub, silentScroll) {
+  if (state.page === page && !sub) { navigateNow(page, sub, silentScroll); return; }
+  if (anyModalOpen()) await requestCloseModal();     /* مودالِ کثیف = هشدارِ ذخیره */
+  /* گاردها: ویرایشگرِ کثیف، و هر زمینه‌ی دیگری که بعداً ثبت شود */
+  if (!(await allowLeave({ to: page, from: MODAL_KEYS.currentPage }))) return;
+  _navLeaving = true;
+  try { navigateNow(page, sub, silentScroll); }
+  finally { _navLeaving = false; }
 }
 
 /* ============================================================== داشبورد */
@@ -4538,6 +5655,22 @@ function filteredMaterials() {
     (!q || m.name.includes(q) || (m.supplier || "").includes(q) || catLabel(m.cat).includes(q)));
 }
 
+/* ── ناوبریِ Tab در «ویرایش سریعِ قیمت» ────────────────────────────────────
+   ثبتِ قیمت جدول را از نو می‌رندد و فوکوس را می‌کشد. این متغیر مقصدِ Tab را
+   نگه می‌دارد تا بلافاصله پس از رندر، سلولِ بعدی باز و فوکوس شود — یعنی
+   اپراتور می‌تواند ده‌ها نرخ را پشتِ سر هم و فقط با Tab به‌روز کند.          */
+let _qpNavTarget = null;
+function applyQuickPriceNav() {
+  if (_qpNavTarget === null) return;
+  const id = _qpNavTarget;
+  _qpNavTarget = null;
+  const cell = document.querySelector(`[data-quick-price="${id}"]`);
+  if (!cell) return;
+  if (cell.scrollIntoView) cell.scrollIntoView({ block: "nearest" });
+  /* همان مسیرِ کلیک — تا رفتارِ Tab و ماوس دقیقاً یکی بماند (ثباتِ رویه) */
+  cell.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+}
+
 function renderMaterials() {
   renderChips();
   const rows = applySort(filteredMaterials(), "materials", MAT_SORT);
@@ -4573,6 +5706,9 @@ function renderMaterials() {
       </tbody>`;
   }
   el("matCount").innerHTML = `${fa(rows.length)} قلم نمایش داده شد${rows.length !== MATERIALS.length ? ` از ${fa(MATERIALS.length)}` : ""}`;
+  /* ناوبریِ Tab باید «پس از» نشستنِ DOMِ تازه اجرا شود؛ اگر پیش از آن باشد،
+     همان innerHTMLِ پایین ویرایشگرِ تازه‌بازشده را پاک می‌کند.              */
+  applyQuickPriceNav();
 }
 
 function renderHistory() {
@@ -4983,55 +6119,160 @@ const UNIT_MAT_FIELDS = [
   ["shelf_pin_id", "خار طبقه", "shelf_pin"], ["assembly_id", "مونتاژ یونیت", "service"],
 ];
 
+/* ══════════════════════════════════════════════════════════════════════════
+   حفظِ فوکوس و اسکرول در بازسازیِ جدول‌ها
+   --------------------------------------------------------------------------
+   مشکلِ قبلی (K‑5/K‑6): `innerHTML` کل جدول را عوض می‌کند، پس عنصرِ دارای
+   فوکوس نابود می‌شود و مکان‌نما به `body` می‌پرد؛ کاربر باید دوباره ردیفش را
+   پیدا کند. راه‌حل: «هویتِ سلول» (data-scope/data-k/data-ui/data-di/data-ri)
+   را پیش از بازسازی نگه می‌داریم و بعد همان سلول را پیدا و فوکوس می‌کنیم —
+   چون DOM عوض می‌شود ولی هویتِ سلول نه. به‌علاوه جای اسکرولِ هر ظرف هم
+   بازگردانده می‌شود.                                                          */
+const EDITOR_TABLE_IDS = ["tblUnits", "tblDoors", "tblDrawers", "tblFacade", "tblExtras", "tblServices"];
+let _pendingFocus = null;    /* {row, scope, k} — مثلاً پس از «افزودن ردیف» */
+
+function cellIdentity(node) {
+  const ds = node && node.dataset ? node.dataset : null;
+  if (!ds || !ds.scope || !ds.k) return null;
+  return { scope: ds.scope, k: ds.k, ui: ds.ui ?? "", di: ds.di ?? "", ri: ds.ri ?? "" };
+}
+
+function captureCellFocus() {
+  const ae = document.activeElement;
+  const wrap = ae && ae.closest ? ae.closest(".table-wrap") : null;
+  return {
+    ident: cellIdentity(ae),
+    wasSelStart: ae && ae.selectionStart !== undefined && ae.selectionStart !== null ? ae.selectionStart : null,
+    scroll: wrap ? { el: wrap, left: wrap.scrollLeft, top: wrap.scrollTop } : null,
+  };
+}
+
+function findCellNode(ident) {
+  if (!ident) return null;
+  /* نکته: `[data-di=""]` با «نبودِ صفت» فرق دارد — صفتی که چاپ نشده را نباید
+     در گزینش‌گر خواست، وگرنه سلول پیدا نمی‌شود و فوکوس می‌پرد.               */
+  let q = `#projectEditor [data-scope="${ident.scope}"][data-k="${ident.k}"]`;
+  ["ui", "di", "ri"].forEach((k) => {
+    if (ident[k] !== "" && ident[k] !== null && ident[k] !== undefined) q += `[data-${k}="${ident[k]}"]`;
+  });
+  return document.querySelector(q);
+}
+
+function restoreCellFocus(keep) {
+  keep = keep || {};
+  /* اسکرولِ افقی/عمودی هر ظرف سرِ جایش برگردد */
+  EDITOR_TABLE_IDS.forEach((id) => {
+    const t = el(id);
+    if (!t) return;
+    const w = t.closest(".table-wrap");
+    if (w && keep.scroll && keep.scroll.el && keep.scroll.el.classList.contains("grid-head")) {
+      /* ظرفِ همان جدول — اگر همان است، مقدارها را برگردان */
+      if (keep.scroll.el === w) { w.scrollLeft = keep.scroll.left; w.scrollTop = keep.scroll.top; }
+    }
+  });
+  if (keep.scroll && keep.scroll.el && keep.scroll.el.isConnected) {
+    keep.scroll.el.scrollLeft = keep.scroll.left;
+    keep.scroll.el.scrollTop = keep.scroll.top;
+  }
+  const target = _pendingFocus ? document.querySelector(`#projectEditor tr[data-row="${_pendingFocus.row}"]`) : null;
+  let node = null;
+  if (target) {
+    node = (_pendingFocus.scope && _pendingFocus.k)
+      ? target.querySelector(`[data-scope="${_pendingFocus.scope}"][data-k="${_pendingFocus.k}"]`)
+      : target.querySelector("input, select, textarea, button");
+  }
+  if (!node) node = findCellNode(keep.ident);
+  if (!node || node.disabled || !node.isConnected) { _pendingFocus = null; return; }
+  try {
+    node.focus({ preventScroll: true });
+    if (node.select && (node.type === "text")) {
+      if (keep.wasSelStart !== null && keep.wasSelStart !== undefined && node === findCellNode(keep.ident)) {
+        node.setSelectionRange(keep.wasSelStart, keep.wasSelStart);
+      } else node.select();
+    }
+  } catch (e) { /* مرورگرِ بدونِ پشتیبانی */ }
+  _pendingFocus = null;
+}
+
+/** پس از «افزودن/کپی/حذف ردیف» فوکوس را به ردیفِ مربوطه ببر (K‑6) */
+function focusRowAfter(kind, idx, scope, k) {
+  _pendingFocus = { row: "er:" + kind + ":" + idx, scope: scope || null, k: k || null };
+}
+
 function renderEditorTables() {
   const p = state.editingProject;
   const pg = curPage();
   if (!p || !pg) return;
-  const del = (kind, ui, di) =>
-    iconBtn("del", "trash", "حذف", `data-del-row="${kind}" data-ui="${ui ?? ""}" data-di="${di ?? ""}"`);
-  /* کپی ردیف — برای وقتی که چند یونیت شبیه هم داریم و نمی‌خواهیم همه‌ی
-     فیلدهای متریال را از اول انتخاب کنیم. */
-  const dup = (kind, ui, di, ri) =>
-    iconBtn("", "copy", "کپی ردیف", `data-copy-row="${kind}" data-ui="${ui ?? ""}" data-di="${di ?? ""}" data-ri="${ri ?? ""}"`);
-  /* ذخیره‌ی یونیت به‌عنوان الگوی قابل استفاده‌ی مجدد */
+
+  /* ═══ حفظِ فوکوس و اسکرول ═══
+     هر بازسازیِ جدول پیش از این فوکوس و جای اسکرول را می‌کشت (یافته‌ی K‑5):
+     کاربر وسطِ تایپ، با یک تغییرِ انتخاب به ابتدای جدول پرت می‌شد. حالا
+     «هویتِ سلول» (scope/k/ui/di/ri) پیش از بازسازی گرفته و بعد بازگردانده
+     می‌شود — چون DOM عوض می‌شود ولی هویتِ سلول نه.                            */
+  const keep = captureCellFocus();
+
+  /* ── کنش‌های ردیف ──
+     سه تغییر نسبت به قبل (یافته‌های F‑1 و F‑3):
+       ۱) کنش‌ها به «ستونِ اولِ چسبان» آمدند؛ پیش‌تر در آخرین سلولِ یک جدولِ
+          تا ۱۲۰۰ پیکسل بودند و برای هر حذف باید افقی اسکرول می‌شد.
+       ۲) هدف‌ها از ۳۲ به ۳۹ پیکسل رسیدند.
+       ۳) پیش از «حذف» جداکننده آمد تا از «کپیِ» پرتکرار فاصله بگیرد.        */
+  const actBtn = (cls, icon, title, attrs) =>
+    `<button class="row-actions ${cls}" type="button" title="${title}" aria-label="${title}" ${attrs}>${ICONS[icon]}</button>`;
+  const delBtn = (kind, ui, di, ri) =>
+    actBtn("del", "trash", "حذف ردیف", `data-del-row="${kind}" data-ui="${ui ?? ""}" data-di="${di ?? ""}" data-ri="${ri ?? ""}"`);
+  const dupBtn = (kind, ui, di, ri) =>
+    actBtn("", "copy", "کپی ردیف", `data-copy-row="${kind}" data-ui="${ui ?? ""}" data-di="${di ?? ""}" data-ri="${ri ?? ""}"`);
   const tplBtn = (ui) =>
-    iconBtn("", "tpl", "ذخیره به‌عنوان الگو", `data-tpl-save="${ui}"`);
+    actBtn("", "tpl", "ذخیره به‌عنوان الگو", `data-tpl-save="${ui}"`);
+  const SEP = `<span class="row-sep" aria-hidden="true"></span>`;
+  const acts = (inner) => `<div class="row-btns">${inner}</div>`;
+  /* هویتِ ردیف روی خودِ <tr> — برای «پس از بازسازی، فوکوس را به ردیفِ تازه
+     اضافه‌شده ببر» (K‑6) و برای برگرداندنِ فوکوس پس از حذف/کپی.              */
+  /* پیشوندِ «er:» تا هویتِ ردیف‌های ویرایشگر با `data-row` در جاهای دیگر
+     (مثلاً مودالِ ساختِ فاکتور) قاطی نشود.                                  */
+  const rowAttrs = (kind, i) => ` class="erow" data-row="er:${kind}:${i}"`;
+  const withRow = (extra, kind, i) =>
+    `data-row="er:${kind}:${i}" ${extra || ""}`.trim();
 
   /* --- یونیت‌ها --- */
   let uRows = "";
   pg.units.forEach((u, i) => {
     const open = state.expanded.has(`${p.id}:${state.pageIdx}:${i}`);
+    const a = (extra) => withRow(extra, "unit", i);
     uRows += `
-      <tr>
-        <td>${inpT("unit", "label", u.label, `data-ui="${i}"`)}</td>
-        <td><select class="cell-select" data-scope="unit" data-k="unit_type" data-ui="${i}">
+      <tr${rowAttrs("unit", i)}>
+        <td><div class="row-id-cell">
+          ${inpT("unit", "label", u.label, a(`data-ui="${i}"`))}
+          ${acts(`${tplBtn(i)}${dupBtn("unit", i)}${SEP}${delBtn("unit", i)}`)}
+        </div></td>
+        <td><select class="cell-select" data-scope="unit" data-k="unit_type" data-ui="${i}" ${a("")}>
           ${Object.entries(UNIT_TYPES).map(([k, l]) => `<option value="${k}"${u.unit_type === k ? " selected" : ""}>${l}</option>`).join("")}
         </select></td>
-        <td>${inp("unit", "length_cm", u.length_cm, `data-ui="${i}"`, U_CM, "w-dim")}</td>
-        <td>${inp("unit", "height_cm", u.height_cm, `data-ui="${i}"`, U_CM, "w-dim")}</td>
-        <td>${inp("unit", "depth_cm", u.depth_cm, `data-ui="${i}"`, U_CM, "w-dim")}</td>
-        <td>${inp("unit", "qty", u.qty, `data-ui="${i}"`, U_QTY, "w-qty")}</td>
-        <td>${inp("unit", "shelves", u.shelves, `data-ui="${i}"`, U_QTY, "w-qty")}</td>
+        <td>${inp("unit", "length_cm", u.length_cm, a(`data-ui="${i}"`), U_CM, "w-dim")}</td>
+        <td>${inp("unit", "height_cm", u.height_cm, a(`data-ui="${i}"`), U_CM, "w-dim")}</td>
+        <td>${inp("unit", "depth_cm", u.depth_cm, a(`data-ui="${i}"`), U_CM, "w-dim")}</td>
+        <td>${inp("unit", "qty", u.qty, a(`data-ui="${i}"`), U_QTY, "w-qty")}</td>
+        <td>${inp("unit", "shelves", u.shelves, a(`data-ui="${i}"`), U_QTY, "w-qty")}</td>
         <td><span class="cell-badges">
-              <button type="button" class="count-badge badge-btn" data-goto-tab="doors" data-ui="${i}" title="پرش به ردیف‌های درِ همین یونیت در تب «درها»">در ${fa(u.doors.reduce((a, d) => a + (+d.qty || 0), 0) * (+u.qty || 1))}</button>
-              <button type="button" class="count-badge badge-btn" data-goto-tab="drawers" data-ui="${i}" title="پرش به ردیف‌های کشوی همین یونیت در تب «کشوها»">کشو ${fa(u.drawers.reduce((a, d) => a + (+d.qty || 0), 0) * (+u.qty || 1))}</button>
+              <button type="button" class="count-badge badge-btn" data-goto-tab="doors" data-ui="${i}" title="پرش به ردیف‌های درِ همین یونیت در تب «درها»">در ${fa(u.doors.reduce((s, d) => s + (+d.qty || 0), 0) * (+u.qty || 1))}</button>
+              <button type="button" class="count-badge badge-btn" data-goto-tab="drawers" data-ui="${i}" title="پرش به ردیف‌های کشوی همین یونیت در تب «کشوها»">کشو ${fa(u.drawers.reduce((s, d) => s + (+d.qty || 0), 0) * (+u.qty || 1))}</button>
             </span></td>
-        <td><button class="expander${open ? " open" : ""}" type="button" data-expand="${i}" title="متریال و یراق یونیت">${ICONS.chev}</button></td>
-        <td><div class="row-btns">${tplBtn(i)}${dup("unit", i)}${del("unit", i)}</div></td>
+        <td><button class="expander${open ? " open" : ""}" type="button" data-expand="${i}" title="متریال و یراق یونیت" aria-expanded="${open ? "true" : "false"}">${ICONS.chev}</button></td>
       </tr>`;
     if (open) {
       uRows += `
-      <tr class="unit-detail-row"><td colspan="10">
+      <tr class="unit-detail-row" data-detail-of="unit:${i}"><td colspan="9">
         <div class="unit-detail">
           ${UNIT_MAT_FIELDS.map(([k, label, cat]) => `
             <div class="field"><label>${label}</label>
-              ${matSelect(cat, u[k], `data-scope="unit" data-k="${k}" data-ui="${i}"`)}
+              ${matSelect(cat, u[k], `data-scope="unit" data-k="${k}" data-ui="${i}" ${a("")}`)}
             </div>`).join("")}
-          <div class="field"><label>تعداد پایه در یونیت</label>${inp("unit", "legs_per_unit", u.legs_per_unit, `data-ui="${i}"`, U_QTY, "w-qty")}</div>
-          <div class="field"><label>خار در هر طبقه</label>${inp("unit", "pins_per_shelf", u.pins_per_shelf, `data-ui="${i}"`, U_QTY, "w-qty")}</div>
+          <div class="field"><label>تعداد پایه در یونیت</label>${inp("unit", "legs_per_unit", u.legs_per_unit, a(`data-ui="${i}"`), U_QTY, "w-qty")}</div>
+          <div class="field"><label>خار در هر طبقه</label>${inp("unit", "pins_per_shelf", u.pins_per_shelf, a(`data-ui="${i}"`), U_QTY, "w-qty")}</div>
           <div class="ud-checks">
-            <label class="check"><input type="checkbox" data-scope="unit" data-k="has_top_panel" data-ui="${i}"${u.has_top_panel !== false ? " checked" : ""}> سقف یونیت</label>
-            <label class="check"><input type="checkbox" data-scope="unit" data-k="has_bottom_panel" data-ui="${i}"${u.has_bottom_panel !== false ? " checked" : ""}> کف یونیت</label>
+            <label class="check"><input type="checkbox" data-scope="unit" data-k="has_top_panel" data-ui="${i}" ${a("")}${u.has_top_panel !== false ? " checked" : ""}> سقف یونیت</label>
+            <label class="check"><input type="checkbox" data-scope="unit" data-k="has_bottom_panel" data-ui="${i}" ${a("")}${u.has_bottom_panel !== false ? " checked" : ""}> کف یونیت</label>
             <span class="tiny muted">مساحت بدنه‌ی این یونیت: <b>${fmt(unitArea(u) * (+u.qty || 1), true)}</b> م² (بدون فیبر پشت)</span>
           </div>
         </div>
@@ -5039,75 +6280,86 @@ function renderEditorTables() {
     }
   });
   el("tblUnits").innerHTML = `
-    <thead><tr><th>برچسب</th><th>نوع</th><th>طول (سم)</th><th>ارتفاع (سم)</th><th>عمق (سم)</th><th>تعداد (عدد)</th><th>طبقات (عدد)</th><th>در/کشو</th><th>جزئیات</th><th></th></tr></thead>
-    <tbody>${uRows || `<tr><td colspan="10"><div class="empty">یونیتی تعریف نشده — «＋ افزودن یونیت» را بزنید.</div></td></tr>`}</tbody>`;
+    <thead><tr><th class="th-row">ردیف</th><th>نوع</th><th>طول (سم)</th><th>ارتفاع (سم)</th><th>عمق (سم)</th><th>تعداد (عدد)</th><th>طبقات (عدد)</th><th>در/کشو</th><th>جزئیات</th></tr></thead>
+    <tbody>${uRows || `<tr><td colspan="9"><div class="empty">یونیتی تعریف نشده — «＋ افزودن یونیت» را بزنید.</div></td></tr>`}</tbody>`;
 
   /* --- درها (سطح بخش، وابسته به یونیت) --- */
   let dRows = "";
   pg.units.forEach((u, ui) => u.doors.forEach((dr, di) => {
+    const a = (extra) => withRow(extra, "door", `${ui}:${di}`);
     dRows += `
-      <tr>
-        <td><select class="cell-select" data-scope="doormove" data-ui="${ui}" data-di="${di}">
-          ${pg.units.map((x, i2) => `<option value="${i2}"${i2 === ui ? " selected" : ""}>${esc(x.label || `یونیت ${i2 + 1}`)}</option>`).join("")}
-        </select></td>
-        <td>${inpT("door", "label", dr.label, `data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${inp("door", "qty", dr.qty, `data-ui="${ui}" data-di="${di}"`, U_LEAF, "w-qty")}</td>
-        <td>${inp("door", "w_cm", dr.w_cm, `data-ui="${ui}" data-di="${di}"`, U_CM, "w-dim")}</td>
-        <td>${inp("door", "h_cm", dr.h_cm, `data-ui="${ui}" data-di="${di}"`, U_CM, "w-dim")}</td>
+      <tr${rowAttrs("door", `${ui}:${di}`)}>
+        <td><div class="row-id-cell">
+          <select class="cell-select" data-scope="doormove" data-ui="${ui}" data-di="${di}" ${a("")}
+                  aria-label="یونیتِ 소속ِ این در" title="در به کدام یونیت تعلق دارد">
+            ${pg.units.map((x, i2) => `<option value="${i2}"${i2 === ui ? " selected" : ""}>${esc(x.label || `یونیت ${i2 + 1}`)}</option>`).join("")}
+          </select>
+          ${acts(`${dupBtn("door", ui, di)}${SEP}${delBtn("door", ui, di)}`)}
+        </div></td>
+        <td>${inpT("door", "label", dr.label, a(`data-ui="${ui}" data-di="${di}"`))}</td>
+        <td>${inp("door", "qty", dr.qty, a(`data-ui="${ui}" data-di="${di}"`), U_LEAF, "w-qty")}</td>
+        <td>${inp("door", "w_cm", dr.w_cm, a(`data-ui="${ui}" data-di="${di}"`), U_CM, "w-dim")}</td>
+        <td>${inp("door", "h_cm", dr.h_cm, a(`data-ui="${ui}" data-di="${di}"`), U_CM, "w-dim")}</td>
         <td>${doorSheetCell(u, dr, ui, di)}</td>
-        <td>${matSelect("door_model", dr.door_model_id, `data-scope="door" data-k="door_model_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${matSelect("hinge", dr.hinge_id, `data-scope="door" data-k="hinge_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${matSelect("handle", dr.handle_id, `data-scope="door" data-k="handle_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${matSelect("service", dr.assembly_id, `data-scope="door" data-k="assembly_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${matSelect("service", dr.packaging_id, `data-scope="door" data-k="packaging_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td><div class="row-btns">${dup("door", ui, di)}${del("door", ui, di)}</div></td>
+        <td>${matSelect("door_model", dr.door_model_id, `data-scope="door" data-k="door_model_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
+        <td>${matSelect("hinge", dr.hinge_id, `data-scope="door" data-k="hinge_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
+        <td>${matSelect("handle", dr.handle_id, `data-scope="door" data-k="handle_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
+        <td>${matSelect("service", dr.assembly_id, `data-scope="door" data-k="assembly_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
+        <td>${matSelect("service", dr.packaging_id, `data-scope="door" data-k="packaging_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
       </tr>`;
   }));
   el("tblDoors").innerHTML = `
-    <thead><tr><th>یونیت</th><th>برچسب</th><th>لنگه (عدد)</th><th>عرض (سم)</th><th>ارتفاع (سم)</th><th>ورق در</th><th>مدل/اجرت</th><th>لولا</th><th>دستگیره</th><th>مونتاژ</th><th>بسته‌بندی</th><th></th></tr></thead>
-    <tbody>${dRows || `<tr><td colspan="12"><div class="empty">دری تعریف نشده است.</div></td></tr>`}</tbody>`;
+    <thead><tr><th class="th-row">یونیت</th><th>برچسب</th><th>لنگه (عدد)</th><th>عرض (سم)</th><th>ارتفاع (سم)</th><th>ورق در</th><th>مدل/اجرت</th><th>لولا</th><th>دستگیره</th><th>مونتاژ</th><th>بسته‌بندی</th></tr></thead>
+    <tbody>${dRows || `<tr><td colspan="11"><div class="empty">دری تعریف نشده است.</div></td></tr>`}</tbody>`;
 
   /* --- کشوها --- */
   let wRows = "";
   pg.units.forEach((u, ui) => u.drawers.forEach((dw, di) => {
+    const a = (extra) => withRow(extra, "drawer", `${ui}:${di}`);
     wRows += `
-      <tr>
-        <td><select class="cell-select" data-scope="drawermove" data-ui="${ui}" data-di="${di}">
-          ${pg.units.map((x, i2) => `<option value="${i2}"${i2 === ui ? " selected" : ""}>${esc(x.label || `یونیت ${i2 + 1}`)}</option>`).join("")}
-        </select></td>
-        <td>${inpT("drawer", "label", dw.label, `data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${inp("drawer", "qty", dw.qty, `data-ui="${ui}" data-di="${di}"`, U_QTY, "w-qty")}</td>
-        <td>${inp("drawer", "w_cm", dw.w_cm, `data-ui="${ui}" data-di="${di}"`, U_CM, "w-dim")}</td>
-        <td>${inp("drawer", "h_cm", dw.h_cm, `data-ui="${ui}" data-di="${di}"`, U_CM, "w-dim")}</td>
-        <td>${inp("drawer", "d_cm", dw.d_cm, `data-ui="${ui}" data-di="${di}"`, U_CM, "w-dim")}</td>
-        <td>${matSelect("drawer_slide", dw.slide_id, `data-scope="drawer" data-k="slide_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${matSelect("drawer_sheet", dw.sheet_id, `data-scope="drawer" data-k="sheet_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${matSelect("door_sheet", dw.front_id, `data-scope="drawer" data-k="front_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td>${matSelect("handle", dw.handle_id, `data-scope="drawer" data-k="handle_id" data-ui="${ui}" data-di="${di}"`)}</td>
-        <td><div class="row-btns">${dup("drawer", ui, di)}${del("drawer", ui, di)}</div></td>
+      <tr${rowAttrs("drawer", `${ui}:${di}`)}>
+        <td><div class="row-id-cell">
+          <select class="cell-select" data-scope="drawermove" data-ui="${ui}" data-di="${di}" ${a("")}
+                  aria-label="یونیتِ 소속ِ این کشو" title="کشو به کدام یونیت تعلق دارد">
+            ${pg.units.map((x, i2) => `<option value="${i2}"${i2 === ui ? " selected" : ""}>${esc(x.label || `یونیت ${i2 + 1}`)}</option>`).join("")}
+          </select>
+          ${acts(`${dupBtn("drawer", ui, di)}${SEP}${delBtn("drawer", ui, di)}`)}
+        </div></td>
+        <td>${inpT("drawer", "label", dw.label, a(`data-ui="${ui}" data-di="${di}"`))}</td>
+        <td>${inp("drawer", "qty", dw.qty, a(`data-ui="${ui}" data-di="${di}"`), U_QTY, "w-qty")}</td>
+        <td>${inp("drawer", "w_cm", dw.w_cm, a(`data-ui="${ui}" data-di="${di}"`), U_CM, "w-dim")}</td>
+        <td>${inp("drawer", "h_cm", dw.h_cm, a(`data-ui="${ui}" data-di="${di}"`), U_CM, "w-dim")}</td>
+        <td>${inp("drawer", "d_cm", dw.d_cm, a(`data-ui="${ui}" data-di="${di}"`), U_CM, "w-dim")}</td>
+        <td>${matSelect("drawer_slide", dw.slide_id, `data-scope="drawer" data-k="slide_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
+        <td>${matSelect("drawer_sheet", dw.sheet_id, `data-scope="drawer" data-k="sheet_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
+        <td>${matSelect("door_sheet", dw.front_id, `data-scope="drawer" data-k="front_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
+        <td>${matSelect("handle", dw.handle_id, `data-scope="drawer" data-k="handle_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
       </tr>`;
   }));
   el("tblDrawers").innerHTML = `
-    <thead><tr><th>یونیت</th><th>برچسب</th><th>تعداد (عدد)</th><th>عرض (سم)</th><th>ارتفاع (سم)</th><th>عمق (سم)</th><th>ریل</th><th>ورق جعبه</th><th>تیره‌ی کشو</th><th>دستگیره</th><th></th></tr></thead>
-    <tbody>${wRows || `<tr><td colspan="11"><div class="empty">کشویی تعریف نشده است.</div></td></tr>`}</tbody>`;
+    <thead><tr><th class="th-row">یونیت</th><th>برچسب</th><th>تعداد (عدد)</th><th>عرض (سم)</th><th>ارتفاع (سم)</th><th>عمق (سم)</th><th>ریل</th><th>ورق جعبه</th><th>تیره‌ی کشو</th><th>دستگیره</th></tr></thead>
+    <tbody>${wRows || `<tr><td colspan="10"><div class="empty">کشویی تعریف نشده است.</div></td></tr>`}</tbody>`;
 
   /* --- درنما --- */
   if (pg.detail_mode === "detailed") {
     el("tblFacade").innerHTML = `
-      <thead><tr><th>عنوان</th><th>تعداد (عدد)</th><th>عرض (سم)</th><th>ارتفاع (سم)</th><th>قیمت هر م² (${CUR.name})</th><th>مساحت (م²)</th><th>جمع (${CUR.name})</th><th></th></tr></thead>
+      <thead><tr><th class="th-row">ردیف</th><th>تعداد (عدد)</th><th>عرض (سم)</th><th>ارتفاع (سم)</th><th>قیمت هر م² (${CUR.name})</th><th>مساحت (م²)</th><th>جمع (${CUR.name})</th></tr></thead>
       <tbody>${pg.detail_rows.map((r, i) => {
         const area = (+r.qty || 0) * ((+r.w_cm || 0) / 100) * ((+r.h_cm || 0) / 100);
-        return `<tr>
-          <td>${inpT("facade", "label", r.label, `data-ri="${i}"`)}</td>
-          <td>${inp("facade", "qty", r.qty, `data-ri="${i}"`, U_QTY, "w-qty")}</td>
-          <td>${inp("facade", "w_cm", r.w_cm, `data-ri="${i}"`, U_CM, "w-dim")}</td>
-          <td>${inp("facade", "h_cm", r.h_cm, `data-ri="${i}"`, U_CM, "w-dim")}</td>
-          <td>${inp("facade", "price_per_sqm", r.price_per_sqm, `data-ri="${i}"`, uMoney(), "w-money")}</td>
+        const a = (extra) => withRow(extra, "facade", i);
+        return `<tr${rowAttrs("facade", i)}>
+          <td><div class="row-id-cell">
+            ${inpT("facade", "label", r.label, a(`data-ri="${i}"`))}
+            ${acts(`${dupBtn("facade", null, null, i)}${SEP}${delBtn("facade", null, i)}`)}
+          </div></td>
+          <td>${inp("facade", "qty", r.qty, a(`data-ri="${i}"`), U_QTY, "w-qty")}</td>
+          <td>${inp("facade", "w_cm", r.w_cm, a(`data-ri="${i}"`), U_CM, "w-dim")}</td>
+          <td>${inp("facade", "h_cm", r.h_cm, a(`data-ri="${i}"`), U_CM, "w-dim")}</td>
+          <td>${inp("facade", "price_per_sqm", r.price_per_sqm, a(`data-ri="${i}"`), uMoney(), "w-money")}</td>
           <td class="num f-area" data-ri="${i}">${fmt(area, 1)}</td>
           <td class="num f-sum" data-ri="${i}">${fmt(scaled(area * (+r.price_per_sqm || 0)))}</td>
-          <td><div class="row-btns">${dup("facade", null, null, i)}${del("facade", null, i)}</div></td>
         </tr>`;
-      }).join("") || `<tr><td colspan="8"><div class="empty">ردیفی نیست — «＋ افزودن ردیف درنما» را بزنید.</div></td></tr>`}
+      }).join("") || `<tr><td colspan="7"><div class="empty">ردیفی نیست — «＋ افزودن ردیف درنما» را بزنید.</div></td></tr>`}
       </tbody>`;
   } else {
     el("tblFacade").innerHTML = "";
@@ -5115,19 +6367,24 @@ function renderEditorTables() {
 
   /* --- اضافات --- */
   el("tblExtras").innerHTML = `
-    <thead><tr><th>عنوان</th><th>تعداد (عدد)</th><th>واحد</th><th>فی (${CUR.name})</th><th>جمع (${CUR.name})</th><th>در فاکتور</th><th></th></tr></thead>
-    <tbody>${pg.extras.map((r, i) => `
-      <tr>
-        <td>${inpT("extra", "label", r.label, `data-ri="${i}" style="min-width:11rem"`)}</td>
-        <td>${inp("extra", "qty", r.qty, `data-ri="${i}"`, U_QTY, "w-qty")}</td>
-        <td><select class="cell-select" data-scope="extra" data-k="unit" data-ri="${i}">
+    <thead><tr><th class="th-row">ردیف</th><th>تعداد (عدد)</th><th>واحد</th><th>فی (${CUR.name})</th><th>جمع (${CUR.name})</th><th>در فاکتور</th></tr></thead>
+    <tbody>${pg.extras.map((r, i) => {
+      const a = (extra) => withRow(extra, "extra", i);
+      return `
+      <tr${rowAttrs("extra", i)}>
+        <td><div class="row-id-cell">
+          ${inpT("extra", "label", r.label, a(`data-ri="${i}" style="min-width:11rem"`))}
+          ${acts(`${dupBtn("extra", null, null, i)}${SEP}${delBtn("extra", null, i)}`)}
+        </div></td>
+        <td>${inp("extra", "qty", r.qty, a(`data-ri="${i}"`), U_QTY, "w-qty")}</td>
+        <td><select class="cell-select" data-scope="extra" data-k="unit" data-ri="${i}" ${a("")}>
           ${Object.entries(UNITS).map(([k, l]) => `<option value="${k}"${r.unit === k ? " selected" : ""}>${l}</option>`).join("")}
         </select></td>
-        <td>${inp("extra", "price", r.price, `data-ri="${i}"`, uMoney(), "w-money")}</td>
+        <td>${inp("extra", "price", r.price, a(`data-ri="${i}"`), uMoney(), "w-money")}</td>
         <td class="num x-sum" data-ri="${i}">${fmt(scaled((+r.qty || 0) * (+r.price || 0)))}</td>
-        <td><label class="check" style="justify-content:center"><input type="checkbox" data-scope="extra" data-k="visible" data-ri="${i}"${r.visible !== false ? " checked" : ""}></label></td>
-        <td><div class="row-btns">${dup("extra", null, null, i)}${del("extra", null, i)}</div></td>
-      </tr>`).join("") || `<tr><td colspan="7"><div class="empty">قلمی نیست.</div></td></tr>`}
+        <td><label class="check" style="justify-content:center"><input type="checkbox" data-scope="extra" data-k="visible" data-ri="${i}" ${a("")}${r.visible !== false ? " checked" : ""}></label></td>
+      </tr>`;
+    }).join("") || `<tr><td colspan="6"><div class="empty">قلمی نیست.</div></td></tr>`}
     </tbody>`;
 
   /* --- خدمات --- */
@@ -5137,16 +6394,21 @@ function renderEditorTables() {
       return `<option value="${esc(n)}">${esc(n)}${sv && sv.price ? ` — ${fmt(sv.price)}` : ""}</option>`;
     }).join("");
   el("tblServices").innerHTML = `
-    <thead><tr><th>شرح خدمت</th><th>مبنا</th><th>نرخ (${CUR.name})</th><th></th></tr></thead>
-    <tbody>${pg.services.map((s, i) => `
-      <tr>
-        <td>${inpT("service", "label", s.label, `data-ri="${i}" style="min-width:13rem"`)}</td>
-        <td><select class="cell-select" data-scope="service" data-k="basis" data-ri="${i}">
+    <thead><tr><th class="th-row">شرح خدمت</th><th>مبنا</th><th>نرخ (${CUR.name})</th></tr></thead>
+    <tbody>${pg.services.map((s, i) => {
+      const a = (extra) => withRow(extra, "service", i);
+      return `
+      <tr${rowAttrs("service", i)}>
+        <td><div class="row-id-cell">
+          ${inpT("service", "label", s.label, a(`data-ri="${i}" style="min-width:13rem"`))}
+          ${acts(`${dupBtn("service", null, null, i)}${SEP}${delBtn("service", null, i)}`)}
+        </div></td>
+        <td><select class="cell-select" data-scope="service" data-k="basis" data-ri="${i}" ${a("")}>
           ${Object.entries(SERVICE_BASIS).map(([k, l]) => `<option value="${k}"${s.basis === k ? " selected" : ""}>${l}</option>`).join("")}
         </select></td>
-        <td>${inp("service", "price", s.price, `data-ri="${i}"`, uMoney(), "w-money")}</td>
-        <td><div class="row-btns">${dup("service", null, null, i)}${del("service", null, i)}</div></td>
-      </tr>`).join("") || `<tr><td colspan="4"><div class="empty">خدمتی نیست — از کتابخانه اضافه کنید.</div></td></tr>`}
+        <td>${inp("service", "price", s.price, a(`data-ri="${i}"`), uMoney(), "w-money")}</td>
+      </tr>`;
+    }).join("") || `<tr><td colspan="3"><div class="empty">خدمتی نیست — از کتابخانه اضافه کنید.</div></td></tr>`}
     </tbody>`;
 
   /* شمارنده‌ی تب‌ها */
@@ -5159,6 +6421,8 @@ function renderEditorTables() {
   el("cntExtras").textContent = fa(pg.extras.length);
   el("cntServices").textContent = fa(pg.services.length);
   renderDimRibbon();
+
+  restoreCellFocus(keep);
 }
 
 function updateComputedCells() {
@@ -5232,17 +6496,30 @@ function invPayload(p) {
 }
 
 let _calcTimer = null;
+function paintDirtyState2() {
+  const on = !!state.dirty;
+  const b = el("btnSaveProject");
+  if (b) b.classList.toggle("dirty", on);
+  /* نشانِ «ذخیره‌نشده» در نوارِ فرمان و در نوارِ جمع — بازخوردِ مداوم بدونِ
+     مزاحمت: فقط وقتی لازم است دیده می‌شود.                                     */
+  const chip = el("ebDirty");
+  if (chip) chip.hidden = !on;
+  const hint = el("tbSaveHint");
+  if (hint) hint.hidden = !on;
+  const bar = el("editorBar");
+  if (bar) bar.classList.toggle("is-dirty", on);
+}
 function markDirty(undoKey) {
   if (!state.dirty) {
     state.dirty = true;
   }
-  $$("#btnSaveProject, #btnTotalSave").forEach((b) => b && b.classList.add("dirty"));
+  paintDirtyState2();
   undoCommit(undoKey);          /* هر تغییر = یک گام در تاریخچه‌ی واگرد */
   scheduleDraftSave();          /* پیش‌نویسِ خودکار برای نسیدنِ کار */
 }
 function clearDirty() {
   state.dirty = false;
-  $$("#btnSaveProject, #btnTotalSave").forEach((b) => b && b.classList.remove("dirty"));
+  paintDirtyState2();
 }
 
 /* ================================================================== واگرد
@@ -5291,7 +6568,7 @@ function undoApplySnap() {
     p.pages = d.pages || [];
     state.pageIdx = Math.min(Math.max(0, +d.pageIdx || 0), Math.max(0, p.pages.length - 1));
     state.dirty = true;
-    $$("#btnSaveProject, #btnTotalSave").forEach((b) => b && b.classList.add("dirty"));
+    paintDirtyState2();
     renderSectionPills(); renderSectionBar(); renderEditorTables();
     scheduleRecalc(50);
     scheduleDraftSave();
@@ -5388,8 +6665,59 @@ async function recalcTotals() {
   }
   renderDimRibbon();
   updateComputedCells();
+  updateTbSummary();
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   کشوی «تنظیمات مالی» در نوارِ جمع
+   --------------------------------------------------------------------------
+   پیش‌تر نوارِ جمع ۸ ورودی مالی را یک‌جا و همیشه باز نشان می‌داد؛ یعنی نیمی از
+   ارتفاعِ صفحه صرفِ چیزهایی می‌شد که در ۹۰٪ مواقع دست‌نخورده می‌مانند
+   (یافته‌ی F‑2). حالا نوار فقط «خلاصه» دارد و ورودی‌ها پشتِ یک کشو هستند.
+   ولی خلاصه نباید پنهان‌کاری کند: آنچه فعال است همان‌جا دیده می‌شود.        */
+function tbSummaryParts() {
+  const parts = [];
+  const mode = el("tbProfitMode") ? el("tbProfitMode").value : "markup";
+  const pct = parseNum(el("tbProfitPct") ? el("tbProfitPct").value : "");
+  if (pct) parts.push((mode === "margin" ? "مارجین " : "سود ") + fa(pct) + "٪");
+  const im = el("tbInstallMode") ? el("tbInstallMode").value : "none";
+  const iv = parseNum(el("tbInstallVal") ? el("tbInstallVal").value : "");
+  if (im !== "none" && iv) {
+    const lbl = { fixed: "نصب ", per_meter: "نصب متری ", percent: "نصب " }[im] || "نصب ";
+    parts.push(lbl + fa(iv) + (im === "percent" ? "٪" : ""));
+  }
+  const dp = parseNum(el("tbDiscPct") ? el("tbDiscPct").value : "");
+  const da = parseNum(el("tbDiscAmt") ? el("tbDiscAmt").value : "");
+  if (dp) parts.push("تخفیف " + fa(dp) + "٪");
+  else if (da) parts.push("تخفیف " + fmtInp(da));
+  if (el("tbVat") && el("tbVat").checked) {
+    parts.push("مالیات " + fa(parseNum(el("tbVatPct") ? el("tbVatPct").value : "") || 10) + "٪");
+  }
+  const ef = parseNum(el("tbExtraFixed") ? el("tbExtraFixed").value : "");
+  if (ef) parts.push("ثابت " + fmtInp(ef));
+  const dep = parseNum(el("tbDepositAmt") ? el("tbDepositAmt").value : "");
+  const depp = parseNum(el("tbDepositPct") ? el("tbDepositPct").value : "");
+  if (dep) parts.push("پیش‌پرداخت " + fmtInp(dep));
+  else if (depp) parts.push("پیش‌پرداخت " + fa(depp) + "٪");
+  const rs = +(el("tbRoundStep") ? el("tbRoundStep").value : 0);
+  if (rs) parts.push("رُند به " + fmtInp(rs));
+  return parts;
+}
+function updateTbSummary() {
+  const host = el("tbSummary");
+  if (!host) return;
+  const parts = tbSummaryParts();
+  host.textContent = parts.length ? parts.join(" • ") : "بدون تعدیل";
+  host.title = parts.length ? parts.join(" • ") : "هیچ تعدیلِ مالی فعال نیست";
+}
+function setTbDrawer(open, persist) {
+  const d = el("tbDrawer"), b = el("btnTbDrawer");
+  if (!d || !b) return;
+  d.hidden = !open;
+  b.setAttribute("aria-expanded", open ? "true" : "false");
+  b.classList.toggle("open", !!open);
+  if (persist !== false) { try { localStorage.setItem("kabir.tbDrawer", open ? "1" : "0"); } catch (e) {} }
+}
 function readTotalbarInto(p) {
   p.profit_mode = el("tbProfitMode").value;
   p.profit_percent = parseNum(el("tbProfitPct").value);
@@ -5430,6 +6758,38 @@ function readEditorFieldsInto(p) {
 }
 
 function openProjectEditor(id, withDraft) {
+  /* ★ اگر کاربر وسطِ ویرایشِ پروژه‌ی دیگری باشد، بازکردنِ یک پروژه‌ی جدید
+     نباید بی‌صدا کارِ قبلی را دور بریزد (نقضِ «جلوگیری از از دست رفتن داده»).
+     مسیرِ async: ابتدا ذخیره‌ی بی‌صدا، و در صورتِ شکست، پرسشِ صریح.            */
+  const cur = state.editingProject;
+  if (cur && Number(cur.id) !== Number(id) && state.dirty && !withDraft) {
+    (async () => {
+      /* سیاستِ سخت‌گیرانه: حتی جابه‌جایی بین دو پروژه هم بی‌صدا نیست */
+      const go = async () => { forceCloseEditor(); openProjectEditor(id, withDraft); };
+      const act = await confirmDiscard(
+        `پروژه‌ی «<b>${esc(cur.title)}</b>» تغییراتِ <b>ذخیره‌نشده</b> دارد.<br>` +
+        "پیش از بازکردنِ پروژه‌ی دیگر تکلیفشان را روشن کنید.",
+        {
+          title: "جابه‌جایی با داده‌ی ذخیره‌نشده",
+          okLabel: "دور ریختن و بازکردن",
+          okTone: "danger",
+          altLabel: "ذخیره و بازکردن",
+          altTone: "success",
+          cancelLabel: "ماندن روی همین پروژه",
+          onAlt: async () => {
+            const saver = MODAL_KEYS.saveActiveContext || (() => saveProject(true));
+            const ok = await saver();
+            if (ok !== false) await go();
+          },
+        });
+      if (act) await go();
+      else {
+        if (state.page !== "projects") navigateNow("projects");
+        el("projectEditor").scrollIntoView({ block: "start" });
+      }
+    })();
+    return;
+  }
   let p = PROJECTS.find((x) => x.id === Number(id));
   if (!p) return;
   /* ★ بازیابی پیش‌نویسِ ذخیره‌نشده (بعد از بسته‌شدنِ مرورگر/قطع برق) */
@@ -5445,7 +6805,10 @@ function openProjectEditor(id, withDraft) {
   if (!withDraft) state.pageIdx = 0;
   state.expanded.clear();
   el("projectEditor").hidden = false;
-  el("edCode").value = p.code || "—";
+  /* کد و عنوانِ پروژه حالا در نوارِ فرمانِ چسبان دیده می‌شوند تا کاربر هنگام
+     اسکرول در جدولِ بلند همیشه بداند «روی کدام پروژه» کار می‌کند.             */
+  if (el("edCodeChip")) el("edCodeChip").textContent = p.code || "—";
+  if (el("ebTitle")) el("ebTitle").textContent = p.title || "—";
   el("edTitle").value = p.title || "";
   el("edStatus").value = p.status || "draft";
   el("edStatusBadge").textContent = STATUS_LABEL[p.status] || p.status;
@@ -5467,6 +6830,13 @@ function openProjectEditor(id, withDraft) {
   if (el("tbDepositPct")) el("tbDepositPct").value = p.deposit_percent ? fa(p.deposit_percent) : "";
   if (el("tbDepositAmt")) el("tbDepositAmt").value = p.deposit_amount ? fmtInp(p.deposit_amount) : "";
   if (el("tbRoundStep")) el("tbRoundStep").value = "0";
+  /* وضعیتِ کشوی مالی سلیقه‌ی کاربر است، نه ویژگیِ پروژه → از localStorage */
+  {
+    let openD = true;
+    try { openD = localStorage.getItem("kabir.tbDrawer") !== "0"; } catch (e) {}
+    setTbDrawer(openD, false);
+  }
+  updateTbSummary();
   clearDirty();
   renderSectionPills();
   renderSectionBar();
@@ -5494,16 +6864,25 @@ function openProjectEditor(id, withDraft) {
 }
 
 function closeProjectEditor() {
-  const doClose = () => {
-    if (state.editingProject) clearDraft(state.editingProject.id);
-    clearTimeout(_draftTimer);
-    state.editingProject = null;
-    el("projectEditor").hidden = true;
-    undoReset();
-  };
-  if (state.dirty && API.ok) {
-    confirmAction("تغییرات ذخیره‌نشده دارید. بدون ذخیره بستن؟", doClose, "بستن ویرایشگر", "بستن");
-  } else doClose();
+  /* سه کنشِ ثابت (همان قراردادِ لایه‌ی مودال): ذخیره و بستن / ماندن / دور ریختن.
+     کنشِ خطرناک عمداً قرمز و در کنارِ کنشِ امنِ سبز است تا انتخابِ درست آسان باشد. */
+  if (!state.dirty) { forceCloseEditor(); return; }
+  confirmDiscard(
+    "ویرایشگر پروژه تغییراتِ <b>ذخیره‌نشده</b> دارد.<br>پیش از بستن تکلیفشان را روشن کنید.",
+    {
+      title: "بستنِ ویرایشگر",
+      okLabel: "دور ریختن و بستن",
+      okTone: "danger",
+      altLabel: "ذخیره و بستن",
+      altTone: "success",
+      cancelLabel: "ماندن و ادامه‌ی ویرایش",
+      onAlt: async () => {
+        const ok = await saveProject();
+        if (ok !== false) { forceCloseEditor(); toast("ذخیره شد و ویرایشگر بسته شد", "success"); }
+      },
+    }).then((discard) => {
+      if (discard) { forceCloseEditor(); toast("تغییرات ذخیره‌نشده دور ریخته شد", "warn"); }
+    });
 }
 
 async function saveProject(silentToast) {
@@ -5849,6 +7228,9 @@ function renderSearchDrop(q) {
 /* ------------------------------------------------------ ذخیره‌ی حالت نمایشی */
 function demoSave() {
   if (API.ok) return;
+  /* درزِ آزمون: «ذخیره‌ی واقعی» در حالت نمایشی هم باید قابلِ شمردن باشد تا
+     تست‌ها بتوانند «دور ریختن» را از «ذخیره‌ی بی‌صدا» تشخیص دهند.            */
+  try { window.__demoSaveCount = (window.__demoSaveCount || 0) + 1; } catch (e) {}
   try {
     localStorage.setItem("kabir-demo-db", JSON.stringify({
       materials: MATERIALS, styles: STYLES, projects: PROJECTS,
@@ -5892,9 +7274,12 @@ function openTemplateSaveModal(unitIdx) {
 }
 
 async function saveUnitTemplate() {
-  if (!_tplPendingUnit) return;
+  if (!_tplPendingUnit) return false;
+  clearFieldErrors(el("modal-tpl-save"));
   const name = el("tplName").value.trim();
-  if (!name) { toast("نام الگو را وارد کنید", "warn"); return; }
+  if (!validateForm([
+    ["tplName", (v) => !!v.trim(), "نام الگو را وارد کنید — در فهرستِ الگوها با همین نام می‌آید."],
+  ])) return false;
   const note = el("tplNote").value.trim();
   const data = JSON.parse(JSON.stringify(_tplPendingUnit));
   data.label = name;
@@ -5902,16 +7287,17 @@ async function saveUnitTemplate() {
     try {
       const r = await API.req("POST", "/api/unit-templates", { name, note, data });
       UNIT_TEMPLATES = r.templates || [];
-    } catch (e) { toast("ذخیره‌ی الگو ناموفق: " + esc(e.message), "error"); return; }
+    } catch (e) { toast("ذخیره‌ی الگو ناموفق: " + esc(e.message), "error"); return false; }
   } else {
     const id = Math.max(0, ...UNIT_TEMPLATES.map((t) => +t.id || 0)) + 1;
     UNIT_TEMPLATES.push({ id, name, note, data, sort_order: UNIT_TEMPLATES.length });
     demoSave();
   }
   _tplPendingUnit = null;
-  closeModal();
   renderTemplateSelect();
+  renderTemplatesTable();
   toast(`الگوی «${esc(name)}» ذخیره شد`, "success");
+  return true;
 }
 
 function useTemplate() {
@@ -6170,18 +7556,20 @@ function quickPayload() {
 
 async function buildQuickProject() {
   const q = quickPayload();
+  clearFieldErrors(el("modal-quick"));
   if (q.ground_lm <= 0 && q.wall_lm <= 0) {
-    toast("حداقل یکی از متراژهای زمینی یا دیواری را وارد کنید", "warn"); return;
+    setFieldError("qkGround", "حداقل یکی از متراژهای زمینی یا دیواری لازم است.");
+    setFieldError("qkWall", "حداقل یکی از متراژهای زمینی یا دیواری لازم است.");
+    focusFirstError(el("modal-quick"));
+    return false;
   }
-  const btn = el("btnQuickBuild");
-  btn.disabled = true;
   try {
     if (API.ok) {
       const r = await API.req("POST", "/api/quick-project", q);
       const np = normalizeProject(r.project);
       PROJECTS.unshift(np);
       renderProjects(); fillInvoiceProjects(); renderDashboard();
-      closeModal();
+      closeModal("quick");
       openProjectEditor(np.id);
       const c = r.calc || {};
       toast(`پروژه ساخته شد — مبلغ برآوردی: ${fmt(scaled(c.final_price || 0))} ${CUR.name} • ابعاد را با اندازه‌ی واقعی چک کنید`, "success");
@@ -6207,15 +7595,22 @@ async function buildQuickProject() {
       p.pages = [pg];
       PROJECTS.unshift(p); demoSave();
       renderProjects(); fillInvoiceProjects(); renderDashboard();
-      closeModal();
+      closeModal("quick");
       openProjectEditor(p.id);
       toast("پروژه ساخته شد (حالت نمایشی)", "success");
     }
+    return true;
   } catch (e) {
     toast("خطا: " + esc(e.message), "error");
-  } finally {
-    btn.disabled = false;
+    return false;
   }
+}
+
+/* واسطه‌ی ثبتِ «قیمت‌گیری سریع» برای لایه‌ی مودال — اگر مودال بسته نشده باشد
+   یعنی ساختِ پروژه ناموفق بوده و فرم باید باز بماند.                          */
+async function buildQuickProjectGuarded() {
+  await buildQuickProject();
+  return !isModalOpen("quick");
 }
 
 /* ============================================================== سیم‌کشی */
@@ -6298,27 +7693,43 @@ function wire() {
     }
   });
 
-  /* --- میان‌برها --- */
+  /* --- میان‌برها و لایه‌ی مودال -------------------------------------------------
+     یک هندلرِ سراسری با اولویتِ روشن:
+       ۱) اگر مودالی باز است → Escape/Enter/Ctrl+S/Tab فقط به لایه‌ی مودال می‌رسد
+          (contract در js/ui-modal.js: handleModalKeys).
+       ۲) وگرنه → میان‌برهای صفحه: جست‌وجو، ناوبری، ذخیره، واگرد.
+     نکته: ناوبری دیگر بی‌قید نیست؛ navigate() گاردِ «تغییرات ذخیره‌نشده» دارد.  */
+  wireModalLayer();
+  registerExitGuard(editorExitGuard);
+
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      closeModal();
-      el("searchDrop").hidden = true;
-      document.body.classList.remove("nav-open");
-    }
-    if (e.key === "/" && !/input|textarea|select/i.test(document.activeElement.tagName)) {
+    /* جست‌وجوی سراسری با «/» — فقط وقتی تایپ نمی‌کنید و مودالی باز نیست */
+    if (e.key === "/" && !anyModalOpen() && !isTypingTarget(document.activeElement)) {
       e.preventDefault(); gs.focus();
+      return;
     }
-    if (e.altKey && /^[1-6]$/.test(e.key)) {
-      navigate(Object.keys(PAGES)[Number(e.key) - 1]);
+    if (anyModalOpen()) {
+      if (handleModalKeys(e)) return;         /* رویداد مصرف شد */
+    } else {
+      /* Ctrl+S در زمینه‌ی صفحه (بدونِ مودال) */
+      if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === "s") {
+        if (handleModalKeys(e)) return;
+      }
+      if (e.key === "Escape") {
+        el("searchDrop").hidden = true;
+        document.body.classList.remove("nav-open");
+        return;
+      }
     }
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && state.editingProject && state.page === "projects") {
+    if (e.altKey && !e.ctrlKey && !e.metaKey && /^[1-6]$/.test(e.key)) {
       e.preventDefault();
-      saveProject();
+      navigate(Object.keys(PAGES)[Number(e.key) - 1]);
+      return;
     }
     /* ★ واگرد/بازانجامِ ویرایشگر — وقتی فوکوس داخل فیلد متنی نیست
        (داخل فیلد، واگردِ خودِ مرورگر برای تایپ کار می‌کند). */
     if ((e.ctrlKey || e.metaKey) && state.editingProject &&
-        !el("projectEditor").hidden && el("modalBackdrop").hidden) {
+        !el("projectEditor").hidden && !anyModalOpen()) {
       const ae = document.activeElement;
       const inText = ae && /input|textarea/i.test(ae.tagName) && ae.type !== "checkbox";
       if (!inText && (e.key.toLowerCase() === "z" || e.key.toLowerCase() === "y")) {
@@ -6327,17 +7738,28 @@ function wire() {
       }
     }
   });
+
+  /* ★ بستنِ تب/مرورگر: هم در حالت متصل و هم نمایشی هشدار می‌دهیم.
+     قبلاً در حالت نمایشی بی‌صدا کارِ کاربر می‌رفت.                            */
   window.addEventListener("beforeunload", (e) => {
-    if (state.dirty && API.ok) { e.preventDefault(); e.returnValue = ""; }
+    if (state.dirty || anyModalDirty()) { e.preventDefault(); e.returnValue = ""; }
   });
 
-  /* --- مودال‌ها --- */
-  el("modalBackdrop").addEventListener("click", (e) => { if (e.target === el("modalBackdrop")) closeModal(); });
-  $$("[data-close]").forEach((b) => b.addEventListener("click", closeModal));
-  el("btnConfirmOk").addEventListener("click", () => {
-    closeModal();
-    if (state.confirmCb) { state.confirmCb(); state.confirmCb = null; }
+  /* ثبتِ «شناسنامه‌ی» هر مودالِ دارای فرم: چه چیزی ثبت می‌کند، با کدام دکمه،
+     چه برچسبی در هشدارِ «تغییرات ذخیره‌نشده» داشته باشد و راهنمای کلیدش چه باشد.
+     توابع با «ارجاع» پاس داده می‌شوند نه با نام روی window — چون اسکریپت‌ها
+     strict اجرا می‌شوند و در strict تابعِ سطح‌بالا به window نمی‌چسبد.          */
+  registerModalForms({
+    saveMaterialForm, applyBulkPrices, saveStyleForm, createProjectForm,
+    buildQuickProjectGuarded, saveUnitTemplate,
   });
+
+  /* کنشِ «ثبت» با Enter/Ctrl+S در زمینه‌ی صفحه (وقتی مودالی باز نیست) */
+  MODAL_KEYS.contextSave = () => {
+    if (state.editingProject && !el("projectEditor").hidden && state.page === "projects") return saveProject();
+    if (state.page === "settings") return el("btnSaveSettings").click();
+    return null;
+  };
 
   /* ---------------- داشبورد ---------------- */
   el("btnDashHistory").addEventListener("click", async () => {
@@ -6433,7 +7855,7 @@ function wire() {
         afterMaterialsChanged();
         toast("متریال حذف شد" + (nRecalc ? ` — قیمت ${fa(nRecalc)} پروژه بازمحاسبه شد` : ""), "success");
       };
-      confirmAction(`«<b>${esc(m.name)}</b>» برای همیشه حذف شود؟`, async () => {
+      askConfirm(`«<b>${esc(m.name)}</b>» برای همیشه حذف شود؟`, async () => {
         if (!API.ok) {
           MATERIALS.splice(MATERIALS.indexOf(m), 1);
           demoSave();
@@ -6448,7 +7870,7 @@ function wire() {
           if (err && err.status === 409) {
             /* ★ قلم در پروژه‌ها استفاده شده — سرور بدون تأییدِ صریح حذف نمی‌کند
                (حذفِ بی‌صدا یعنی قیمت پروژه‌ها بی‌خبر ارزان می‌شد!) */
-            confirmAction(esc(err.message), async () => {
+            askInfo(esc(err.message), async () => {
               try {
                 const resp2 = await API.req("DELETE", `/api/materials/${m.id}`, { force: true });
                 MATERIALS = resp2.materials;
@@ -6519,9 +7941,35 @@ function wire() {
           toast(`«${esc(m.name)}»: ${fmt(old)} ← <b>${fmt(nv)}</b> ${CUR.name}`, "success");
         }
       };
+      /* ناوبریِ کیبوردیِ «نرخِ صبحِ بازار»:
+         اپراتور صبح ده‌ها قیمت را پشتِ سر هم به‌روز می‌کند. پس Tab باید مثلِ
+         یک جدولِ ورودِ داده کار کند: ثبت + رفتن به قیمتِ بعدی. Shift+Tab به
+         قبلی، Enter ثبت و ماندن، Escape انصراف. بدونِ این، بعدِ هر ثبت کل
+         جدول از نو رندر می‌شد و فوکوس به body می‌پرید — یعنی هر قلم یک
+         «برگشت به اولِ صفحه» هزینه داشت (یافته‌ی K‑3).                        */
+      /* مقصدِ Tab را «پیش از» ثبت نگه می‌داریم: ثبت جدول را از نو رندر
+         می‌کند، پس سلولِ فعلی از DOM بیرون می‌رود و باید مقصد را از روی
+         فهرستِ «پیش از رندر» پیدا کنیم.                                       */
+      const planNext = (dir) => {
+        const cells = [...document.querySelectorAll("[data-quick-price]")];
+        const here = cells.findIndex((c) => +c.dataset.quickPrice === +m.id);
+        if (here < 0) return null;
+        const i = here + dir;
+        return (i >= 0 && i < cells.length) ? +cells[i].dataset.quickPrice : null;
+      };
+      const moveTo = async (dir) => {
+        const target = planNext(dir);
+        _qpNavTarget = target;
+        if (target === null) {
+          toast(dir > 0 ? "به آخرین قیمتِ فهرست رسیدید" : "به اولین قیمتِ فهرست رسیدید", "info");
+          _qpNavTarget = null;
+        }
+        await commit();
+      };
       inp2.addEventListener("keydown", (ev) => {
         if (ev.key === "Enter") { ev.preventDefault(); commit(); }
-        else if (ev.key === "Escape") { ev.preventDefault(); cancel(); }
+        else if (ev.key === "Escape") { ev.preventDefault(); _qpNavTarget = null; cancel(); }
+        else if (ev.key === "Tab") { ev.preventDefault(); moveTo(ev.shiftKey ? -1 : 1); }
         ev.stopPropagation();
       });
       inp2.addEventListener("blur", () => setTimeout(commit, 120));
@@ -6530,10 +7978,17 @@ function wire() {
   });
 
   el("mfUnit").addEventListener("change", setMfPriceHint);
-  el("btnSaveMaterial").addEventListener("click", () => busy(el("btnSaveMaterial"), async () => {
+
+  /* ★ ثبتِ فرمِ متریال — هم با کلیک، هم با Enter/Ctrl+S (از لایه‌ی مودال).
+     خطای اعتبارسنجی کنارِ خودِ فیلد نشان داده می‌شود و فوکوس روی اولین
+     فیلدِ خطادار می‌رود؛ دیگر لازم نیست کاربر دنبالِ توست بگردد.             */
+  async function saveMaterialForm() {
+    clearFieldErrors(el("modal-material"));
     const payload = matPayload();
-    if (!payload.name) { toast("نام قلم را وارد کنید", "error"); return; }
-    if (payload.price <= 0) { toast("قیمت معتبر وارد کنید", "error"); return; }
+    if (!validateForm([
+      ["mfName", (v) => !!v.trim(), "نام قلم را وارد کنید — بدون نام، در فهرست‌ها پیدا نمی‌شود."],
+      ["mfPrice", (v) => parseNum(v) > 0, "قیمت باید عددی بزرگ‌تر از صفر باشد."],
+    ])) return false;
     let resp = null;
     if (API.ok) {
       try {
@@ -6541,7 +7996,7 @@ function wire() {
           ? await API.req("PUT", `/api/materials/${state.editingMaterial.id}`, payload)
           : await API.req("POST", "/api/materials", payload);
         MATERIALS = resp.materials;
-      } catch (err) { toast("ذخیره ناموفق: " + esc(err.message), "error"); return; }
+      } catch (err) { toast("ذخیره ناموفق: " + esc(err.message), "error"); return false; }
     } else {
       if (state.editingMaterial) {
         const m = state.editingMaterial;
@@ -6554,14 +8009,15 @@ function wire() {
       }
       demoSave();
     }
-    closeModal();
     /* اگر قیمت تغییر کرده باشد، سرور همه‌ی پروژه‌ها را بازمحاسبه کرده است */
     const nRecalc = ingestPriceRefresh(resp);
     afterMaterialsChanged();
     toast(state.editingMaterial
       ? "تغییرات قلم ذخیره شد" + (nRecalc ? ` — قیمت ${fa(nRecalc)} پروژه هم با نرخ جدید به‌روز شد` : "")
       : "قلم جدید ذخیره شد", "success");
-  }));
+    return true;      /* لایه‌ی مودال خودش می‌بندد و نشانِ «ذخیره‌نشده» را پاک می‌کند */
+  }
+  el("btnSaveMaterial").addEventListener("click", () => submitModal("material"));
   function afterMaterialsChanged() {
     renderMaterials();
     fillStyleSelects();
@@ -6591,9 +8047,12 @@ function wire() {
     chip.classList.add("active");
     el("bulkPct").value = fa(chip.dataset.pct);
   }));
-  el("btnApplyBulk").addEventListener("click", () => busy(el("btnApplyBulk"), async () => {
+  async function applyBulkPrices() {
+    clearFieldErrors(el("modal-bulk"));
     const pct = parseNum(el("bulkPct").value);
-    if (!pct) { toast("درصد تغییر را وارد کنید", "error"); return; }
+    if (!validateForm([
+      ["bulkPct", (v) => parseNum(v) !== 0, "درصد تغییر را وارد کنید (مثلاً ۱۰ یا ۵−)."],
+    ])) return false;
     const scope = ($("input[name=bulkScope]:checked") || {}).value;
     const reason = el("bulkReason").value.trim() || "به‌روزرسانی نرخ بازار";
     const cat = scope === "cat" && state.matCat !== "all" ? state.matCat : null;
@@ -6602,15 +8061,14 @@ function wire() {
         const resp = await API.req("POST", "/api/materials/bulk", { cat, percent: pct, reason });
         MATERIALS = resp.materials;
         HISTORY = resp.history || HISTORY;
-        closeModal();
         /* پروژه‌ها هم با نرخ جدید بازمحاسبه شده‌اند — نتایج ادغام شود */
         const nRecalc = ingestPriceRefresh(resp);
         afterMaterialsChanged();
         renderHistory();
         toast(`قیمت ${fa(resp.count)} قلم به‌روز شد (${pct > 0 ? "+" : ""}${fmt(pct, true)}٪)` +
           (nRecalc ? ` — قیمت ${fa(nRecalc)} پروژه هم خودکار با نرخ جدید بازمحاسبه شد` : ""), "success");
-      } catch (err) { toast("خطا: " + esc(err.message), "error"); }
-      return;
+      } catch (err) { toast("خطا: " + esc(err.message), "error"); return false; }
+      return true;
     }
     let count = 0;
     MATERIALS.forEach((m) => {
@@ -6623,11 +8081,12 @@ function wire() {
       }
     });
     demoSave();
-    closeModal();
     afterMaterialsChanged();
     renderHistory();
     toast(`قیمت ${fa(count)} قلم به‌روز شد (${pct > 0 ? "+" : ""}${fmt(pct, true)}٪)`, "success");
-  }));
+    return true;
+  }
+  el("btnApplyBulk").addEventListener("click", () => submitModal("bulk"));
   /* ---------------- سبک‌ها ---------------- */
   function openStyleModal(st) {
     if (!st && STYLES.length >= 20) { toast("حداکثر ۲۰ سبک مجاز است", "warn"); return; }
@@ -6656,26 +8115,30 @@ function wire() {
     return { name: el("sfName").value.trim(), note: el("sfNote").value.trim(), data };
   }
 
-  el("btnSaveStyle").addEventListener("click", () => busy(el("btnSaveStyle"), async () => {
+  async function saveStyleForm() {
+    clearFieldErrors(el("modal-style"));
     const payload = stylePayload();
-    if (!payload.name) { toast("نام سبک را وارد کنید", "error"); return; }
+    if (!validateForm([
+      ["sfName", (v) => !!v.trim(), "نام سبک را وارد کنید — در فهرستِ بخش‌ها با همین نام پیدا می‌شود."],
+    ])) return false;
     if (API.ok) {
       try {
         const resp = state.editingStyle
           ? await API.req("PUT", `/api/styles/${state.editingStyle.id}`, payload)
           : await API.req("POST", "/api/styles", payload);
         STYLES = resp.styles;
-      } catch (err) { toast("ذخیره ناموفق: " + esc(err.message), "error"); return; }
+      } catch (err) { toast("ذخیره ناموفق: " + esc(err.message), "error"); return false; }
     } else {
       if (state.editingStyle) Object.assign(state.editingStyle, payload);
       else STYLES.push(Object.assign({ id: Math.max(0, ...STYLES.map((s) => s.id)) + 1 }, payload));
       demoSave();
     }
-    closeModal();
     renderStyles();
     if (state.editingProject) renderSectionBar();
     toast("سبک ذخیره شد", "success");
-  }));
+    return true;
+  }
+  el("btnSaveStyle").addEventListener("click", () => submitModal("style"));
   el("stylesGrid").addEventListener("click", async (e) => {
     const btn = e.target.closest("button[data-use-style],button[data-edit-style],button[data-copy-style],button[data-del-style],button[data-new-style]");
     if (!btn) return;
@@ -6700,7 +8163,7 @@ function wire() {
       renderStyles();
       toast("سبک کپی شد", "success");
     } else if (btn.dataset.delStyle !== undefined) {
-      confirmAction(`سبک «<b>${esc(st.name)}</b>» حذف شود؟`, async () => {
+      askConfirm(`سبک «<b>${esc(st.name)}</b>» حذف شود؟`, async () => {
         if (API.ok) {
           try { STYLES = (await API.req("DELETE", `/api/styles/${id}`)).styles; }
           catch (err) { toast("خطا: " + esc(err.message), "error"); return; }
@@ -6738,9 +8201,12 @@ function wire() {
     openModal("project");
   }
 
-  el("btnCreateProject").addEventListener("click", () => busy(el("btnCreateProject"), async () => {
+  async function createProjectForm() {
+    clearFieldErrors(el("modal-project"));
     const title = el("pfTitle").value.trim();
-    if (!title) { toast("عنوان پروژه را وارد کنید", "error"); return; }
+    if (!validateForm([
+      ["pfTitle", (v) => !!v.trim(), "عنوان پروژه را وارد کنید — در فهرست و فاکتور با همین عنوان دیده می‌شود."],
+    ])) return false;
     const styleId = Number(el("pfStyle").value) || 0;
     const body = {
       title, customer: el("pfCustomer").value.trim(), mobile: el("pfMobile").value.trim(),
@@ -6749,7 +8215,7 @@ function wire() {
     let np;
     if (API.ok) {
       try { np = normalizeProject((await API.req("POST", "/api/projects", body)).project); }
-      catch (err) { toast("ایجاد ناموفق: " + esc(err.message), "error"); return; }
+      catch (err) { toast("ایجاد ناموفق: " + esc(err.message), "error"); return false; }
     } else {
       const id = Math.max(0, ...PROJECTS.map((p) => p.id)) + 1;
       np = normalizeProject({
@@ -6765,11 +8231,13 @@ function wire() {
       demoSave();
     }
     if (!PROJECTS.includes(np)) PROJECTS.unshift(np);
-    closeModal();
+    closeModal("project");
     renderProjects(); renderDashboard(); fillInvoiceProjects();
     openProjectEditor(np.id);
     toast("پروژه‌ی جدید ایجاد شد — یونیت‌ها را وارد کنید", "success");
-  }));
+    return true;
+  }
+  el("btnCreateProject").addEventListener("click", () => submitModal("project"));
   el("projectsTable").addEventListener("click", async (e) => {
     const open = e.target.closest("[data-open-project]");
     const inv = e.target.closest("[data-invoice-project]");
@@ -6784,7 +8252,7 @@ function wire() {
       toast("فاکتور برای پروژه بارگذاری شد");
     } else if (del) {
       const p = PROJECTS.find((x) => x.id === +del.dataset.delProject);
-      confirmAction(`پروژه‌ی «<b>${esc(p.title)}</b>» و همه‌ی داده‌های آن حذف شود؟`, async () => {
+      askConfirm(`پروژه‌ی «<b>${esc(p.title)}</b>» و همه‌ی داده‌های آن حذف شود؟`, async () => {
         if (API.ok) {
           try { await API.req("DELETE", `/api/projects/${p.id}`); }
           catch (err) { toast("حذف ناموفق: " + esc(err.message), "error"); return; }
@@ -6802,6 +8270,12 @@ function wire() {
   el("btnDupProject").addEventListener("click", () => busy(el("btnDupProject"), async () => {
     const p = state.editingProject;
     if (!p) return;
+    /* ★ قبلاً کپی از «نسخه‌ی روی سرور» ساخته می‌شد و تغییراتِ ذخیره‌نشده‌ی
+       کاربر بی‌صدا از دست می‌رفت. حالا اول ذخیره، بعد کپی.                      */
+    if (state.dirty) {
+      const ok = await saveProject(true);
+      if (!ok) { toast("ابتدا تغییرات را ذخیره کنید، بعد پروژه را کپی کنید", "warn"); return; }
+    }
     let np;
     if (API.ok) {
       try { np = normalizeProject((await API.req("POST", `/api/projects/${p.id}/duplicate`)).project); }
@@ -6838,7 +8312,7 @@ function wire() {
       e.stopPropagation();
       const p = state.editingProject;
       const i = +x.dataset.secDel;
-      confirmAction(`بخش «<b>${esc(p.pages[i].name)}</b>» و همه‌ی یونیت‌هایش حذف شود؟`, () => {
+      askConfirm(`بخش «<b>${esc(p.pages[i].name)}</b>» و همه‌ی یونیت‌هایش حذف شود؟`, () => {
         p.pages.splice(i, 1);
         state.pageIdx = Math.max(0, state.pageIdx - (i <= state.pageIdx ? 1 : 0));
         markDirty();
@@ -6880,17 +8354,39 @@ function wire() {
     markDirty();
     scheduleRecalc();
   });
+  /* ★ حذفِ یک کلیکِ اضافه: این عملیات کاملاً برگشت‌پذیر است (Undo دارد و
+     پیش‌نویسِ خودکار هم ذخیره می‌شود)، پس مودالِ تأییدِ خطرناک‌نما لازم نبود.
+     به‌جایش بلافاصله اعمال می‌شود و در توست، «بازگردانی» یک‌کلیکی دارد.        */
   el("btnApplyStyle").addEventListener("click", () => {
     const pg = curPage();
     if (!pg) return;
     if (!pg.style_id) { toast("ابتدا یک سبک انتخاب کنید", "warn"); return; }
     const st = STYLES.find((s) => s.id === Number(pg.style_id));
-    confirmAction(`متریالِ سبک «<b>${esc(st.name)}</b>» روی همه‌ی یونیت‌ها، درها و کشوهای این بخش اعمال شود؟`, () => {
-      applyStyleToPage(pg, pg.style_id);
-      markDirty();
-      renderSectionBar(); renderEditorTables(); scheduleRecalc(50);
-      toast(`سبک «${esc(st.name)}» روی بخش اعمال شد`, "success");
-    }, "اعمال سبک", "اعمال");
+    const before = undoSnapshot();          /* وضعیتِ پیش از اعمال — برای بازگردانی */
+    applyStyleToPage(pg, pg.style_id);
+    markDirty();
+    renderSectionBar(); renderEditorTables(); scheduleRecalc(50);
+    toast(`متریالِ سبک «<b>${esc(st.name)}</b>» روی همه‌ی یونیت‌ها، درها و کشوهای این بخش اعمال شد`,
+      "success", {
+        label: "بازگردانی",
+        cb: () => {
+          if (UNDO.applying) return;
+          const p = state.editingProject;
+          if (!p || !before) { doUndo(); return; }
+          UNDO.applying = true;
+          try {
+            const d = JSON.parse(before);
+            p.pages = d.pages || [];
+            state.pageIdx = Math.min(Math.max(0, +d.pageIdx || 0), Math.max(0, p.pages.length - 1));
+            state.dirty = true;
+            paintDirtyState2();
+            renderSectionPills(); renderSectionBar(); renderEditorTables();
+            scheduleRecalc(50); scheduleDraftSave();
+          } finally { UNDO.applying = false; }
+          updateUndoButtons();
+          toast("اعمالِ سبک بازگردانده شد", "info");
+        },
+      });
   });
   ["secWaste", "secOverhead", "secCounterLm", "secWallLen", "facadeTotalSqm", "facadeTotalPrice"].forEach((id) =>
     el(id) && el(id).addEventListener("input", () => { readSectionBarInto(); markDirty("sec." + id); renderDimRibbon(); scheduleRecalc(); }));
@@ -6940,11 +8436,15 @@ function wire() {
     if (!p || !pg) return;
     const kind = b.dataset.add;
     const d = styleDataOf(pg);
+    const keep = captureCellFocus();
+    let focusKind = null, focusIdx = null;
     if (kind === "units" || (kind && kind.startsWith("unit:"))) {
       const type = kind.startsWith("unit:") ? kind.slice("unit:".length) : "ground";
       const u = defaultUnit(type);
       applyStyleToUnit(u, d);
       pg.units.push(u);
+      focusKind = "unit"; focusIdx = pg.units.length - 1;
+      state.lastUnitIdx = focusIdx;
     } else if (kind === "doors") {
       if (!pg.units.length) { toast("ابتدا یک یونیت بسازید", "warn"); return; }
       const dr = defaultDoor();
@@ -6956,6 +8456,7 @@ function wire() {
       if (d.assembly_door) dr.assembly_id = midByName(d.assembly_door);
       if (d.packaging_door) dr.packaging_id = midByName(d.packaging_door);
       pg.units[state.lastUnitIdx || 0].doors.push(dr);
+      focusKind = "door"; focusIdx = (state.lastUnitIdx || 0) + ":" + (pg.units[state.lastUnitIdx || 0].doors.length - 1);
     } else if (kind === "drawers") {
       if (!pg.units.length) { toast("ابتدا یک یونیت بسازید", "warn"); return; }
       const dw = defaultDrawer();
@@ -6965,19 +8466,27 @@ function wire() {
       if (d.handle) dw.handle_id = midByName(d.handle);
       if (d.banding) dw.banding_id = midByName(d.banding);
       pg.units[state.lastUnitIdx || 0].drawers.push(dw);
+      focusKind = "drawer"; focusIdx = (state.lastUnitIdx || 0) + ":" + (pg.units[state.lastUnitIdx || 0].drawers.length - 1);
     } else if (kind === "facade") {
       if (pg.detail_mode !== "detailed") {
         pg.detail_mode = "detailed";
         renderSectionBar();
       }
       pg.detail_rows.push({ label: "ردیف درنما", qty: 1, w_cm: 100, h_cm: 60, price_per_sqm: 300000 });
+      focusKind = "facade"; focusIdx = pg.detail_rows.length - 1;
     } else if (kind === "extras") {
       pg.extras.push({ label: "قلم جدید", qty: 1, unit: "piece", price: 500000, visible: true });
+      focusKind = "extra"; focusIdx = pg.extras.length - 1;
     } else if (kind === "services") {
       pg.services.push({ label: "خدمت جدید", basis: "fixed", qty: 1, price: 300000 });
+      focusKind = "service"; focusIdx = pg.services.length - 1;
     }
     markDirty();
+    /* فوکوس مستقیم روی ردیفِ تازه — کاربر بدونِ یک کلیکِ اضافه تایپ را شروع
+       می‌کند (یافته‌ی K‑6: پیش‌تر پس از «افزودن» مکان‌نما گم می‌شد).          */
+    if (focusKind !== null) focusRowAfter(focusKind, focusIdx);
     renderEditorTables();
+    if (!focusKind) restoreCellFocus(keep);
     scheduleRecalc(50);
     toast("ردیف اضافه شد — مقادیر را ویرایش کنید");
   }));
@@ -7105,6 +8614,7 @@ function wire() {
     /* کپی ردیف — دقیقاً کنار ردیف فعلی قرار می‌گیرد */
     const c = e.target.closest("[data-copy-row]");
     if (c) {
+      const keepF = captureCellFocus();
       const kind = c.dataset.copyRow;
       const ui = c.dataset.ui !== "" ? +c.dataset.ui : null;
       const di = c.dataset.di !== "" ? +c.dataset.di : null;
@@ -7135,7 +8645,16 @@ function wire() {
         const src = pg.services[ri]; if (!src) return;
         pg.services.splice(ri + 1, 0, clone(src));
       }
-      markDirty(); renderEditorTables(); scheduleRecalc(50);
+      /* فوکوس به ردیفِ کپی‌شده برود تا بلافاصله قابل ویرایش باشد */
+      const focusOf = {
+        unit: ["unit", ui + 1], door: ["door", ui + ":" + (di + 1)], drawer: ["drawer", ui + ":" + (di + 1)],
+        facade: ["facade", ri + 1], extra: ["extra", ri + 1], service: ["service", ri + 1],
+      }[kind];
+      markDirty();
+      if (focusOf) focusRowAfter(focusOf[0], focusOf[1]);
+      renderEditorTables();
+      if (!focusOf) restoreCellFocus(keepF);
+      scheduleRecalc(50);
       toast(msg, "success");
       return;
     }
@@ -7148,6 +8667,8 @@ function wire() {
       const kind = d.dataset.delRow;
       const ui = d.dataset.ui !== "" ? +d.dataset.ui : null;
       const di = d.dataset.di !== "" ? +d.dataset.di : null;
+      const riD = d.dataset.ri !== "" ? +d.dataset.ri : null;
+      const keepF = captureCellFocus();
       /* ★ حذفِ قابلِ بازگردانی: ردیف را نگه می‌داریم تا با یک کلیکِ «بازگردانی»
          در توست، سرِ جایش برگردد — حذفِ اشتباهِ یک یونیتِ پرمتریال دیگر
          یعنی دوباره‌کاریِ ده‌دقیقه‌ای.                                        */
@@ -7155,19 +8676,34 @@ function wire() {
       if (kind === "unit") { arr = pg.units; idx = ui; }
       else if (kind === "door") { arr = pg.units[ui] && pg.units[ui].doors; idx = di; }
       else if (kind === "drawer") { arr = pg.units[ui] && pg.units[ui].drawers; idx = di; }
-      else if (kind === "facade") { arr = pg.detail_rows; idx = di; }
-      else if (kind === "extra") { arr = pg.extras; idx = di; }
-      else if (kind === "service") { arr = pg.services; idx = di; }
+      else if (kind === "facade") { arr = pg.detail_rows; idx = riD !== null ? riD : di; }
+      else if (kind === "extra") { arr = pg.extras; idx = riD !== null ? riD : di; }
+      else if (kind === "service") { arr = pg.services; idx = riD !== null ? riD : di; }
       if (arr && idx !== null && idx >= 0 && idx < arr.length) removed = arr.splice(idx, 1)[0];
       const labelOf = { unit: "یونیت", door: "در", drawer: "کشو", facade: "ردیف درنما", extra: "قلم", service: "خدمت" };
+      /* هویتِ ردیفِ «بعدی» — چون پس از حذف، شاخص‌ها یکی به عقب می‌آیند */
+      const nextIdOf = {
+        unit: () => ["unit", Math.min(idx, pg.units.length - 1)],
+        door: () => ["door", ui + ":" + Math.min(idx, (pg.units[ui] && pg.units[ui].doors.length || 1) - 1)],
+        drawer: () => ["drawer", ui + ":" + Math.min(idx, (pg.units[ui] && pg.units[ui].drawers.length || 1) - 1)],
+        facade: () => ["facade", Math.min(idx, pg.detail_rows.length - 1)],
+        extra: () => ["extra", Math.min(idx, pg.extras.length - 1)],
+        service: () => ["service", Math.min(idx, pg.services.length - 1)],
+      }[kind];
       markDirty();
+      const nxt = nextIdOf ? nextIdOf() : null;
+      if (nxt && nxt[1] >= 0) focusRowAfter(nxt[0], nxt[1]);
       renderEditorTables();
+      if (!nxt || nxt[1] < 0) restoreCellFocus(keepF);
       scheduleRecalc(50);
       toast(`ردیفِ «${esc(labelOf[kind] || "")}» حذف شد`, "info", removed && arr ? {
         label: "بازگردانی",
         cb: () => {
           arr.splice(Math.min(idx, arr.length), 0, removed);
           markDirty();
+          /* ردیفِ برگشته زیرِ انگشت بماند — کاربر معمولاً می‌خواهد ویرایشش کند */
+          const backKey = (kind === "door" || kind === "drawer") ? (ui + ":" + idx) : idx;
+          focusRowAfter(kind, backKey);
           renderEditorTables();
           scheduleRecalc(50);
           toast("ردیف برگشت", "success");
@@ -7231,13 +8767,23 @@ function wire() {
     }
   });
 
-  /* ★ دکمه‌های همسانِ نوار جمع (چسبانِ پایین) — «ذخیره» و «برش‌نامه» همیشه
-     در دسترس‌اند، حتی وقتی کاربر وسطِ جدولِ یونیت‌هاست و تا بالای صفحه
-     فاصله دارد. همان کارِ دکمه‌های سرِ کارت، بدونِ اسکرول.                  */
-  const btnTotalSave = el("btnTotalSave");
-  if (btnTotalSave) btnTotalSave.addEventListener("click", () => busy(btnTotalSave, () => saveProject()));
-  const btnTotalWorkshop = el("btnTotalWorkshop");
-  if (btnTotalWorkshop) btnTotalWorkshop.addEventListener("click", () => openWorkshopModal());
+  /* ★ ثباتِ رویه: «ذخیره» و «برش‌نامه» فقط یک جای ثابت دارند — نوارِ فرمانِ
+     چسبانِ بالای ویرایشگر. پیش‌تر هر دو در نوارِ جمع هم تکرار می‌شدند؛ یعنی
+     دو دکمه‌ی هم‌وزن برای یک کنش، که هم قانونِ فیتز را می‌شکست و هم یادگیریِ
+     جایِ دکمه را. نوارِ جمع حالا فقط «عدد» و «تنظیمات مالی» دارد.            */
+
+  /* کشوی تنظیمات مالی — جمع‌شده تا ارتفاعِ صفحه خرجِ ورودی‌های کم‌مصرف نشود */
+  const btnTbDrawer = el("btnTbDrawer");
+  if (btnTbDrawer) {
+    let saved = null;
+    try { saved = localStorage.getItem("kabir.tbDrawer"); } catch (e) {}
+    setTbDrawer(saved === null ? true : saved === "1", false);
+    btnTbDrawer.addEventListener("click", () => {
+      const d = el("tbDrawer");
+      setTbDrawer(!!d && d.hidden);
+      updateTbSummary();
+    });
+  }
 
   /* ★ واگرد/بازانجامِ تغییراتِ ویرایشگر (Ctrl+Z / Ctrl+Shift+Z) */
   const btnUndo = el("btnUndo");
@@ -7246,7 +8792,7 @@ function wire() {
   if (btnRedo) btnRedo.addEventListener("click", () => { doRedo(); });
 
   el("btnBreakdownInvoice").addEventListener("click", async () => {
-    closeModal();
+    await requestCloseModal("breakdown");   /* فقط همین لایه بسته می‌شود، نه همه */
     await gotoInvoiceForCurrent();
   });
   el("btnGoInvoice").addEventListener("click", gotoInvoiceForCurrent);
@@ -7375,7 +8921,7 @@ function wire() {
     } else if (d) {
       const id = +d.dataset.delArch;
       const a = ARCHIVE.find((x) => x.id === id);
-      confirmAction(`فاکتور <b class="ltr">${esc(a.number)}</b> از بایگانی حذف شود؟`, async () => {
+      askConfirm(`فاکتور <b class="ltr">${esc(a.number)}</b> از بایگانی حذف شود؟`, async () => {
         if (API.ok) {
           try { ARCHIVE = (await API.req("DELETE", `/api/invoices/${id}`)).invoices; }
           catch (err) { toast("خطا: " + esc(err.message), "error"); return; }
@@ -7405,7 +8951,7 @@ function wire() {
     toast("تنظیمات ذخیره شد", "success");
   }));
   el("btnResetSettings").addEventListener("click", () =>
-    confirmAction("پیش‌فرض‌های محاسبه (سود، پرت، سربار، نصب، مالیات و ابعاد پیش‌فرض یونیت‌ها) به حالت اولیه برگردانده شود؟", () => {
+    askConfirm("پیش‌فرض‌های محاسبه (سود، پرت، سربار، نصب، مالیات و ابعاد پیش‌فرض یونیت‌ها) به حالت اولیه برگردانده شود؟", () => {
       el("setProfitPct").value = fa(FACTORY_NUM_SETTINGS.setProfitPct);
       el("setOverhead").value = fa(FACTORY_NUM_SETTINGS.setOverhead);
       el("setWaste").value = fa(FACTORY_NUM_SETTINGS.setWaste);
@@ -7441,7 +8987,7 @@ function wire() {
     el("fileImportJson").value = "";
     if (!f) return;
     if (!API.ok) { toast("ورود JSON در حالت نمایشی فعال نیست", "warn"); return; }
-    confirmAction(`محتوای «<b>${esc(f.name)}</b>» جایگزین داده‌های فعلی شود؟`, async () => {
+    askConfirm(`محتوای «<b>${esc(f.name)}</b>» جایگزین داده‌های فعلی شود؟`, async () => {
       try {
         const text = await f.text();
         const resp = await API.req("POST", "/api/backups/import", { content: text });
@@ -7458,7 +9004,7 @@ function wire() {
     if (!API.ok) { toast("مدیریت پشتیبان‌ها در حالت نمایشی فعال نیست", "warn"); return; }
     if (r) {
       const name = r.dataset.restoreBk;
-      confirmAction(`بازیابی از «<b class="ltr">${esc(name)}</b>»؟<br>داده‌های فعلی جایگزین می‌شوند (ابتدا پشتیبانِ وضعیت فعلی گرفته می‌شود).`, async () => {
+      askConfirm(`بازیابی از «<b class="ltr">${esc(name)}</b>»؟<br>داده‌های فعلی جایگزین می‌شوند (ابتدا پشتیبانِ وضعیت فعلی گرفته می‌شود).`, async () => {
         try {
           const resp = await API.req("POST", "/api/backups/restore", { name });
           ingestBootstrap(resp);
@@ -7469,7 +9015,7 @@ function wire() {
       }, "بازیابی نسخه‌ی پشتیبان", "بازیابی");
     } else if (d) {
       const name = d.dataset.delBk;
-      confirmAction(`«<b class="ltr">${esc(name)}</b>» حذف شود؟`, async () => {
+      askConfirm(`«<b class="ltr">${esc(name)}</b>» حذف شود؟`, async () => {
         try {
           BACKUPS = (await API.req("DELETE", "/api/backups", { name })).backups;
           renderBackups();
@@ -7519,7 +9065,7 @@ function wire() {
     renderTemplatesTable(); openModal("templates");
   });
   const btnTplSave = el("btnTplSave");
-  if (btnTplSave) btnTplSave.addEventListener("click", () => busy(btnTplSave, saveUnitTemplate));
+  if (btnTplSave) btnTplSave.addEventListener("click", () => submitModal("tpl-save"));
   const tplTable = el("tplTable");
   if (tplTable) tplTable.addEventListener("click", (e) => {
     const use = e.target.closest("[data-tpl-use]");
@@ -7534,7 +9080,7 @@ function wire() {
     const del = e.target.closest("[data-tpl-del]");
     if (del) {
       const t = UNIT_TEMPLATES.find((x) => +x.id === +del.dataset.tplDel);
-      confirmAction(`الگوی «<b>${esc(t ? t.name : "")}</b>» حذف شود؟`,
+      askConfirm(`الگوی «<b>${esc(t ? t.name : "")}</b>» حذف شود؟`,
         () => deleteTemplate(del.dataset.tplDel), "حذف الگو");
     }
   });
@@ -7566,18 +9112,71 @@ function wire() {
   ["tbDepositPct", "tbDepositAmt"].forEach((id) => {
     const n = el(id);
     if (!n) return;
-    n.addEventListener("input", () => { markDirty("tb." + id); scheduleRecalc(); refreshTbUnits(); });
-    n.addEventListener("change", () => { markDirty("tb." + id); scheduleRecalc(); refreshTbUnits(); });
+    n.addEventListener("input", () => { markDirty("tb." + id); scheduleRecalc(); refreshTbUnits(); updateTbSummary(); });
+    n.addEventListener("change", () => { markDirty("tb." + id); scheduleRecalc(); refreshTbUnits(); updateTbSummary(); });
   });
+
+  /* --- گامِ رُندکردن: فقط خلاصه را تازه می‌کند (تا وقتی «رند کن» زده نشود
+         مبلغی عوض نمی‌شود؛ پس «dirty» نمی‌شود و کاربر الکی هشدار نمی‌گیرد) --- */
+  {
+    const rs = el("tbRoundStep");
+    if (rs) rs.addEventListener("change", updateTbSummary);
+  }
 
   /* --- قیمت‌گیری سریع --- */
   const btnQk = el("btnQuickQuote");
   if (btnQk) btnQk.addEventListener("click", openQuickModal);
+  /* ثبت با کلیکِ دکمه، با Enter و با Ctrl+S — هر سه از یک مسیر (submitModal)
+     تا رفتار و پیام‌ها دقیقاً یکسان بماند.                                    */
   const btnQkBuild = el("btnQuickBuild");
-  if (btnQkBuild) btnQkBuild.addEventListener("click", buildQuickProject);
-  ["qkGround", "qkWall", "qkDrawers", "qkTall"].forEach((id) => {
-    const n = el(id);
-    if (n) n.addEventListener("keydown", (e) => { if (e.key === "Enter") buildQuickProject(); });
+  if (btnQkBuild) btnQkBuild.addEventListener("click", () => submitModal("quick"));
+}
+
+/* ==========================================================================
+   شناسنامه‌ی مودال‌های دارای فرم
+   --------------------------------------------------------------------------
+   برای هر مودال: چه چیزی ثبت می‌کند (save)، با کدام دکمه (saveBtn)، چه
+   برچسبی در هشدارِ «تغییرات ذخیره‌نشده» داشته باشد (label) و متنِ راهنمای
+   کلید چه باشد (hint). این تنها جایی است که باید برای افزودنِ فرمِ جدید
+   دست خورد — بقیه‌ی رفتار (Esc، کلیک بیرون، Enter، تله‌ی فوکوس) خودکار است.
+   ========================================================================== */
+const MODAL_FORMS = {
+  material: { label: "فرمِ متریال", save: "saveMaterialForm", saveBtn: "btnSaveMaterial",
+              hint: "Enter = ذخیره‌ی قلم" },
+  bulk:     { label: "تغییر دسته‌جمعی قیمت‌ها", save: "applyBulkPrices", saveBtn: "btnApplyBulk",
+              hint: "Enter = اعمال تغییر روی قیمت‌ها" },
+  style:    { label: "فرمِ سبک", save: "saveStyleForm", saveBtn: "btnSaveStyle",
+              hint: "Enter = ذخیره‌ی سبک" },
+  project:  { label: "پروژه‌ی جدید", save: "createProjectForm", saveBtn: "btnCreateProject",
+              hint: "Enter = ایجاد پروژه" },
+  quick:    { label: "قیمت‌گیری سریع", save: "buildQuickProjectGuarded", saveBtn: "btnQuickBuild",
+              hint: "Enter = ساخت پروژه و دیدن قیمت" },
+  "tpl-save": { label: "الگوی یونیت", save: "saveUnitTemplate", saveBtn: "btnTplSave",
+              hint: "Enter = ذخیره‌ی الگو" },
+  /* مودال‌های بدونِ فرم: خروجشان بی‌خطر است، ولی برچسب برای هشدارها لازم است */
+  breakdown: { label: "ریز محاسبه" },
+  workshop:  { label: "بسته‌ی کارگاهی", alwaysDirty: false },
+  templates: { label: "فهرست الگوها" },
+};
+
+function registerModalForms(fns) {
+  fns = fns || {};
+  Object.keys(MODAL_FORMS).forEach((id) => {
+    const cfg = MODAL_FORMS[id];
+    const saveFn = cfg.save ? (fns[cfg.save] || (typeof window !== "undefined" ? window[cfg.save] : null)) : null;
+    registerModal(id, {
+      label: cfg.label,
+      saveBtn: cfg.saveBtn || null,
+      save: saveFn ? () => saveFn() : null,
+    });
+    /* راهنمای کلید پایینِ مودال — کشف‌پذیریِ Enter برای کاربرِ کیبوردی */
+    const foot = document.querySelector("#modal-" + id + " .modal-foot");
+    if (foot && cfg.hint && !foot.querySelector(".kbd-hint")) {
+      const h = document.createElement("span");
+      h.className = "kbd-hint";
+      h.innerHTML = "<kbd>Enter</kbd> " + esc(cfg.hint.replace(/^Enter = /, ""));
+      foot.insertBefore(h, foot.firstChild);
+    }
   });
 }
 
@@ -7689,6 +9288,7 @@ if (typeof module !== "undefined" && module.exports) {
 </script>
 
 
+
 </head>
 <body>
 
@@ -7762,7 +9362,10 @@ if (typeof module !== "undefined" && module.exports) {
   <div class="sidebar-foot">
     <div class="ver"><span class="dot"></span> <span id="appVer">کبیر — رابط وب</span></div>
     <div id="connBadge" class="conn demo"><span class="dot"></span> در حال اتصال…</div>
-    <div class="tiny" style="opacity:.7">میان‌بر: <b>/</b> جست‌وجو • <b>Alt+۱..۶</b> صفحه‌ها • <b>Ctrl+S</b> ذخیره • <b>Ctrl+Z</b> واگرد</div>
+    <div class="tiny" style="opacity:.7">
+      میان‌بر: <b>/</b> جست‌وجو • <b>Alt+۱..۶</b> صفحه‌ها • <b>Ctrl+S</b> یا <b>Enter</b> ثبتِ فرم •
+      <b>Ctrl+Z</b> واگرد • <b>Esc</b> بستن (با هشدارِ ذخیره)
+    </div>
   </div>
 </aside>
 <div class="scrim" id="scrim"></div>
@@ -7860,7 +9463,7 @@ if (typeof module !== "undefined" && module.exports) {
               <li>قیمت روز ورق، یراق و خدمات را در <a data-goto="materials">متریال و خدمات</a> وارد کنید.</li>
               <li>ترکیب پرکاربرد خود را یک‌بار در <a data-goto="styles">سبک‌ها</a> ذخیره کنید.</li>
               <li>در <a data-goto="projects">پروژه‌ها</a> یونیت‌ها، درها و کشوها را با ابعاد دقیق بسازید.</li>
-              <li>سود، نصب، تخفیف و مالیات را در نوار پایین تنظیم و <b>محاسبه‌ی دقیق</b> کنید.</li>
+              <li>سود، نصب، تخفیف و مالیات را در نوار پایین تنظیم و <b>ریز قیمت‌ها</b> را ببینید.</li>
               <li>از صفحه‌ی <a data-goto="invoice">فاکتور</a> چاپ، PDF یا اکسل بگیرید.</li>
             </ol>
           </div>
@@ -7920,37 +9523,72 @@ if (typeof module !== "undefined" && module.exports) {
         <div class="table-wrap sticky-head"><table class="data" id="projectsTable" aria-label="فهرست پروژه‌ها"></table></div>
       </div>
 
-      <!-- ویرایشگر پروژه -->
+      <!-- ═══════════ ویرایشگر پروژه ═══════════
+           نوارِ فرمانِ چسبان: کنش‌های پرتکرار (ذخیره / صدور فاکتور / برش‌نامه)
+           همیشه در دسترس‌ترین نقطه‌ی دید — بالای صفحه، چسبیده زیرِ نوارِ عنوان،
+           بدونِ هیچ اسکرولی. یک «ذخیره» در کل صفحه (نه دو تای هم‌وزن).        -->
       <div class="editor-stack" id="projectEditor" hidden>
+
+        <div class="editor-bar" id="editorBar">
+          <div class="eb-title">
+            <span class="eb-name" id="ebTitle">—</span>
+            <span class="badge b-open" id="edStatusBadge"></span>
+            <span class="eb-dirty" id="ebDirty" hidden title="تغییرات ذخیره‌نشده دارید (Ctrl+S)">● ذخیره‌نشده</span>
+          </div>
+
+          <div class="eb-actions">
+            <span class="undo-group" role="group" aria-label="واگرد و بازانجام">
+              <button class="btn ghost sm icon-only" id="btnUndo" type="button" disabled
+                      title="واگردِ آخرین تغییر (Ctrl+Z)" aria-label="واگرد">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></svg>
+              </button>
+              <button class="btn ghost sm icon-only" id="btnRedo" type="button" disabled
+                      title="بازانجام (Ctrl+Shift+Z)" aria-label="بازانجام">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 15-6.7L21 13"/></svg>
+              </button>
+            </span>
+
+            <span class="eb-sep" aria-hidden="true"></span>
+
+            <button class="btn ghost sm" id="btnDupProject" type="button" title="یک کپیِ کامل از این پروژه بساز (ابتدا تغییرات ذخیره می‌شود)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              کپی پروژه
+            </button>
+            <button class="btn outline sm" id="btnWorkshop" type="button" title="برش‌نامه، خلاصه‌ی ورق و فهرست خرید">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.1-.6-.6-2.1z"/></svg>
+              برش‌نامه و خرید
+            </button>
+
+            <span class="eb-sep" aria-hidden="true"></span>
+
+            <!-- کنشِ اصلی: بزرگ‌ترین هدفِ نوار (قانونِ فیتز) -->
+            <button class="btn success btn-lg" id="btnGoInvoice" type="button" title="پیش‌نمایش و صدور فاکتور از این پروژه">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18l-2.4-1.6L14 21l-2-1.6L10 21l-2.6-1.6L5 21z"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+              صدور فاکتور
+            </button>
+            <button class="btn primary btn-lg" id="btnSaveProject" type="button" title="ذخیره‌ی تغییرات (Ctrl+S)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              ذخیره
+              <kbd class="btn-kbd">Ctrl+S</kbd>
+            </button>
+
+            <span class="eb-sep" aria-hidden="true"></span>
+
+            <!-- «بستن» خطرناک نیست، اما از کنش‌های اصلی جدا و در دورترین نقطه -->
+            <button class="btn ghost sm" id="btnCloseEditor" type="button" title="بستن ویرایشگر (با پرسش اگر ذخیره نکرده باشید)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+              بستن
+            </button>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-head">
-            <h3>مشخصات پروژه <span class="badge b-open" id="edStatusBadge"></span></h3>
-            <div class="card-actions">
-              <span class="undo-group" role="group" aria-label="واگرد و بازانجام">
-                <button class="btn ghost sm icon-only" id="btnUndo" type="button" disabled
-                        title="واگردِ آخرین تغییر (Ctrl+Z)" aria-label="واگرد">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></svg>
-                </button>
-                <button class="btn ghost sm icon-only" id="btnRedo" type="button" disabled
-                        title="بازانجام (Ctrl+Shift+Z)" aria-label="بازانجام">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 15-6.7L21 13"/></svg>
-                </button>
-              </span>
-              <button class="btn ghost sm" id="btnCloseEditor" type="button">بستن</button>
-              <button class="btn ghost sm" id="btnDupProject" type="button">کپی پروژه</button>
-              <button class="btn outline sm" id="btnWorkshop" type="button" title="فهرست قطعات با ابعاد دقیق + آنچه باید بخرید">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.1-.6-.6-2.1z"/></svg>
-                برش‌نامه و لیست خرید
-              </button>
-              <button class="btn primary sm" id="btnSaveProject" type="button">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                ذخیره‌ی تغییرات
-              </button>
-            </div>
+            <h3>مشخصات پروژه</h3>
+            <div class="card-actions"><span class="sub ltr" id="edCodeChip"></span></div>
           </div>
           <div class="card-body">
             <div class="fields-grid">
-              <div class="field"><label for="edCode">کد پروژه</label><input type="text" id="edCode" readonly></div>
               <div class="field span2"><label for="edTitle">عنوان پروژه</label><input type="text" id="edTitle" placeholder="مثلاً کابینت آشپزخانه"></div>
               <div class="field"><label for="edStatus">وضعیت</label>
                 <select id="edStatus">
@@ -8034,7 +9672,7 @@ if (typeof module !== "undefined" && module.exports) {
                 <button class="btn ghost sm" id="btnManageTpl" type="button" title="دیدن، ویرایش و حذف الگوهای ذخیره‌شده">مدیریت الگوها</button>
                 <span class="tiny muted ut-hint">برای ذخیره‌ی یک یونیت به‌عنوان الگو، از دکمه‌ی «الگو» در همان ردیف استفاده کنید.</span>
               </div>
-              <div class="table-wrap"><table class="data center" id="tblUnits"></table></div>
+              <div class="table-wrap grid-head"><table class="data center" id="tblUnits"></table></div>
               <div class="add-unit-row">
                 <button class="btn ghost sm add-row" data-add="unit:ground" type="button" title="یونیت زمینی با ابعاد پیش‌فرض (قابل تغییر در تنظیمات)">＋ یونیت زمینی</button>
                 <button class="btn ghost sm add-row" data-add="unit:wall" type="button" title="یونیت دیواری با ابعاد پیش‌فرض (قابل تغییر در تنظیمات)">＋ یونیت دیواری</button>
@@ -8043,11 +9681,11 @@ if (typeof module !== "undefined" && module.exports) {
               <p class="tiny muted" style="margin-top:.4rem">ابعاد هر نوع به‌صورت پیش‌فرض از «تنظیمات → ابعاد پیش‌فرض یونیت‌ها» می‌آید و با تغییر نوع یونیت هم خودکار اعمال می‌شود. برای انتخاب متریال و یراق هر یونیت، روی «جزئیات» ردیف آن کلیک کنید.</p>
             </div>
             <div class="tab-panel" id="tab-doors" role="tabpanel">
-              <div class="table-wrap"><table class="data center" id="tblDoors"></table></div>
+              <div class="table-wrap grid-head"><table class="data center" id="tblDoors"></table></div>
               <button class="btn ghost sm add-row" data-add="doors" type="button">＋ افزودن در</button>
             </div>
             <div class="tab-panel" id="tab-drawers" role="tabpanel">
-              <div class="table-wrap"><table class="data center" id="tblDrawers"></table></div>
+              <div class="table-wrap grid-head"><table class="data center" id="tblDrawers"></table></div>
               <button class="btn ghost sm add-row" data-add="drawers" type="button">＋ افزودن کشو</button>
             </div>
             <div class="tab-panel" id="tab-facade" role="tabpanel">
@@ -8065,12 +9703,12 @@ if (typeof module !== "undefined" && module.exports) {
                 </span>
               </div>
               <div id="facadeRowsWrap">
-                <div class="table-wrap"><table class="data center" id="tblFacade"></table></div>
+                <div class="table-wrap grid-head"><table class="data center" id="tblFacade"></table></div>
                 <button class="btn ghost sm add-row" data-add="facade" type="button">＋ افزودن ردیف درنما</button>
               </div>
             </div>
             <div class="tab-panel" id="tab-extras" role="tabpanel">
-              <div class="table-wrap"><table class="data center" id="tblExtras"></table></div>
+              <div class="table-wrap grid-head"><table class="data center" id="tblExtras"></table></div>
               <button class="btn ghost sm add-row" data-add="extras" type="button">＋ افزودن ردیف</button>
             </div>
             <div class="tab-panel" id="tab-services" role="tabpanel">
@@ -8080,14 +9718,51 @@ if (typeof module !== "undefined" && module.exports) {
                 </label>
                 <span class="tiny muted">مبنا: مقدار ردیف خودکار از روی آمار بخش محاسبه می‌شود (تعداد یونیت، لنگه در، متر طول…)</span>
               </div>
-              <div class="table-wrap"><table class="data center" id="tblServices"></table></div>
+              <div class="table-wrap grid-head"><table class="data center" id="tblServices"></table></div>
               <button class="btn ghost sm add-row" data-add="services" type="button">＋ افزودن خدمت</button>
             </div>
           </div>
         </div>
 
+        <!-- ═══════════ نوارِ جمعِ چسبان ═══════════
+             پیش از این، نوار دو ردیفِ کامل بود: ۸ ورودیِ مالیِ کم‌تغییر + ۴ دکمه
+             (~۲۰۰ پیکسل از ~۵۵۰ پیکسل فضای مفیدِ لپ‌تاپ ۱۳۶۶×۷۶۸).
+             حالا: «نتیجه + کنش» همیشه دیده می‌شود (~۶۴ پیکسل) و «تنظیمات مالی»
+             داخلِ کشویی است که فقط هنگامِ نیاز باز می‌شود (وضعیتش هم به خاطر
+             سپرده می‌شود). نتیجه: حدودِ ۱۴۰ پیکسل فضای بیشتر برای جدولِ داده.   -->
         <div class="totalbar" id="totalBar">
-          <div class="totalbar-inner">
+          <div class="tb-slim">
+
+            <button class="tb-drawer-toggle" id="btnTbDrawer" type="button"
+                    aria-expanded="false" aria-controls="tbDrawer"
+                    title="سود، نصب، تخفیف، مالیات، مبلغ ثابت اضافه، پیش‌پرداخت و رُندکردن">
+              <svg class="tb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              <span class="tb-drawer-title">تنظیمات مالی</span>
+              <span class="tb-summary" id="tbSummary">—</span>
+            </button>
+
+            <div class="tb-figures">
+              <div class="tb-fig"><span>هزینه‌ی تمام‌شده</span><b id="tbCost">—</b></div>
+              <div class="tb-fig"><span>قیمت ناخالص</span><b id="tbGross">—</b></div>
+              <div class="tb-fig" title="همان چیزی که مشتری می‌پرسد: متری چند؟"><span>قیمت هر متر طول</span><b id="tbPerMeter">—</b></div>
+              <div class="tb-final"><span>مبلغ قابل پرداخت</span><b id="tbFinal">—</b></div>
+              <div class="tb-fig tb-due" id="tbDueWrap" hidden><span>باقی‌مانده پس از پیش‌پرداخت</span><b id="tbDue">—</b></div>
+            </div>
+
+            <div class="tb-actions">
+              <button class="btn outline" id="btnBreakdown" type="button" title="ریز گروه‌های هزینه + هشدارهای محاسبه">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="12" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="12" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="13" y2="18"/></svg>
+                ریز قیمت‌ها
+              </button>
+              <!-- «ذخیره» و «برش‌نامه» در نوارِ فرمانِ چسبانِ بالای ویرایشگرند:
+                   یک کنش = یک جای ثابت (ثباتِ رویه)، بدونِ دو دکمه‌ی هم‌وزن. -->
+              <span class="tb-save-hint" id="tbSaveHint" hidden>
+                تغییرات ذخیره‌نشده — <kbd>Ctrl+S</kbd>
+              </span>
+            </div>
+          </div>
+
+          <div class="tb-drawer" id="tbDrawer" hidden>
             <div class="tb-fields">
               <div class="tb-field">
                 <span>روش سود</span>
@@ -8135,44 +9810,19 @@ if (typeof module !== "undefined" && module.exports) {
                   <span class="cell-wrap"><input type="text" id="tbDepositAmt" inputmode="numeric" placeholder="مبلغ" aria-label="مبلغ پیش‌پرداخت" class="has-u"><i class="cell-u" id="uDepositAmt">تومان</i></span>
                 </div>
               </div>
-            </div>
-            <div class="tb-round">
-              <span>رند کردن مبلغ نهایی</span>
-              <div class="pair">
-                <select id="tbRoundStep" aria-label="گام رندکردن">
-                  <option value="0">خاموش</option>
-                  <option value="10000000">۱ میلیون تومان</option>
-                  <option value="1000000">۱۰۰ هزار تومان</option>
-                  <option value="100000">۱۰ هزار تومان</option>
-                  <option value="100000000">۱۰ میلیون تومان</option>
-                </select>
-                <button class="btn outline sm" id="btnRoundPrice" type="button" title="تخفیف را طوری تنظیم می‌کند که مبلغ قابل پرداخت رُند شود">رند کن</button>
+              <div class="tb-field tb-round">
+                <span>رند کردن مبلغ نهایی</span>
+                <div class="pair">
+                  <select id="tbRoundStep" aria-label="گام رندکردن">
+                    <option value="0">خاموش</option>
+                    <option value="10000000">۱ میلیون تومان</option>
+                    <option value="1000000">۱۰۰ هزار تومان</option>
+                    <option value="100000">۱۰ هزار تومان</option>
+                    <option value="100000000">۱۰ میلیون تومان</option>
+                  </select>
+                  <button class="btn outline sm" id="btnRoundPrice" type="button" title="تخفیف را طوری تنظیم می‌کند که مبلغ قابل پرداخت رُند شود">رند کن</button>
+                </div>
               </div>
-            </div>
-            <div class="tb-figures">
-              <div class="tb-fig"><span>جمع هزینه‌ی تمام‌شده</span><b id="tbCost">—</b></div>
-              <div class="tb-fig"><span>قیمت ناخالص</span><b id="tbGross">—</b></div>
-              <div class="tb-fig" title="همان چیزی که مشتری می‌پرسد: متری چند؟"><span>قیمت هر متر طول</span><b id="tbPerMeter">—</b></div>
-              <div class="tb-final"><span>مبلغ قابل پرداخت</span><b id="tbFinal">—</b></div>
-              <div class="tb-fig tb-due" id="tbDueWrap" hidden><span>باقی‌مانده پس از پیش‌پرداخت</span><b id="tbDue">—</b></div>
-            </div>
-            <div class="tb-actions">
-              <button class="btn outline" id="btnTotalSave" type="button" title="ذخیره‌ی تغییرات (Ctrl+S)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                ذخیره
-              </button>
-              <button class="btn outline" id="btnTotalWorkshop" type="button" title="برش‌نامه، خلاصه‌ی ورق و لیست خرید">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.1-.6-.6-2.1z"/></svg>
-                برش‌نامه
-              </button>
-              <button class="btn outline" id="btnBreakdown" type="button" title="ریز گروه‌های هزینه + هشدارهای محاسبه">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="12" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="12" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="13" y2="18"/></svg>
-                ریز قیمت‌ها
-              </button>
-              <button class="btn success" id="btnGoInvoice" type="button">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18l-2.4-1.6L14 21l-2-1.6L10 21l-2.6-1.6L5 21z"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
-                صدور فاکتور
-              </button>
             </div>
           </div>
         </div>
@@ -8465,7 +10115,7 @@ if (typeof module !== "undefined" && module.exports) {
     </div>
     <div class="modal-body">
       <div class="fields-grid" style="grid-template-columns:repeat(2,1fr)">
-        <div class="field span2"><label for="mfName">نام قلم</label><input type="text" id="mfName" placeholder="مثلاً ام‌دی‌اف سفید صدفی ۱۶ میل"></div>
+        <div class="field span2"><label for="mfName">نام قلم</label><input type="text" id="mfName" data-autofocus placeholder="مثلاً ام‌دی‌اف سفید صدفی ۱۶ میل"></div>
         <div class="field"><label for="mfCat">دسته‌بندی</label><select id="mfCat"></select></div>
         <div class="field"><label for="mfUnit">واحد</label>
           <select id="mfUnit">
@@ -8506,7 +10156,7 @@ if (typeof module !== "undefined" && module.exports) {
       </div>
       <div class="field" style="margin-bottom:1rem">
         <label for="bulkPct">درصد تغییر</label>
-        <div class="input-affix"><input type="text" id="bulkPct" inputmode="numeric" placeholder="مثلاً ۱۰ یا ۵−" data-no-sep><span class="affix">٪</span></div>
+        <div class="input-affix"><input type="text" id="bulkPct" data-autofocus inputmode="numeric" placeholder="مثلاً ۱۰ یا ۵−" data-no-sep><span class="affix">٪</span></div>
         <div class="pct-chips" style="margin-top:.55rem">
           <button type="button" class="pct-chip neg" data-pct="-10">−۱۰٪</button>
           <button type="button" class="pct-chip neg" data-pct="-5">−۵٪</button>
@@ -8536,7 +10186,7 @@ if (typeof module !== "undefined" && module.exports) {
     </div>
     <div class="modal-body">
       <div class="grid2">
-        <div class="field" style="grid-column:1/-1"><label for="sfName">نام سبک</label><input type="text" id="sfName" placeholder="مثلاً هایگلاس ترک — یراق بلوم"></div>
+        <div class="field" style="grid-column:1/-1"><label for="sfName">نام سبک</label><input type="text" id="sfName" data-autofocus placeholder="مثلاً هایگلاس ترک — یراق بلوم"></div>
         <div class="field"><label for="sfBody">ورق بدنه</label><select id="sfBody"></select></div>
         <div class="field"><label for="sfDoor">ورق در</label><select id="sfDoor"></select></div>
         <div class="field"><label for="sfBack">فیبر پشت</label><select id="sfBack"></select></div>
@@ -8572,7 +10222,7 @@ if (typeof module !== "undefined" && module.exports) {
     </div>
     <div class="modal-body">
       <div class="grid2">
-        <div class="field span2" style="grid-column:1/-1"><label for="pfTitle">عنوان پروژه</label><input type="text" id="pfTitle" placeholder="مثلاً کابینت آشپزخانه — واحد ۵"></div>
+        <div class="field span2" style="grid-column:1/-1"><label for="pfTitle">عنوان پروژه</label><input type="text" id="pfTitle" data-autofocus placeholder="مثلاً کابینت آشپزخانه — واحد ۵"></div>
         <div class="field"><label for="pfCustomer">نام مشتری</label><input type="text" id="pfCustomer"></div>
         <div class="field"><label for="pfMobile">همراه</label><input type="tel" id="pfMobile" placeholder="۰۹۱۲…"></div>
         <div class="field"><label for="pfStyle">سبک بخش اول</label><select id="pfStyle"></select></div>
@@ -8652,7 +10302,7 @@ if (typeof module !== "undefined" && module.exports) {
       </p>
       <div class="grid2">
         <div class="field" style="grid-column:1/-1"><label for="qkTitle">عنوان</label>
-          <input type="text" id="qkTitle" placeholder="مثلاً آشپزخانه ۴ متری هایگلاس"></div>
+          <input type="text" id="qkTitle" data-autofocus placeholder="مثلاً آشپزخانه ۴ متری هایگلاس"></div>
         <div class="field"><label for="qkCustomer">نام مشتری</label><input type="text" id="qkCustomer"></div>
         <div class="field"><label for="qkMobile">همراه</label><input type="tel" id="qkMobile" placeholder="۰۹۱۲…"></div>
         <div class="field"><label for="qkGround">متراژ زمینی (متر طول)</label>
@@ -8702,7 +10352,7 @@ if (typeof module !== "undefined" && module.exports) {
     <div class="modal-head"><h3>ذخیره‌ی یونیت به‌عنوان الگو</h3>
       <button class="icon-btn" data-close type="button" aria-label="بستن">✕</button></div>
     <div class="modal-body">
-      <div class="field"><label for="tplName">نام الگو</label><input type="text" id="tplName" placeholder="مثلاً یونیت سینک ۹۰"></div>
+      <div class="field"><label for="tplName">نام الگو</label><input type="text" id="tplName" data-autofocus placeholder="مثلاً یونیت سینک ۹۰"></div>
       <div class="field"><label for="tplNote">یادداشت (اختیاری)</label><input type="text" id="tplNote"></div>
       <p class="tiny muted" id="tplSummary"></p>
     </div>
@@ -8713,6 +10363,33 @@ if (typeof module !== "undefined" && module.exports) {
     </div>
   </div>
 
+  <!-- ═══════════ تغییرات ذخیره‌نشده (لایه‌ی محافظِ داده) ═══════════
+       جای کنش‌ها در همه‌ی نرم‌افزار ثابت است:
+       راست = «ادامه‌ی ویرایش» (امن‌ترین) • وسط = «ذخیره و بستن»
+       چپِ دور، کوچک و کم‌رنگ = «دور ریختن» (خطرناک، عمداً پرت و جدا) -->
+  <div class="modal narrow" id="modal-unsaved" role="alertdialog" aria-modal="true"
+       aria-labelledby="unsavedTitle" aria-describedby="unsavedText">
+    <div class="modal-head warn-head">
+      <span class="warn-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg></span>
+      <h3 id="unsavedTitle">تغییرات ذخیره‌نشده دارید</h3>
+    </div>
+    <div class="modal-body">
+      <p id="unsavedText" style="font-size:.92rem;line-height:1.9"></p>
+    </div>
+    <div class="modal-foot guard-foot">
+      <button class="btn primary btn-lg" id="btnUnsavedStay" type="button" data-autofocus>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+        ادامه‌ی ویرایش
+      </button>
+      <button class="btn success btn-lg" id="btnUnsavedSave" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        ذخیره و بستن
+      </button>
+      <div class="spacer"></div>
+      <button class="btn danger-far" id="btnUnsavedDiscard" type="button" title="تغییرات بدون ذخیره از بین می‌روند">دور ریختن تغییرات</button>
+    </div>
+  </div>
+
   <!-- تأیید -->
   <div class="modal" id="modal-confirm" role="dialog" aria-modal="true" style="width:min(26rem,100%)">
     <div class="modal-head"><h3 id="confirmTitle">تأیید</h3>
@@ -8720,9 +10397,10 @@ if (typeof module !== "undefined" && module.exports) {
     </div>
     <div class="modal-body"><p id="confirmText" style="font-size:.92rem"></p></div>
     <div class="modal-foot">
-      <button class="btn danger" id="btnConfirmOk" type="button">حذف</button>
+      <button class="btn danger btn-lg" id="btnConfirmOk" type="button">تأیید</button>
+      <button class="btn success btn-lg" id="btnConfirmAlt" type="button" hidden></button>
       <div class="spacer"></div>
-      <button class="btn ghost" data-close type="button">انصراف</button>
+      <button class="btn ghost" id="btnConfirmCancel" data-close type="button">انصراف</button>
     </div>
   </div>
 </div>

@@ -11,9 +11,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 
 css = (HERE / "css/styles.css").read_text(encoding="utf-8")
+JS_FILES = ("data", "engine", "ui-modal", "ui")   # ترتیب بارگذاری مهم است
 js = "".join(
     (HERE / f"js/{name}.js").read_text(encoding="utf-8") + "\n"
-    for name in ("data", "engine", "ui")
+    for name in JS_FILES
 )
 html = (HERE / "index.html").read_text(encoding="utf-8")
 
@@ -33,7 +34,7 @@ assert "</style" not in css, "CSS نباید تگ بسته‌شدن style داش
 
 html = html.replace('<link rel="stylesheet" href="css/styles.css">', f"<style>\n{css}\n</style>")
 first = True
-for name in ("data", "engine", "ui"):
+for name in JS_FILES:
     tag = f'<script src="js/{name}.js" defer></script>'
     if first:
         html = html.replace(tag, f"<script>\n{js}\n</script>")

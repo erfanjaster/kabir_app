@@ -1730,13 +1730,27 @@ tr.unit-detail-row > td { background: var(--surface-2); padding: 0.95rem 1rem; t
   box-shadow: var(--shadow-lg);
 }
 
+/* وضعیتِ «ذخیره‌نشده»: کلِ دکمه کهربایی می‌شود + یک تپشِ ملایمِ یک‌بار.
+   نقطه‌ی کوچکِ قبلی در کارِ ۸ ساعته دیده نمی‌شد (بازخورد باید بی‌صدا اما
+   غیرقابلِ نادیده‌گیری باشد).                                                 */
+#btnSaveProject.dirty {
+  background: linear-gradient(180deg, #f0b45f, #dd9a3c);
+  border-color: #c9862c;
+  color: #2b1c05;
+  box-shadow: 0 6px 20px -8px rgba(221, 154, 60, 0.85);
+}
+#btnSaveProject.dirty:hover { filter: brightness(1.05); }
+#btnSaveProject.dirty .btn-kbd { border-color: rgba(43, 28, 5, 0.35); color: #2b1c05; }
 #btnSaveProject.dirty::before {
-  content: "•";
-  color: #e0a458;
-  font-size: 1.6rem;
-  line-height: 0;
-  margin-inline-end: 0.25rem;
-  vertical-align: middle;
+  content: "●";
+  font-size: 0.7rem;
+  line-height: 1;
+  margin-inline-end: 0.3rem;
+  animation: dirtyPulse 1.6s ease-in-out 2;
+}
+@keyframes dirtyPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) {
+  #btnSaveProject.dirty::before { animation: none; }
 }
 
 @media print {
@@ -1749,7 +1763,7 @@ tr.unit-detail-row > td { background: var(--surface-2); padding: 0.95rem 1rem; t
 @media print {
   @page { size: A4; margin: 10mm; }
   body { display: block; background: #fff; }
-  .sidebar, .topbar, .scrim, .toasts, .modal-backdrop,
+  .sidebar, .topbar, .scrim, .toasts, .modal-backdrop, .editor-bar,
   .inv-options, .no-print, .totalbar, .toolbar, .chips, .settings-save { display: none !important; }
   .content { padding: 0; }
   .invoice-layout { display: block; }
@@ -2214,4 +2228,370 @@ tr.hl-row > td { animation: rowFlash 2.6s ease both; }
   #tblUnits tr:hover td:first-child,
   #tblDoors tr:hover td:first-child,
   #tblDrawers tr:hover td:first-child { background: var(--surface-2); }
+}
+
+/* ==========================================================================
+   ۲۴) لایه‌ی مودال و فرم — ارگونومیِ کاربرِ دائمی
+   --------------------------------------------------------------------------
+   سه اصل در این بخش:
+   ۱) کنشِ اصلی همیشه بزرگ‌تر و در دسترس‌ترین نقطه (قانونِ فیتز).
+   ۲) کنشِ خطرناک «دور ریختن» عمداً کوچک، کم‌رنگ و در دورترین گوشه.
+   ۳) پشته‌ی مودال‌ها با سایه و تورِ تاریک‌تر دیده می‌شود تا کاربر بداند
+      «کجای کار است» و لایه‌ی زیرین هنوز زنده است.
+   ========================================================================== */
+
+/* --- قفلِ اسکرولِ پس‌زمینه + تورِ پشته --- */
+body.modal-open { overflow: hidden; }
+.modal-backdrop.stacked-2 { background: rgba(15, 18, 17, 0.62); }
+.modal-backdrop.stacked-3 { background: rgba(15, 18, 17, 0.72); }
+/* لایه‌ی زیرین کمی کم‌رنگ‌تر می‌شود تا سلسله‌مرتبِ لایه‌ها دیده شود */
+.modal-backdrop .modal.open.beneath { filter: saturate(0.8) brightness(0.98); }
+
+.modal.narrow { width: min(30rem, 100%); }
+
+/* --- دکمه‌ی بزرگ: هدفِ اصلیِ انگشت/موس --- */
+.btn.btn-lg {
+  height: 2.9rem;
+  padding: 0 1.35rem;
+  font-size: 0.93rem;
+  font-weight: 800;
+  border-radius: var(--radius-sm);
+  gap: 0.5rem;
+}
+.btn.btn-lg svg { width: 1.15rem; height: 1.15rem; }
+
+/* --- کنشِ خطرناکِ «دور»: کوچک، کم‌رنگ، با فاصله‌ی زیاد از کنش‌های اصلی --- */
+.btn.danger-far {
+  background: transparent;
+  color: var(--text-3);
+  border: 1px solid transparent;
+  border-bottom: 1px dashed var(--border-strong);
+  border-radius: var(--radius-xs);
+  font-size: 0.78rem;
+  font-weight: 600;
+  height: 2rem;
+  padding: 0 0.5rem;
+  margin-inline-start: 1.4rem;   /* فاصله‌ی فیزیکی از «انصراف» تا کلیکِ اشتباه */
+}
+.btn.danger-far:hover {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+}
+.btn.danger-far:focus-visible { box-shadow: 0 0 0 3px rgba(179, 38, 30, 0.28); }
+
+/* --- پاورقیِ مودال‌های محافظ: کنش‌های امن راست، خطرناک چپِ دور --- */
+.modal-foot.guard-foot { align-items: center; gap: 0.55rem; }
+.modal-foot .btn.btn-lg + .btn.btn-lg { margin-inline-start: 0.15rem; }
+
+/* --- سربرگِ هشدار --- */
+.modal-head.warn-head { background: var(--warning-soft); border-bottom-color: color-mix(in srgb, var(--warning) 22%, transparent); }
+.modal-head .warn-ic {
+  display: grid; place-items: center;
+  width: 2rem; height: 2rem; flex-shrink: 0;
+  border-radius: 50%;
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 16%, transparent);
+}
+.modal-head .warn-ic svg { width: 1.15rem; height: 1.15rem; }
+[data-theme="dark"] .modal-head.warn-head { background: color-mix(in srgb, var(--warning) 14%, var(--surface-2)); }
+
+/* --- نشانِ «پر شده» روی مودال: کاربر می‌داند خروج بی‌هشدار نیست --- */
+.modal.is-dirty .modal-head::after {
+  content: "ذخیره‌نشده";
+  margin-inline-start: 0.55rem;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--warning);
+  background: var(--warning-soft);
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+  border-radius: 999px;
+  padding: 0.06rem 0.55rem;
+  line-height: 1.7;
+  white-space: nowrap;
+}
+
+/* --- خطای اعتبارسنجی کنارِ خودِ فیلد (نه فقط توستِ دور از چشم) --- */
+.field-err {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--danger);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.7;
+}
+input.invalid, select.invalid, textarea.invalid {
+  border-color: var(--danger) !important;
+  background: var(--danger-soft);
+}
+input.invalid:focus, select.invalid:focus, textarea.invalid:focus {
+  box-shadow: 0 0 0 3px rgba(179, 38, 30, 0.2) !important;
+}
+
+/* --- مودالِ تأیید: کنشِ اصلی بزرگ و واضح --- */
+#modal-confirm .modal-foot { padding-block: 1rem; }
+#modal-confirm .btn.danger {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+  box-shadow: 0 6px 18px -8px rgba(179, 38, 30, 0.7);
+}
+#modal-confirm .btn.danger:hover { filter: brightness(1.08); }
+#modal-confirm .btn.ghost { min-width: 6.5rem; justify-content: center; }
+
+/* --- راهنمای میان‌بر داخل مودال: کشف‌پذیریِ Enter --- */
+.modal-foot .kbd-hint {
+  font-size: 0.7rem;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.modal-foot .kbd-hint kbd {
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 0.02rem 0.35rem;
+  background: var(--surface);
+  color: var(--text-2);
+}
+
+/* --- موبایل: کنش‌ها تمام‌عرض و به‌ترتیبِ اهمیت --- */
+@media (max-width: 640px) {
+  .modal-foot.guard-foot { flex-wrap: wrap; }
+  .modal-foot.guard-foot .btn { flex: 1 1 auto; justify-content: center; }
+  .btn.danger-far { flex: 1 1 100%; margin-inline-start: 0; margin-top: 0.35rem; }
+  .modal-backdrop { padding: 0.75rem; }
+}
+
+/* --- چاپ: لایه‌ی محافظ هرگز چاپ نشود --- */
+@media print {
+  #modal-unsaved { display: none !important; }
+}
+
+/* ==========================================================================
+   ۲۵) ویرایشگر پروژه — ارگونومیِ کاربرِ دائمی
+   --------------------------------------------------------------------------
+   چهار مشکلِ ممیزی (F‑1، F‑2، F‑3، F‑4) این‌جا حل می‌شوند:
+   • نوارِ فرمانِ چسبان → کنش‌های پرتکرار بدونِ اسکرول در دسترس‌اند.
+   • نوارِ جمع باریک + کشوی مالی → ~۱۴۰ پیکسل فضای بیشتر برای جدولِ داده.
+   • سرستون و ستونِ اولِ چسبان → کاربر همیشه می‌داند در کدام ستون است.
+   • دکمه‌های ردیف در ستونِ اول (نه انتهای یک جدولِ ۱۲۰۰ پیکسلی) و بزرگ‌تر،
+     با جداکننده پیش از «حذف».
+   ========================================================================== */
+
+:root { --topbar-h: 3.9rem; }
+
+/* --- نوارِ فرمانِ چسبان ------------------------------------------------- */
+.editor-bar {
+  position: sticky;
+  top: var(--topbar-h);
+  z-index: 24;                       /* زیرِ نوارِ عنوان (۳۰)، بالای کارت‌ها */
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.9rem;
+  margin-bottom: 0.8rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-md);
+}
+.eb-title { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.eb-name {
+  font-weight: 800;
+  font-size: 0.95rem;
+  max-width: 22rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.eb-dirty {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--warning);
+  background: var(--warning-soft);
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+  border-radius: 999px;
+  padding: 0.02rem 0.6rem;
+  white-space: nowrap;
+}
+.eb-actions {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+.eb-sep {
+  width: 1px;
+  height: 1.5rem;
+  background: var(--border-strong);
+  margin-inline: 0.35rem;
+  flex-shrink: 0;
+}
+/* کلیدِ میان‌بر روی خودِ دکمه — کشف‌پذیری بدونِ خواندنِ راهنما */
+.btn-kbd {
+  font-family: inherit;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.4;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 4px;
+  padding: 0 0.25rem;
+  margin-inline-start: 0.45rem;
+  opacity: 0.85;
+}
+
+/* --- نوارِ جمع: ردیفِ باریکِ «نتیجه + کنش» ------------------------------ */
+.totalbar .tb-slim {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem 1.1rem;
+  padding: 0.5rem 0.9rem;
+  flex-wrap: wrap;
+}
+.tb-drawer-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: var(--radius-xs);
+  padding: 0.32rem 0.7rem;
+  min-height: 2.5rem;
+  cursor: pointer;
+  text-align: start;
+  transition: background 0.13s ease, border-color 0.13s ease;
+}
+.tb-drawer-toggle:hover { background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.4); }
+.tb-drawer-toggle:focus-visible { box-shadow: 0 0 0 3px rgba(74, 214, 194, 0.35); outline: none; }
+.tb-chev { width: 0.95rem; height: 0.95rem; transition: transform 0.18s ease; flex-shrink: 0; }
+.tb-drawer-toggle[aria-expanded="true"] .tb-chev { transform: rotate(180deg); }
+.tb-drawer-title { font-size: 0.78rem; font-weight: 800; white-space: nowrap; }
+.tb-summary {
+  font-size: 0.7rem;
+  color: rgba(230, 242, 239, 0.72);
+  border-inline-start: 1px solid rgba(255, 255, 255, 0.2);
+  padding-inline-start: 0.55rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 30rem;
+}
+.totalbar .tb-slim .tb-figures { flex: 1 1 auto; }
+.totalbar .tb-slim .tb-actions { margin-inline-start: auto; align-items: center; }
+.tb-save-hint {
+  font-size: 0.72rem;
+  color: #ffd9a8;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+.tb-save-hint kbd {
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  border: 1px solid rgba(255, 217, 168, 0.5);
+  border-radius: 4px;
+  padding: 0 0.3rem;
+  color: #ffd9a8;
+}
+
+/* --- کشوی تنظیمات مالی ------------------------------------------------- */
+.tb-drawer {
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.16);
+  padding: 0.7rem 0.9rem 0.8rem;
+}
+.tb-drawer .tb-fields { flex: 1 1 auto; }
+.tb-drawer .tb-round { border: 0; padding: 0; width: auto; }
+
+/* --- جدول‌های ویرایشگر: سرستون و ستونِ اولِ چسبان ----------------------- */
+.table-wrap.grid-head {
+  max-height: 56vh;
+  overflow: auto;
+  overscroll-behavior: contain;     /* اسکرولِ صفحه را وقتی به انتها رسید نمی‌دزدد */
+}
+.table-wrap.grid-head thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  box-shadow: inset 0 -1px 0 var(--border-strong), 0 2px 6px -4px rgba(0, 0, 0, 0.4);
+}
+.table-wrap.grid-head thead th:first-child { z-index: 6; }   /* گوشه‌ی تقاطع */
+.table-wrap.grid-head th:first-child,
+.table-wrap.grid-head td:first-child {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 2;
+  background: var(--surface);
+  box-shadow: -6px 0 10px -8px rgba(0, 0, 0, 0.45);
+}
+.table-wrap.grid-head tbody tr:hover td:first-child { background: var(--surface-2); }
+.table-wrap.grid-head td:first-child:focus-within { background: var(--surface-2); }
+
+/* --- سلولِ شناسه‌ی ردیف: برچسب + کنش‌ها در یک خانه‌ی چسبان -------------- */
+.row-id-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  justify-content: flex-start;
+}
+.row-id-cell .cell-input { flex: 1 1 auto; }
+.row-id-cell .row-btns { flex-shrink: 0; }
+
+/* هدفِ بزرگ‌تر (≥۴۰ پیکسل) + جداکننده پیش از کنشِ خطرناک */
+.row-btns { gap: 0.35rem; }
+.row-btns .row-actions {
+  width: 2.45rem;
+  height: 2.45rem;
+  padding: 0;
+  opacity: 1;
+  color: var(--text-2);
+  border: 1px solid transparent;
+}
+.row-btns .row-actions svg { width: 1.1rem; height: 1.1rem; }
+.row-btns .row-actions:hover { border-color: var(--border-strong); }
+.row-btns .row-actions.del { color: var(--text-3); }
+.row-btns .row-actions.del:hover { background: var(--danger-soft); color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
+/* جداکننده: فاصله‌ی فیزیکی میان «کپی» (پرتکرار) و «حذف» (خطرناک) */
+.row-sep {
+  width: 1px;
+  height: 1.5rem;
+  background: var(--border-strong);
+  margin-inline: 0.35rem;
+  flex-shrink: 0;
+}
+
+/* سلول‌های ورودی بزرگ‌تر — خطای کمتر در کارِ طولانی */
+.cell-input { min-height: 2.35rem; padding-block: 0.36rem; }
+.cell-select { min-height: 2.35rem; padding-block: 0.36rem; }
+.unit-detail select, .unit-detail input { min-height: 2.35rem; }
+
+/* --- واکنش‌گرایی -------------------------------------------------------- */
+@media (max-width: 1100px) {
+  .editor-bar { gap: 0.6rem; }
+  .eb-name { max-width: 12rem; }
+  .tb-summary { max-width: 14rem; }
+}
+@media (max-width: 900px) {
+  .editor-bar { position: static; box-shadow: var(--shadow-sm); }
+  .eb-actions { margin-inline-start: 0; width: 100%; }
+  .eb-actions .btn { flex: 1 1 auto; justify-content: center; }
+  .btn-kbd { display: none; }
+}
+@media (max-width: 720px) {
+  .table-wrap.grid-head { max-height: none; }
+  .totalbar .tb-slim { padding: 0.55rem 0.7rem; }
+  .tb-summary { display: none; }
 }

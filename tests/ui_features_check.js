@@ -34,7 +34,8 @@ function makeSandbox() {
 
 const code =
   fs.readFileSync(path.join(ROOT, "webui/js/data.js"), "utf8") + "\n" +
-  fs.readFileSync(path.join(ROOT, "webui/js/engine.js"), "utf8") + `
+  fs.readFileSync(path.join(ROOT, "webui/js/engine.js"), "utf8") + "\n" +
+  fs.readFileSync(path.join(ROOT, "webui/js/ui-modal.js"), "utf8") + `
 ;loadDemoData();
 /* متغیرهای let در vm به global نمی‌چسبند — با getter صادرشان می‌کنیم */
 var __t = {
