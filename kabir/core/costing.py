@@ -374,7 +374,9 @@ class UnitRow:
     leg_id: int = 0
     leg_name: str = ""
     leg_price: float = 0.0
-    legs_per_unit: float = 2
+    #: تعداد پایه در هر یونیت — پیش‌فرض ۴ (دو جلو، دو عقب)؛ با رابط وب و
+    #: موتور JS هم‌تراز شد (پیش‌تر این‌جا ۲ بود و قیمت پایه‌ها نصف می‌شد).
+    legs_per_unit: float = 4
     banding_id: int = 0
     banding_name: str = ""
     banding_price: float = 0.0
@@ -694,8 +696,19 @@ class CostingEngine:
     # محاسبه‌ی یک یونیت
     # ------------------------------------------------------------------
     def calc_unit(self, u: UnitRow, page: Page) -> UnitResult:
-        res = UnitResult(label=u.label or "یونیت", qty=int(u.qty or 1))
-        n = max(1, res.qty)
+        # ⚠ تعداد یونیت: پیش‌تر qty=0 یا منفی به‌جای حذف، «یک عدد» قیمت می‌خورد
+        #   (چون `int(u.qty or 1)` صفر را falsy می‌گرفت و max(1,..) منفی را ۱
+        #   می‌کرد). اکنون تعداد مؤثر ≤ ۰ یعنی یونیت کنار گذاشته می‌شود +
+        #   هشدار به کاربر (به‌جای قیمتِ بی‌صدا).
+        qty = int(_f(u.qty, 0))
+        res = UnitResult(label=u.label or "یونیت", qty=qty)
+        if qty <= 0:
+            res.warnings.append(
+                f"«{u.label or 'یونیت'}»: تعداد یونیت {qty} وارد شده — بدون هزینه "
+                "نادیده گرفته شد. اگر این یونیت را می‌خواهید، تعداد را دست‌کم ۱ "
+                "بگذارید و اگر نمی‌خواهید، حذفش کنید.")
+            return res
+        n = qty
         items: List[LineItem] = []
 
         body_mat = self.mat(u.body_id)
@@ -714,7 +727,7 @@ class CostingEngine:
             else:
                 body_area += p.area_sqm
 
-        waste = _f(page.waste_percent)
+        waste = _f(page.waste_percent, 10.0)
 
         # --- ورق بدنه ---
         if body_area > 0 and body_mat is not None:
@@ -740,6 +753,14 @@ class CostingEngine:
                                       mat_id=int(body_mat.id), mat_cat="body_sheet",
                                       area_sqm=per_unit_area * n))
             res.body_area += body_area * n
+        elif body_area > 0 and body_mat is None:
+            # ★ متریال بدنه انتخاب نشده یا از کتابخانه حذف شده — پیش‌تر بی‌صدا
+            #   «بدنه‌ی رایگان» تولید می‌کرد! اکنون هشدار صریح می‌دهیم.
+            why = "حذف شده" if u.body_id else "انتخاب نشده"
+            res.warnings.append(
+                f"«{u.label or 'یونیت'}»: ورق بدنه {why} است — هزینه‌ی "
+                f"{body_area * n:.3f} م² بدنه محاسبه نشد!")
+            res.body_area += body_area * n
 
         # --- فیبر پشت ---
         if back_area > 0 and back_mat is not None:
@@ -761,6 +782,12 @@ class CostingEngine:
                                       _f(back_mat.price_per_sqm), amount,
                                       mat_id=int(back_mat.id), mat_cat="back_sheet",
                                       area_sqm=per_unit_area * n))
+            res.back_area += back_area * n
+        elif back_area > 0 and back_mat is None:
+            why = "حذف شده" if u.back_id else "انتخاب نشده"
+            res.warnings.append(
+                f"«{u.label or 'یونیت'}»: متریال فیبر پشت {why} است — هزینه‌ی "
+                f"{back_area * n:.3f} م² فیبر پشت محاسبه نشد!")
             res.back_area += back_area * n
 
         # --- نوار PVC بدنه ---
@@ -800,6 +827,10 @@ class CostingEngine:
                                       mat_id=int(u.countertop_id), mat_cat="countertop"))
                 res.countertop_area += lm * width / 100.0
                 res.countertop_lm += lm
+            else:
+                res.warnings.append(
+                    f"«{u.label or 'یونیت'}»: متریال صفحه‌ی کابینت در کتابخانه قیمت "
+                    "پیدا نشد (حذف شده؟) — هزینه‌ی صفحه محاسبه نشد!")
 
         # --- تاج ---
         if u.crown_id and u.unit_type in ("wall", "tall"):
@@ -830,7 +861,7 @@ class CostingEngine:
 
         # --- پایه ---
         if u.leg_id and u.unit_type in ("ground", "tall"):
-            legs = _f(u.legs_per_unit, 2) * n
+            legs = _f(u.legs_per_unit, 4) * n
             price = self.price_of(u.leg_id, u.leg_price)
             items.append(LineItem("leg", "پایه", (self.mat(u.leg_id).name if self.mat(u.leg_id)
                                                   else u.leg_name) or "پایه",
@@ -925,6 +956,11 @@ class CostingEngine:
                                       area, "م²", ppsqm, area * ppsqm,
                                       mat_id=int(dmat.id), mat_cat="door_sheet",
                                       area_sqm=area))
+        elif dr.material_id:
+            # متریال در از کتابخانه حذف شده — بی‌صدا «درِ رایگان» ندهیم!
+            res.warnings.append(
+                f"«{dr.label or 'در'}»: متریال در ({dr.material_name or 'شناسهٔ ' + str(dr.material_id)}) "
+                f"در کتابخانه قیمت پیدا نشد — هزینه‌ی {area:.3f} م² ورق در محاسبه نشد!")
 
         # هزینه‌ی ساخت/ CNC مدل در (مثلاً ممبران، هایگلاس، رنگ)
         if dr.door_model_id or dr.door_model_price:
@@ -945,11 +981,17 @@ class CostingEngine:
         if dr.banding_id:
             bmat = self.mat(dr.banding_id)
             if bmat is not None:
-                meters = dr.perimeter_m * leaves
+                # ★ ضریب نوار در: پیش‌تر فیلد `banding_door_factor` در تنظیمات و
+                #   رابط کاربری وجود داشت ولی هرگز در محاسبه ضرب نمی‌شد!
+                factor = _f(page.banding_door_factor, 1.0) if page is not None else 1.0
+                if factor <= 0:
+                    factor = 1.0
+                meters = dr.perimeter_m * leaves * factor
                 meters *= (1 + (_f(page.banding_waste_percent, 8.0) if page is not None else 0.0) / 100.0)
                 price = _f(bmat.price)
                 items.append(LineItem("banding_door", "نوار PVC در", bmat.name,
-                                      f"محیط {dr.perimeter_m:.2f} متر × {leaves} لنگه",
+                                      f"محیط {dr.perimeter_m:.2f} متر × {leaves} لنگه"
+                                      + (f" × ضریب {factor:g}" if factor != 1.0 else ""),
                                       meters, "متر", price, meters * price,
                                       mat_id=int(dr.banding_id), mat_cat="banding"))
                 res.banding_m += meters
@@ -1000,7 +1042,7 @@ class CostingEngine:
                                   f"{leaves} لنگه در", leaves, "لنگه", price, leaves * price,
                                   mat_id=int(dr.packaging_id), mat_cat="service"))
 
-        res.total_doors = getattr(res, "total_doors", 0) + leaves
+        res.total_doors += leaves
 
     # ------------------------------------------------------------------
     def _calc_drawer(self, dw: DrawerRow, unit_qty: int, res: UnitResult,
@@ -1015,6 +1057,11 @@ class CostingEngine:
             m = self.mat(dw.sheet_id)
             ppsqm = _f(m.price_per_sqm) if m else _f(dw.sheet_price_per_sqm)
             name = m.name if m else (dw.sheet_name or "ورق بدنه‌ی کشو")
+            if m is None and ppsqm <= 0 and dw.sheet_id:
+                res.warnings.append(
+                    f"«{dw.label or 'کشو'}»: متریال جعبه‌ی کشو در کتابخانه قیمت "
+                    "پیدا نشد و قیمت ثبت‌شده‌ای هم ندارد — هزینه‌ی ورق جعبه "
+                    "محاسبه نشد!")
             area = dw.box_area_sqm * count
             sa = _f(m.sheet_area_sqm) if m else 0.0
             items.append(LineItem("drawer_box", "جعبه‌ی کشو", name,
@@ -1029,6 +1076,10 @@ class CostingEngine:
             m = self.mat(dw.front_id)
             ppsqm = _f(m.price_per_sqm) if m else _f(dw.front_price_per_sqm)
             name = m.name if m else (dw.front_name or "تیره‌ی کشو")
+            if m is None and ppsqm <= 0 and dw.front_id:
+                res.warnings.append(
+                    f"«{dw.label or 'کشو'}»: متریال تیره‌ی کشو در کتابخانه قیمت "
+                    "پیدا نشد و قیمت ثبت‌شده‌ای هم ندارد — هزینه‌ی تیره محاسبه نشد!")
             area = dw.front_area_sqm * count
             sa = _f(m.sheet_area_sqm) if m else 0.0
             items.append(LineItem("drawer_front", "تیره‌ی کشو", name,
@@ -1051,9 +1102,13 @@ class CostingEngine:
         if dw.banding_id:
             m = self.mat(dw.banding_id)
             if m is not None:
-                meters = dw.banding_m * count
+                # پرت نوار برای کشو هم مثل بدنه و در اعمال می‌شود (قبلاً فقط
+                # نوار بدنه/در پرت داشتند و نوار کشو بدون پرت حساب می‌شد).
+                bw = _f(page.banding_waste_percent, 8.0) if page is not None else 0.0
+                meters = dw.banding_m * count * (1 + bw / 100.0)
                 items.append(LineItem("banding_drawer", "نوار PVC کشو", m.name,
-                                      f"{dw.banding_m:.2f} متر در هر کشو",
+                                      f"{dw.banding_m:.2f} متر در هر کشو"
+                                      + (f" + {bw:.0f}٪ پرت" if bw else ""),
                                       meters, "متر", _f(m.price), meters * _f(m.price),
                                       mat_id=int(dw.banding_id), mat_cat="banding"))
                 res.banding_m += meters
@@ -1076,7 +1131,7 @@ class CostingEngine:
                                   f"{count} عدد کشو", count, "عدد", price, count * price,
                                   mat_id=int(dw.assembly_id), mat_cat="service"))
 
-        res.total_drawers = getattr(res, "total_drawers", 0) + count
+        res.total_drawers += count
 
     # ------------------------------------------------------------------
     # محاسبه‌ی یک صفحه (سبک)
@@ -1145,31 +1200,54 @@ class CostingEngine:
             pr.unit_results.append(ur)
             pr.items.extend(ur.items)
             pr.warnings.extend(ur.warnings)
-            pr.total_units += max(0, int(u.qty or 0))
-            pr.total_doors += sum(d.leaves for d in u.doors) * max(1, int(u.qty or 1))
-            pr.total_drawers += sum(int(d.qty or 0) for d in u.drawers) * max(1, int(u.qty or 1))
+            # تعداد مؤثر یونیت: صفر/منفی یعنی یونیت کنار گذاشته شده (بدون هزینه)
+            nq = max(0, int(_f(u.qty, 0)))
+            pr.total_units += nq
+            pr.total_doors += sum(d.leaves for d in u.doors) * nq
+            pr.total_drawers += sum(max(0, int(d.qty or 0)) for d in u.drawers) * nq
             if u.unit_type in ("ground", "tall"):
-                pr.total_ground_lm += _f(u.length_cm) / 100.0 * max(1, int(u.qty or 1))
+                pr.total_ground_lm += _f(u.length_cm) / 100.0 * nq
             if u.unit_type == "wall":
-                pr.total_wall_lm += _f(u.length_cm) / 100.0 * max(1, int(u.qty or 1))
+                pr.total_wall_lm += _f(u.length_cm) / 100.0 * nq
+
+        # آمار تجمیعی — «قبل از» خدمات محاسبه می‌شود چون مبنای «مترمربع»
+        # (sqm) در خدماتِ صفحه به مساحت کل قطعات همین بخش نیاز دارد.
+        for ur in pr.unit_results:
+            pr.total_body_area += ur.body_area
+            pr.total_back_area += ur.back_area
+            pr.total_door_area += ur.door_area
+            pr.total_banding_m += ur.banding_m
+            pr.total_countertop_area += ur.countertop_area
+        pr.total_area_sqm = pr.total_body_area + pr.total_door_area + pr.total_back_area
 
         # ★ تجمیع ورق‌ها: همه‌ی قطعات هم‌جنسِ این بخش روی ورق‌های مشترک برش
         #   می‌خورند، پس تعداد ورق یک‌بار (و نه برای هر یونیت) گرد می‌شود.
         self.batch_sheets(pr.items)
         pr.total_sheets = sum(_f(i.sheets) for i in pr.items)
+        # batch_sheets مبلغ ردیف‌های ورقی را بازنویسی می‌کند؛ هزینه‌ی هر یونیت
+        # هم با همان مبالغِ نهایی همگام می‌شود تا جمع یونیت‌ها == جمع بخش بماند.
+        for ur in pr.unit_results:
+            ur.cost = sum(_f(i.amount) for i in ur.items)
 
         # صفحه‌ی کابینت کلی صفحه (اگر کاربر متراژ کلی داده باشد)
         if page.countertop_lm > 0:
             used = [u for u in page.units if u.countertop_id]
-            if used:
-                cm = self.mat(used[0].countertop_id)
-                if cm is not None:
-                    price = _f(cm.price)
-                    countertop_items.append(LineItem(
-                        "countertop", "صفحه کابینت", cm.name,
-                        f"{page.countertop_lm:.2f} متر طول (ورودی کلی)",
-                        page.countertop_lm, "متر", price, page.countertop_lm * price,
-                        mat_id=int(used[0].countertop_id), mat_cat="countertop"))
+            cm = self.mat(used[0].countertop_id) if used else None
+            if cm is not None:
+                price = _f(cm.price)
+                countertop_items.append(LineItem(
+                    "countertop", "صفحه کابینت", cm.name,
+                    f"{page.countertop_lm:.2f} متر طول (ورودی کلی)",
+                    page.countertop_lm, "متر", price, page.countertop_lm * price,
+                    mat_id=int(used[0].countertop_id), mat_cat="countertop"))
+            else:
+                # متراژ داده‌اند ولی متریالِ صفحه هیچ‌جا انتخاب نشده/پیدا نشد —
+                # بی‌صدا نادیده گرفتن یعنی پیش‌فاکتورِ ارزانِ غلط؛ هشدار می‌دهیم.
+                pr.warnings.append(
+                    f"«{page.name or 'بخش'}»: متراژ صفحه‌ی کابینت "
+                    f"({page.countertop_lm:g} متر) وارد شده ولی متریال صفحه در هیچ "
+                    "یونیتی انتخاب نشده (یا از کتابخانه حذف شده) — هزینه‌ی صفحه "
+                    "محاسبه نشد.")
 
         pr.items.extend(countertop_items)
 
@@ -1189,6 +1267,10 @@ class CostingEngine:
         pr.service_cost = self._calc_services(page, pr)
 
         # جمع‌بندی
+        # ⚠ کلید «service» عمداً در هیچ سطلی نیست: ردیف‌های خدمات توسط
+        #   `_calc_services` ساخته می‌شوند و جمعشان یک‌بار در `service_cost`
+        #   می‌آید. اگر این‌جا هم شمرده شوند، مبلغ خدمات دوبار در `subtotal`
+        #   لحاظ می‌شود (باگ قدیمیِ دوباره‌شماری که برطرف شد).
         group_map = {
             "material_cost": {"body_sheet", "back_sheet", "countertop", "crown",
                               "underlight", "kickboard", "banding_body", "banding_drawer",
@@ -1197,7 +1279,7 @@ class CostingEngine:
             "accessory_cost": {"hinge", "gas_spring", "shelf_pin", "handle", "leg",
                                "drawer_slide", "accessory"},
             "labor_cost": {"assembly_unit", "assembly_door", "assembly_drawer",
-                           "packaging_door", "service"},
+                           "packaging_door"},
         }
         for it in pr.items:
             for attr, keys in group_map.items():
@@ -1208,19 +1290,31 @@ class CostingEngine:
         pr.subtotal = (pr.material_cost + pr.door_cost + pr.accessory_cost +
                        pr.detail_cost + pr.labor_cost + pr.service_cost + pr.extra_cost)
         pr.waste_amount = 0.0     # پرت ورق داخل محاسبه‌ی ورق اعمال شده
-        pr.overhead_amount = pr.subtotal * _f(page.overhead_percent) / 100.0
-        pr.total_cost = pr.subtotal + pr.overhead_amount
-
-        # آمار تجمیعی
-        for ur in pr.unit_results:
-            pr.total_body_area += ur.body_area
-            pr.total_back_area += ur.back_area
-            pr.total_door_area += ur.door_area
-            pr.total_banding_m += ur.banding_m
-        for ur in pr.unit_results:
-            pr.total_countertop_area += ur.countertop_area
-        pr.total_area_sqm = pr.total_body_area + pr.total_door_area + pr.total_back_area
+        self._apply_overhead(pr, page)
         return pr
+
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _apply_overhead(pr: "PageResult", page: "Page") -> None:
+        """
+        محاسبه‌ی سربار و ثبت آن به‌صورت یک ردیف شفاف.
+
+        سربار پیش‌تر فقط در جمع‌ها وجود داشت و در ریزِ اقلام/فاکتور دیده
+        نمی‌شد؛ در نتیجه «جمع ردیف‌های فاکتور» از «هزینه‌ی تمام‌شده» کمتر
+        می‌شد. اکنون ردیف «سربار» اضافه می‌شود و اگر جمع بخش بعداً تغییر
+        کند (مثلاً خدمات درصدی در سطح پروژه)، این متد دوباره صدا زده شده و
+        مبلغ ردیف همگام می‌ماند (idempotent).
+        """
+        overhead_pct = max(0.0, _f(page.overhead_percent))
+        pr.overhead_amount = pr.subtotal * overhead_pct / 100.0
+        pr.total_cost = pr.subtotal + pr.overhead_amount
+        # ردیف کهنه‌ی سربار (اگر هست) حذف و با مبلغ تازه جایگزین می‌شود
+        pr.items[:] = [i for i in pr.items if i.key != "overhead"]
+        if pr.overhead_amount > 0:
+            pr.items.append(LineItem(
+                "overhead", "سربار", f"سربار کارگاه ({overhead_pct:g}٪)",
+                f"{overhead_pct:g}٪ از جمع اقلام بخش",
+                1, "موردی", pr.overhead_amount, pr.overhead_amount))
 
     # ------------------------------------------------------------------
     def _calc_detail(self, page: Page, pr: PageResult) -> float:
@@ -1248,13 +1342,16 @@ class CostingEngine:
             "unit": float(pr.total_units),
             "door": float(pr.total_doors),
             "shelf": 0.0,
-            "sqm": 0.0,
+            # مبنای «مترمربع»: مساحت کل قطعاتِ ورقی بخش (بدنه + در + پشت).
+            # ⚠ پیش‌تر این مقدار همیشه صفر بود و خدماتِ مترمربعی هیچ هزینه‌ای
+            #   نمی‌گرفتند؛ اکنون از آمار تجمیعیِ محاسبه‌شده پر می‌شود.
+            "sqm": float(pr.total_area_sqm),
             "lm": pr.total_ground_lm + pr.total_wall_lm,
             "fixed": 1.0,
             "percent": 0.0,
         }
         for u in page.units:
-            ctx["shelf"] += _f(u.shelves) * max(1, int(u.qty or 1))
+            ctx["shelf"] += max(0.0, _f(u.shelves)) * max(0, int(_f(u.qty, 0)))
         for s in page.services:
             if not s.label and not s.price:
                 continue
@@ -1282,11 +1379,47 @@ class CostingEngine:
                      deposit_percent: float = 0.0,
                      deposit_amount: float = 0.0) -> ProjectResult:
         out = ProjectResult()
+
+        # --- اعتبارسنجی ورودی‌های مالی -------------------------------------
+        # ورودی‌های نامعقول (درصد منفی، مارجین ≥ ۱۰۰ و …) پیش‌تر بی‌صدا
+        # نتایج عجیب می‌ساختند (مثلاً تخفیف منفی قیمت را از ناخالص بالاتر
+        # می‌برد). اکنون مقدارِ مؤثر محدود می‌شود و هشدارش به کاربر می‌رسد.
+        profit_percent = _f(profit_percent)
+        if profit_percent < 0:
+            out.warnings.append(f"درصد سود منفی ({profit_percent:g}٪) بود — صفر در نظر گرفته شد.")
+            profit_percent = 0.0
+        if profit_mode == "margin" and profit_percent >= 100:
+            out.warnings.append(
+                f"مارجین {profit_percent:g}٪ نامعتبر است (باید کمتر از ۱۰۰٪ باشد) — "
+                "سود صفر محاسبه شد.")
+        discount_percent = _f(discount_percent)
+        if not (0.0 <= discount_percent <= 100.0):
+            out.warnings.append(
+                f"درصد تخفیف ({discount_percent:g}٪) خارج از بازه‌ی ۰ تا ۱۰۰ بود — "
+                f"به {min(max(discount_percent, 0.0), 100.0):g}٪ محدود شد.")
+            discount_percent = min(max(discount_percent, 0.0), 100.0)
+        discount_amount = _f(discount_amount)
+        if discount_amount < 0:
+            out.warnings.append("مبلغ تخفیف منفی بود — صفر در نظر گرفته شد.")
+            discount_amount = 0.0
+        vat_percent = _f(vat_percent)
+        if vat_percent < 0:
+            out.warnings.append("درصد مالیات منفی بود — صفر در نظر گرفته شد.")
+            vat_percent = 0.0
+        install_value = _f(install_value)
+        if install_value < 0:
+            out.warnings.append("مبلغ نصب منفی بود — صفر در نظر گرفته شد.")
+            install_value = 0.0
+        deposit_percent = _f(deposit_percent)
+        if not (0.0 <= deposit_percent <= 100.0):
+            deposit_percent = min(max(deposit_percent, 0.0), 100.0)
+        deposit_amount = max(0.0, _f(deposit_amount))
+
         out.profit_mode = profit_mode
-        out.profit_percent = _f(profit_percent)
-        out.discount_percent = _f(discount_percent)
-        out.discount_amount_input = _f(discount_amount)
-        out.vat_percent = _f(vat_percent) if vat_enabled else 0.0
+        out.profit_percent = profit_percent
+        out.discount_percent = discount_percent
+        out.discount_amount_input = discount_amount
+        out.vat_percent = vat_percent if vat_enabled else 0.0
 
         stats = dict(total_units=0, total_doors=0, total_drawers=0, total_ground_lm=0.0,
                      total_wall_lm=0.0, total_body_area=0.0, total_door_area=0.0,
@@ -1294,16 +1427,22 @@ class CostingEngine:
 
         for page in pages:
             pr = self.calc_page(page)
-            # خدمات درصدی
+            # خدمات درصدی — همه نسبت به «جمع اقلامِ قبل از خدمات درصدی» حساب
+            # می‌شوند (بدون اثر مرکب روی هم)؛ پیش‌تر هر خدمت درصدی روی جمعِ
+            # شاملِ خدمت درصدیِ قبلی اعمال می‌شد.
             pct_services = [s for s in page.services if s.basis == "percent"]
-            for s in pct_services:
-                amt = pr.subtotal * _f(s.price) / 100.0
-                pr.items.append(LineItem("service", "خدمات", s.label or "خدمات درصدی",
-                                         f"{_f(s.price):g}٪ از جمع بخش", 1, "", _f(s.price), amt))
-                pr.service_cost += amt
-                pr.subtotal += amt
-                pr.overhead_amount = pr.subtotal * _f(page.overhead_percent) / 100.0
-                pr.total_cost = pr.subtotal + pr.overhead_amount
+            if pct_services:
+                base = pr.subtotal
+                pct_total = 0.0
+                for s in pct_services:
+                    pct = max(0.0, _f(s.price))
+                    amt = base * pct / 100.0
+                    pr.items.append(LineItem("service", "خدمات", s.label or "خدمات درصدی",
+                                             f"{pct:g}٪ از جمع بخش", 1, "", pct, amt))
+                    pct_total += amt
+                pr.service_cost += pct_total
+                pr.subtotal += pct_total
+                self._apply_overhead(pr, page)
             out.pages.append(pr)
             out.pages_cost += pr.total_cost
             out.items.extend(pr.items)
@@ -1328,11 +1467,11 @@ class CostingEngine:
         out.total_cost = out.pages_cost + install
 
         # سود
-        out.profit_amount = self.calc_profit(out.total_cost, profit_mode, _f(profit_percent))
+        out.profit_amount = self.calc_profit(out.total_cost, profit_mode, profit_percent)
         out.gross_price = out.total_cost + out.profit_amount
 
-        # تخفیف
-        disc = out.gross_price * _f(discount_percent) / 100.0 + _f(discount_amount)
+        # تخفیف (درصد و مبلغِ اعتبارسنجی‌شده)
+        disc = out.gross_price * discount_percent / 100.0 + discount_amount
         out.discount_amount = min(disc, out.gross_price)
         out.net_price = out.gross_price - out.discount_amount
 
@@ -1341,8 +1480,8 @@ class CostingEngine:
         out.final_price = out.net_price + out.vat_amount
 
         # پیش‌پرداخت (بیعانه) و باقی‌مانده
-        out.deposit_percent = _f(deposit_percent)
-        dep = out.final_price * out.deposit_percent / 100.0 + _f(deposit_amount)
+        out.deposit_percent = deposit_percent
+        dep = out.final_price * out.deposit_percent / 100.0 + deposit_amount
         out.deposit_amount = max(0.0, min(dep, out.final_price))
         out.remaining_amount = out.final_price - out.deposit_amount
 

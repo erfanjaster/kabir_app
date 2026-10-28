@@ -167,7 +167,7 @@ class MaterialRepo:
 
     def bulk_change_price(self, category: Optional[str], percent: float,
                           only_ids: Optional[List[int]] = None, reason: str = "به‌روزرسانی دسته‌جمعی") -> int:
-        """افزایش/کاهش درصدی قیمت‌ها — با ثبت تاریخچه."""
+        """افزایش/کاهش درصدی قیمت‌ها — با ثبت تاریخچه (فقط برای تغییرات واقعی)."""
         rows = self.all()
         count = 0
         for m in rows:
@@ -176,6 +176,10 @@ class MaterialRepo:
             if category and m.category != category:
                 continue
             new_price = round(float(m.price) * (1 + percent / 100.0), 2)
+            # ⚠ اگر قیمت عملاً عوض نمی‌شود (مثلاً درصدِ صفر یا گرد‌شدن)،
+            #   تاریخچه‌ی پوچ ثبت نکن و در شمارش هم نیاور.
+            if abs(new_price - float(m.price)) < 0.005:
+                continue
             self.set_price(m.id, new_price, reason)
             count += 1
         return count
@@ -308,9 +312,12 @@ class ProjectRepo:
         self.db.execute(f"UPDATE projects SET {','.join(sets)} WHERE id=?", vals)
 
     def delete(self, pid: int) -> None:
-        self.db.execute("DELETE FROM pages WHERE project_id=?", (pid,))
-        self.db.execute("DELETE FROM invoices WHERE project_id=?", (pid,))
-        self.db.execute("DELETE FROM projects WHERE id=?", (pid,))
+        # در یک تراکنشِ واحد — پیش‌تر سه حذفِ جدا بود و قطعیِ میانه می‌توانست
+        # داده‌ی یتیم به‌جا بگذارد.
+        with self.db.tx() as conn:
+            conn.execute("DELETE FROM pages WHERE project_id=?", (pid,))
+            conn.execute("DELETE FROM invoices WHERE project_id=?", (pid,))
+            conn.execute("DELETE FROM projects WHERE id=?", (pid,))
 
     def duplicate(self, pid: int) -> Optional[int]:
         p = self.get(pid)
@@ -328,9 +335,17 @@ class ProjectRepo:
         return new_id
 
     def next_code(self) -> str:
-        n = int(self.db.scalar("SELECT COUNT(*) FROM projects", default=0) or 0) + 1
+        # ⚠ پیش‌تر از COUNT(*)+1 استفاده می‌شد؛ با حذفِ یک پروژه، کدِ تکراری
+        #   تولید می‌شد. اکنون بزرگ‌ترین شماره‌ی سریالِ همین روز + ۱ می‌آید.
         from ..core.persian import jdate_str
-        return f"PR-{jdate_str(persian=False).replace('/', '')}-{n:03d}"
+        prefix = f"PR-{jdate_str(persian=False).replace('/', '')}-"
+        rows = self.db.q("SELECT code FROM projects WHERE code LIKE ?", (prefix + "%",))
+        n = 0
+        for r in rows:
+            tail = str(r["code"] or "")[len(prefix):]
+            if tail.isdigit():
+                n = max(n, int(tail))
+        return f"{prefix}{n + 1:03d}"
 
     # --- صفحه‌ها ---
     def pages_of(self, pid: int) -> List[Dict[str, Any]]:
@@ -400,12 +415,34 @@ class ProjectRepo:
         }
 
     def monthly(self, months: int = 6) -> List[Dict[str, Any]]:
+        """
+        جمع فروشِ N ماهِ اخیر — همیشه به‌ترتیبِ زمانی و با «صفر» برای ماه‌های
+        بدون پروژه.
+
+        ⚠ پیش‌تر فقط ماه‌های دارای داده برمی‌گشت؛ در نتیجه «فروش این ماه» در
+        داشبورد می‌توانست مبلغِ ماهِ دیگری باشد و «رشد ماهانه» دو ماهِ
+        نامتوالی را مقایسه می‌کرد.
+        """
+        months = max(1, int(months))
         rows = self.db.q(
             "SELECT substr(created_at,1,7) AS ym, COUNT(*) AS cnt, "
             "COALESCE(SUM(final_price),0) AS total FROM projects "
-            "GROUP BY ym ORDER BY ym DESC LIMIT ?", (months,))
-        out = [dict(r) for r in rows]
-        out.reverse()
+            "GROUP BY ym")
+        by_ym = {str(r["ym"]): r for r in rows}
+        today = datetime.now()
+        out: List[Dict[str, Any]] = []
+        y, m = today.year, today.month
+        keys = []
+        for _ in range(months):
+            keys.append(f"{y:04d}-{m:02d}")
+            m -= 1
+            if m == 0:
+                y, m = y - 1, 12
+        for ym in reversed(keys):
+            r = by_ym.get(ym)
+            out.append({"ym": ym,
+                        "cnt": int(r["cnt"]) if r else 0,
+                        "total": float(r["total"]) if r else 0.0})
         return out
 
 
@@ -441,20 +478,34 @@ class InvoiceRepo:
 
     def save(self, project_id: int, number: str, data: Dict[str, Any],
              total: float, kind: str = "quote") -> int:
+        # ⚠ نام مشتری در داده‌ی فاکتور زیرِ کلیدِ تودرتوی «customer» است؛
+        #   پیش‌تر data.get("customer_name") همیشه خالی بود و ستونِ DB هیچ‌وقت
+        #   پر نمی‌شد (جست‌وجوی مشتری روی فاکتورها کار نمی‌کرد).
+        customer = (data.get("customer") or {})
+        customer_name = data.get("customer_name") or customer.get("name", "")
         return int(self.db.execute(
             "INSERT INTO invoices(project_id,number,kind,customer_name,data,total,created_at) "
             "VALUES(?,?,?,?,?,?,?)",
-            (project_id, number, kind, data.get("customer_name", ""),
+            (project_id, number, kind, customer_name,
              json.dumps(data, ensure_ascii=False), total, _now())))
 
     def delete(self, iid: int) -> None:
         self.db.execute("DELETE FROM invoices WHERE id=?", (iid,))
 
     def next_number(self, kind: str = "quote") -> str:
+        # ⚠ پیش‌تر COUNT(*)+1 بود؛ بعد از حذف یک فاکتور، شماره‌ی تکراری صادر
+        #   می‌شد. اکنون بزرگ‌ترین سریالِ ثبت‌شده برای همین نوع و روز + ۱.
         from ..core.persian import jdate_str
-        n = int(self.db.scalar("SELECT COUNT(*) FROM invoices WHERE kind=?", (kind,), default=0) or 0) + 1
         prefix = "PI" if kind == "quote" else "INV"
-        return f"{prefix}-{jdate_str(persian=False).replace('/', '')}-{n:04d}"
+        prefix = f"{prefix}-{jdate_str(persian=False).replace('/', '')}-"
+        rows = self.db.q("SELECT number FROM invoices WHERE kind=? AND number LIKE ?",
+                         (kind, prefix + "%"))
+        n = 0
+        for r in rows:
+            tail = str(r["number"] or "")[len(prefix):]
+            if tail.isdigit():
+                n = max(n, int(tail))
+        return f"{prefix}{n + 1:04d}"
 
 
 # ===========================================================================

@@ -25,7 +25,7 @@ GROUP_ORDER = [
     "صفحه کابینت", "تاج", "زیرچراغ", "پاخور",
     "نوار PVC بدنه", "نوار PVC در", "نوار PVC کشو",
     "لولا", "گازور / جک", "خار طبقه", "دستگیره", "پایه", "ریل کشو",
-    "درنما", "اضافات و اکسسوری", "مونتاژ و خدمات", "خدمات", "نصب و حمل",
+    "درنما", "اضافات و اکسسوری", "مونتاژ و خدمات", "خدمات", "سربار", "نصب و حمل",
 ]
 
 KIND_LABELS = {"quote": "پیش‌فاکتور", "invoice": "فاکتور فروش", "proforma": "پیش‌فاکتور رسمی"}
@@ -50,6 +50,7 @@ def build_invoice_data(result: ProjectResult, project: Dict[str, Any],
       summary  → فقط جمع‌های کل
     """
     hidden = set(hidden or [])
+    now = datetime.now()          # یک زمانِ واحد برای تاریخ/ساعت سند
     items: List[Dict[str, Any]] = []
 
     def add(key, title, detail, qty, unit, unit_price, amount, group=""):
@@ -110,9 +111,9 @@ def build_invoice_data(result: ProjectResult, project: Dict[str, Any],
         "kind": kind,
         "kind_label": KIND_LABELS.get(kind, "پیش‌فاکتور"),
         "number": invoice_number or "",
-        "date_fa": fa.jdate_str(),
-        "date_en": datetime.now().strftime("%Y-%m-%d"),
-        "time": datetime.now().strftime("%H:%M"),
+        "date_fa": fa.jdate_str(now),
+        "date_en": now.strftime("%Y-%m-%d"),
+        "time": now.strftime("%H:%M"),
         "valid_until": project.get("valid_until", "") or "",
         "title": settings.get("invoice_title", "پیش‌فاکتور"),
         "project_title": project.get("title", "") or "",
@@ -312,8 +313,11 @@ def render_html(data: Dict[str, Any], accent: str = "#0f766e") -> str:
 
     total_rows: List[str] = []
     if data.get("show_cost"):
+        # ردیف «سربار» اکنون جزو اقلام است، پس جمع اقلام == هزینه‌ی تمام‌شده؛
+        # یک ردیف کافی است (پیش‌تر دو ردیف هم‌عدد چاپ می‌شد).
         total_rows.append(trow("جمع هزینه‌ی تمام‌شده", money(totals.get("total_cost", 0), data)))
-    total_rows.append(trow("جمع کل اقلام", money(totals.get("total_cost", 0), data)))
+    else:
+        total_rows.append(trow("جمع کل اقلام", money(totals.get("total_cost", 0), data)))
     mode_lbl = "مارکاپ" if totals.get("profit_mode") == "markup" else "مارجین"
     total_rows.append(trow(f"سود ({mode_lbl} {num(totals.get('profit_percent', 0), data)}٪)",
                            money(totals.get("profit_amount", 0), data)))

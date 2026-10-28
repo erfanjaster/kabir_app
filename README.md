@@ -1,6 +1,6 @@
 # 🗄 کبیر — نرم‌افزار محاسبه‌ی قیمت تمام‌شده و صدور فاکتور کابینت
 
-![نسخه](https://img.shields.io/badge/version-2.2.0-0f766e)
+![نسخه](https://img.shields.io/badge/version-2.3.0-0f766e)
 ![پایتون](https://img.shields.io/badge/python-3.10%2B-blue)
 ![پروانه](https://img.shields.io/badge/license-MIT-green)
 

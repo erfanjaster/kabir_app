@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib
+import ipaddress
 import json
 import mimetypes
 import os
@@ -46,6 +47,44 @@ EXPORT_DIR = Path(getattr(config, "EXPORT_DIR", Path(config.data_dir()) / "expor
 
 _lock = threading.RLock()
 _START_TIME = datetime.now()
+
+#: میزبان‌های مجاز برای صدا زدن API — جلوی DNS-rebinding گرفته می‌شود.
+#: با متغیر محیطی KABIR_ALLOWED_HOSTS می‌توان دامنه‌های اضافه (مثلاً پشت
+#: پروکسی معکوس) را مجاز کرد: KABIR_ALLOWED_HOSTS="kabir.local,*.example.com"
+_LOCAL_HOSTNAMES = {"localhost", "127.0.0.1", "::1"}
+_EXTRA_ALLOWED_HOSTS = tuple(
+    h.strip().lower() for h in os.environ.get("KABIR_ALLOWED_HOSTS", "").split(",") if h.strip()
+)
+
+
+def _hostname_of(value: str) -> str:
+    """نام میزبان از هدر Host (بدون اسکیم) یا Origin (با اسکیم)."""
+    v = (value or "").strip()
+    if not v:
+        return ""
+    if "://" not in v:
+        v = "//" + v
+    try:
+        return (urlparse(v).hostname or "").lower()
+    except ValueError:
+        return ""
+
+
+def _host_allowed(host_header: str) -> bool:
+    """آیا هدر Host برای پذیرفتن درخواست امن است؟ (دامنه‌های ناشناس رد می‌شوند)"""
+    hostname = _hostname_of(host_header)
+    if not hostname:
+        return True                      # کلاینت‌های بدون Host (ابزارهای محلی)
+    if hostname in _LOCAL_HOSTNAMES:
+        return True
+    for pat in _EXTRA_ALLOWED_HOSTS:
+        if hostname == pat or (pat.startswith("*.") and hostname.endswith(pat[1:])):
+            return True
+    try:
+        ipaddress.ip_address(hostname)
+        return True                      # IP مستقیم (دسترسی LAN روی 0.0.0.0)
+    except ValueError:
+        return False                     # دامنه‌ی ناشناس → احتمال DNS-rebinding
 
 MIME = {
     ".html": "text/html; charset=utf-8",
@@ -99,12 +138,20 @@ def _bool(v: Any) -> bool:
 
 
 def _jdate(value: Any) -> str:
-    """تبدیل متن تاریخ (ISO یا شمسی) به تاریخ شمسی کوتاه."""
+    """
+    تبدیل متن تاریخ (ISO میلادی یا شمسی) به تاریخ شمسی کوتاه.
+
+    ⚠ منطق قدیمی «اگر با 20 شروع نمی‌شد، شمسی است» بود؛ در نتیجه تاریخِ
+    میلادیِ مثل 1998-05-05 بدون تبدیل به‌عنوان شمسی برگردانده می‌شد.
+    اکنون: سال‌های ۱۰۰۰..۱۷۰۰ شمسی فرض می‌شوند (سال شمسیِ امروز ~۱۴۰۰ است)
+    و بقیه اگر ISO معتبر بودند به شمسی تبدیل می‌شوند.
+    """
     if not value:
         return ""
     s = str(value).strip()
-    if re.match(r"^\d{4}[/-]\d{1,2}[/-]\d{1,2}", s) and not s.startswith("20"):
-        return s.replace("-", "/")
+    m = re.match(r"^(\d{4})[/-]\d{1,2}[/-]\d{1,2}", s)
+    if m and 1000 <= int(m.group(1)) <= 1700:
+        return s.replace("-", "/")            # همین‌جا شمسی است
     try:
         d = datetime.fromisoformat(s.replace("Z", ""))
     except ValueError:
@@ -541,12 +588,17 @@ def api_material_update(db: Database, body: Dict[str, Any], mid: int) -> Dict[st
     old = repo.get(mid)
     if not old:
         raise ApiError("قلم یافت نشد.", 404)
+    # ⚠ اگر کلید price موجود ولی null باشد، _round2(None) صفر می‌شد و قیمت
+    #   قلم بی‌صدا صفر می‌شد! اکنون null یعنی «تغییری نده».
+    price_val = body.get("price")
+    if price_val is None:
+        price_val = old.price
     m = costing.Material(
         id=mid,
         name=_str(body.get("name"), old.name).strip() or old.name,
         category=_str(body.get("cat"), old.category),
         unit=_str(body.get("unit"), old.unit),
-        price=_round2(body.get("price", old.price)),
+        price=_round2(price_val),
         sheet_width_cm=_num(body.get("sheet_width_cm", old.sheet_width_cm)),
         sheet_height_cm=_num(body.get("sheet_height_cm", old.sheet_height_cm)),
         thickness_mm=_num(body.get("thickness_mm", old.thickness_mm)),
@@ -575,13 +627,69 @@ def api_material_toggle(db: Database, body: Dict[str, Any], mid: int) -> Dict[st
     return {"id": mid, "active": active, "materials": _materials_with_active(db)}
 
 
+#: کلیدهایی در JSON صفحه‌ها/الگوها که به شناسه‌ی متریال اشاره دارند
+_MATERIAL_REF_KEYS = {
+    "body_id", "back_id", "countertop_id", "crown_id", "underlight_id",
+    "kickboard_id", "leg_id", "banding_id", "shelf_pin_id", "assembly_id",
+    "material_id", "door_model_id", "hinge_id", "gas_spring_id", "handle_id",
+    "packaging_id", "slide_id", "sheet_id", "front_id",
+}
+
+
+def _walk_material_refs(node: Any, mid: int) -> bool:
+    """آیا در این ساختار JSON ارجاعی به شناسه‌ی متریال mid هست؟"""
+    if isinstance(node, dict):
+        for k, v in node.items():
+            if k in _MATERIAL_REF_KEYS:
+                try:
+                    if int(v or 0) == mid:
+                        return True
+                except (TypeError, ValueError):
+                    pass
+            elif isinstance(v, (dict, list)) and _walk_material_refs(v, mid):
+                return True
+    elif isinstance(node, list):
+        for x in node:
+            if _walk_material_refs(x, mid):
+                return True
+    return False
+
+
+def _material_usage(db: Database, mid: int) -> Dict[int, str]:
+    """پروژه‌هایی که این متریال در یونیت‌هایشان استفاده شده {id: عنوان}."""
+    users: Dict[int, str] = {}
+    rows = db.q("SELECT p.id AS pid, p.title AS title, pg.data AS data "
+                "FROM pages pg JOIN projects p ON p.id = pg.project_id")
+    for r in rows:
+        try:
+            data = json.loads(r["data"] or "{}")
+        except json.JSONDecodeError:
+            continue
+        if _walk_material_refs(data, mid):
+            users[int(r["pid"])] = (r["title"] or f"پروژه #{r['pid']}")
+    return users
+
+
 def api_material_delete(db: Database, body: Dict[str, Any], mid: int) -> Dict[str, Any]:
     repo = MaterialRepo(db)
     m = repo.get(mid)
     if not m:
         raise ApiError("قلم یافت نشد.", 404)
+    # ★ پیش‌تر متریالِ در حال استفاده بی‌سروصدا حذف می‌شد و موتور محاسبه هم
+    #   هزینه‌اش را «صفر» می‌گرفت — یعنی قیمت پروژه‌ها بی‌خبر ارزان می‌شد!
+    #   اکنون حذف بدون تأیید صریح (force) برای اقلامِ در حال استفاده رد می‌شود.
+    users = _material_usage(db, mid)
+    if users and not _bool(body.get("force")):
+        names = "، ".join(list(users.values())[:4])
+        if len(users) > 4:
+            names += f" و {fa.to_fa_digits(len(users) - 4)} پروژه‌ی دیگر"
+        raise ApiError(
+            f"«{m.name}» در {fa.to_fa_digits(len(users))} پروژه استفاده شده است "
+            f"({names}). حذفش هزینه‌ی این قلم را از قیمت آن پروژه‌ها حذف می‌کند. "
+            "پیشنهاد می‌شود به‌جای حذف، غیرفعالش کنید؛ اگر مطمئنید حذفِ اجباری "
+            "را تأیید کنید.", 409)
     repo.delete(mid)
-    db.log("material", f"حذف قلم: {m.name}")
+    db.log("material", f"حذف قلم: {m.name}" + (f" (اجباری — {len(users)} پروژه درگیر)" if users else ""))
     out: Dict[str, Any] = {"id": mid, "materials": _materials_with_active(db)}
     # قلم حذف‌شده ممکن است در پروژه‌ها استفاده شده باشد — بازمحاسبه‌ی خودکار
     out.update(_price_refresh(db))
@@ -773,8 +881,9 @@ def api_project_update(db: Database, body: Dict[str, Any], pid: int) -> Dict[str
         patch["final_price"] = _round2(body["final_price"])
     if "total_cost" in body:
         patch["total_cost"] = _round2(body["total_cost"])
-    # پروژه با نرخ‌های جاری محاسبه/ذخیره شد — نسخه‌ی نرخ ثبت می‌شود
-    patch["rates_rev"] = rc.current_prices_rev(db)
+    # ⚠ rates_rev تنها زمانی ثبت می‌شود که قیمت‌ها واقعاً (سمت سرور) بازمحاسبه
+    #   شوند — پیش‌تر هر ویرایشِ جزئی (مثلاً فقط عنوان) پرچمِ «نرخ قدیمی» را
+    #   بی‌آنکه قیمتی تازه شود پاک می‌کرد.
     if patch:
         repo.update(pid, patch)
 
@@ -799,6 +908,14 @@ def api_project_update(db: Database, body: Dict[str, Any], pid: int) -> Dict[str
             if old_id not in seen:
                 repo.delete_page(old_id)
         repo.reorder_pages(pid, seen)
+    # ★ بازمحاسبه‌ی قطعی سمت سرور: قیمتِ ذخیره‌شده همیشه از داده‌ی ذخیره‌شده
+    #   و نرخ‌های جاری به دست می‌آید (نه عددی که کلاینت ادعا می‌کند) و
+    #   rates_rev هم درست در همین لحظه ثبت می‌شود.
+    row = _project_or_404(db, pid)
+    try:
+        rc.recalc_project(db, row)
+    except Exception as exc:                   # noqa: BLE001
+        db.log("error", f"بازمحاسبه‌ی پروژه #{pid} هنگام ذخیره ناموفق بود: {exc}")
     db.log("project", f"به‌روزرسانی پروژه #{pid}")
     return {"project": _project_json(db, _project_or_404(db, pid))}
 
@@ -954,18 +1071,29 @@ def api_quick_project(db: Database, body: Dict[str, Any]) -> Dict[str, Any]:
     if style is None:
         # ★ بدون سبک، هیچ متریالی به یونیت‌ها نمی‌چسبد و قیمتِ کلِ آشپزخانه
         #   به «فقط اجرت نصب» سقوط می‌کند — یعنی یک پیش‌فاکتورِ غلطِ فاحش.
-        #   پس به اولین سبکِ موجود برمی‌گردیم تا عدد همیشه قابل دفاع باشد.
+        #   پس به اولین سبکِ موجود برمی‌گردیم تا عدد همیشه قابل دفاع باشد؛
+        #   و اگر هیچ سبکی وجود ندارد، به‌جای ساختنِ عددِ پوچ، خطا می‌دهیم.
         styles = StyleRepo(db).all()
         if styles:
             style = styles[0]
             style_id = int(style["id"])
+        else:
+            raise ApiError(
+                "برای قیمت‌گیری سریع دست‌کم یک «سبک» تعریف کنید (صفحه‌ی سبک‌ها). "
+                "بدون سبک، متریالی به یونیت‌ها نمی‌چسبد و قیمتِ پروژه غلطِ فاحش "
+                "از آب درمی‌آید.")
     style_data = (style or {}).get("data") or {}
 
     def _mid(cat: str, role: str) -> int:
         name = style_data.get(role)
         if not name:
             return 0
-        row = db.one("SELECT id FROM materials WHERE name=? AND active=1", (name,))
+        # اول در دسته‌ی درست بگرد (دو قلمِ هم‌نام در دسته‌های مختلف قاطی
+        # نشوند)؛ اگر نبود، هر هم‌نامِ فعال.
+        row = db.one("SELECT id FROM materials WHERE name=? AND category=? AND active=1",
+                     (name, cat))
+        if row is None:
+            row = db.one("SELECT id FROM materials WHERE name=? AND active=1", (name,))
         return int(row["id"]) if row else 0
 
     def _dims(kind: str) -> Dict[str, float]:
@@ -1425,9 +1553,28 @@ class KabirHandler(BaseHTTPRequestHandler):
 
     # ---------------- پاسخ‌ها ----------------
     def _cors(self) -> None:
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        """
+        هدرهای CORS — فقط برای مبدأهای هم‌تراز با Host.
+
+        ⚠ پیش‌تر `Access-Control-Allow-Origin: *` ارسال می‌شد؛ یعنی «هر»
+        وب‌سایتی که کاربر باز می‌کرد می‌توانست با fetch به API محلی کبیر
+        بنویسد/بخواند (پروژه‌ها را پاک کند یا داده‌ها را بدزدد). اکنون:
+          - درخواست هم‌ریشه (بدون Origin) → همیشه مجاز؛
+          - Origin «null» (رابط مستقل file://) → مجاز؛
+          - Origin با همان hostname هدر Host → مجاز (پروکسی/preview)؛
+          - در بقیه‌ی حالات هیچ هدر CORS نمی‌آید → مرورگر پاسخ را به صفحه‌ی
+            بیگانه نمی‌دهد و preflight هم رد می‌شود.
+        """
+        origin = (self.headers.get("Origin") or "").strip()
+        if not origin:
+            return
+        o_host = _hostname_of(origin)
+        h_host = _hostname_of(self.headers.get("Host") or "")
+        if origin == "null" or (o_host and o_host == h_host):
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
     def _security(self) -> None:
         """هدرهای امنیتی پایه (نرم‌افزار محلی، سخت‌گیری متعادل)."""
@@ -1545,6 +1692,10 @@ class KabirHandler(BaseHTTPRequestHandler):
                 if method != "GET":
                     raise ApiError("مسیر نامعتبر", 405)
                 self._static(path)
+                return
+            # ★ اعتبارسنجی Host برای همه‌ی مسیرهای API (ضد DNS-rebinding)
+            if not _host_allowed(self.headers.get("Host") or ""):
+                self._json({"ok": False, "error": "میزبان نامعتبر"}, 403)
                 return
             query = {k: v[0] for k, v in parse_qs(parsed.query).items()}
             for m, pattern, handler in ROUTES:

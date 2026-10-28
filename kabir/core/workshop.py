@@ -159,7 +159,11 @@ def build_cut_list(engine: CostingEngine, pages: List[Page]) -> List[CutPart]:
     for page in pages:
         sec = page.name or "بخش"
         for u in page.units:
-            n = max(1, int(u.qty or 1))
+            # یونیت با تعداد ≤ ۰ در قیمت هم شمرده نمی‌شود، پس در برش‌نامه هم
+            # نباید قطعه‌ای برایش صادر شود (پیش‌تر max(1,..) یک عدد می‌ساخت!)
+            n = int(float(u.qty or 0))
+            if n <= 0:
+                continue
             u_label = u.label or "یونیت"
 
             # --- پنل‌های بدنه و فیبر پشت ---
@@ -256,31 +260,54 @@ def _drawer_parts(sec: str, u_label: str, dw: DrawerRow, n: int,
         banding=True, banding_sides="۱ طول (لبه‌ی بالا)",
         area_sqm=round(cnt * 2 * (d / 100.0) * (h / 100.0), 4),
     ))
+    # ضخامت واقعیِ ورقِ جعبه (پیش‌تر ۱٫۶ سانتِ ثابت فرض می‌شد حتی برای ورق ۱۸)
+    t_cm = thickness_of(dw.sheet_id, 16.0) / 10.0
     # پشت جعبه
-    ln, wd = _ordered(w - 2 * 1.6, h)
+    ln, wd = _ordered(w - 2 * t_cm, h)
     parts.append(CutPart(
         section=sec, unit=u_label, part=f"پشت {label}", qty=cnt,
         length_mm=ln, width_mm=wd, thickness_mm=thickness_of(dw.sheet_id),
         material=name_of(dw.sheet_id, dw.sheet_name), mat_cat="drawer_sheet",
         banding=False, banding_sides="—",
-        area_sqm=round(cnt * max(0.0, (w - 3.2) / 100.0) * (h / 100.0), 4),
+        area_sqm=round(cnt * max(0.0, (w - 2 * t_cm) / 100.0) * (h / 100.0), 4),
     ))
     # کف جعبه (معمولاً فیبر ۳ میل)
-    ln, wd = _ordered(w - 2 * 1.6, d)
+    ln, wd = _ordered(w - 2 * t_cm, d)
     parts.append(CutPart(
         section=sec, unit=u_label, part=f"کف {label}", qty=cnt,
         length_mm=ln, width_mm=wd, thickness_mm=3.0,
         material="فیبر ۳ میل (کف کشو)", mat_cat="back_sheet",
         banding=False, banding_sides="—",
-        area_sqm=round(cnt * max(0.0, (w - 3.2) / 100.0) * (d / 100.0), 4),
+        area_sqm=round(cnt * max(0.0, (w - 2 * t_cm) / 100.0) * (d / 100.0), 4),
     ))
     return parts
 
 
 def summarize_sheets(parts: List[CutPart], engine: CostingEngine,
-                     settings: Optional[Dict[str, str]] = None) -> List[Dict[str, Any]]:
-    """چند ورق از هر متریال لازم است؟ (بر اساس مساحت قطعات برش‌نامه)"""
+                     settings: Optional[Dict[str, str]] = None,
+                     result: Optional[costing.ProjectResult] = None) -> List[Dict[str, Any]]:
+    """
+    چند ورق از هر متریال لازم است؟
+
+    اگر نتیجه‌ی محاسبه‌ی قیمت (result) در دسترس باشد، تعداد ورق «همان عددی»
+    است که در فاکتور پولش گرفته شده (با پرت و گردشدن در سطح بخش) — پیش‌تر
+    این خلاصه بدون پرت محاسبه می‌شد و می‌توانست کمتر از ورقِ فاکتور بگوید
+    (کارگاه یک ورق کمتر می‌خرید و کار می‌خوابید!). در غیر این صورت، بر
+    اساس مساحت قطعات برش‌نامه تقریب زده می‌شود.
+    """
     st = settings or {}
+
+    # ورق‌های «فاکتورشده» به تفکیک نام متریال (از ردیف‌های محاسبه)
+    invoiced_sheets: Dict[str, float] = {}
+    if result is not None:
+        per_mid: Dict[int, float] = {}
+        for it in result.items:
+            if it.key in CostingEngine.SHEET_ITEM_KEYS and it.mat_id:
+                per_mid[int(it.mat_id)] = per_mid.get(int(it.mat_id), 0.0) + float(it.sheets or 0.0)
+        for mid, sheets in per_mid.items():
+            m = engine.mat(mid)
+            if m is not None:
+                invoiced_sheets[m.name] = invoiced_sheets.get(m.name, 0.0) + sheets
 
     def _num(key: str, d: float) -> float:
         try:
@@ -320,7 +347,11 @@ def summarize_sheets(parts: List[CutPart], engine: CostingEngine,
             sa, size, price = 0.0, "", 0.0
         a["sheet_size"] = size
         a["price"] = price
-        if sa > 0:
+        if a["material"] in invoiced_sheets:
+            a["sheets"] = round(invoiced_sheets[a["material"]], 3)
+            a["cost"] = a["sheets"] * price
+            a["note"] = "همان تعداد ورقِ فاکتورشده (با پرت و تجمیع بخش)"
+        elif sa > 0:
             a["sheets"] = float(costing.round_up_sheets(a["area_sqm"], sa, 0.0))
             a["cost"] = a["sheets"] * price
     rows = sorted(agg.values(), key=lambda x: (CAT_ORDER.index(x["cat"])
@@ -330,10 +361,15 @@ def summarize_sheets(parts: List[CutPart], engine: CostingEngine,
 
 
 def _find_material_id(engine: CostingEngine, name: str, cat: str) -> int:
+    # اول هم‌نامِ هم‌دسته (دقیق‌تر)؛ بعد هر هم‌نام — پیش‌تر دسته نادیده گرفته
+    # می‌شد و دو قلمِ هم‌نام در دسته‌های مختلف به هم قاطی می‌شدند.
+    fallback = 0
     for mid, m in engine.materials.items():
         if m.name == name:
-            return int(mid)
-    return 0
+            if m.category == cat:
+                return int(mid)
+            fallback = fallback or int(mid)
+    return fallback
 
 
 # ---------------------------------------------------------------------------
@@ -418,7 +454,7 @@ def build_workshop_pack(engine: CostingEngine, pages: List[Page],
                         settings: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     """یک‌جا: برش‌نامه + خلاصه‌ی ورق + لیست خرید (برای ارسال به رابط وب)."""
     parts = build_cut_list(engine, pages)
-    sheets = summarize_sheets(parts, engine, settings)
+    sheets = summarize_sheets(parts, engine, settings, result=result)
     lines = build_shopping_list(result, engine)
 
     # آمار سرجمع برش‌نامه

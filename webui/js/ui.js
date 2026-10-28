@@ -2048,19 +2048,40 @@ function wire() {
       openModal("material");
     } else if (del) {
       const m = MATERIALS.find((x) => x.id === +del.dataset.delMat);
-      confirmAction(`«<b>${esc(m.name)}</b>» برای همیشه حذف شود؟`, async () => {
-        let resp = null;
-        if (API.ok) {
-          try { resp = await API.req("DELETE", `/api/materials/${m.id}`); MATERIALS = resp.materials; }
-          catch (err) { toast("حذف ناموفق: " + esc(err.message), "error"); return; }
-        } else {
-          MATERIALS.splice(MATERIALS.indexOf(m), 1);
-          demoSave();
-        }
+      const finishDelete = (resp) => {
         /* قلم حذف‌شده ممکن است در پروژه‌ها بوده باشد — سرور بازمحاسبه می‌کند */
         const nRecalc = ingestPriceRefresh(resp);
         afterMaterialsChanged();
         toast("متریال حذف شد" + (nRecalc ? ` — قیمت ${fa(nRecalc)} پروژه بازمحاسبه شد` : ""), "success");
+      };
+      confirmAction(`«<b>${esc(m.name)}</b>» برای همیشه حذف شود؟`, async () => {
+        if (!API.ok) {
+          MATERIALS.splice(MATERIALS.indexOf(m), 1);
+          demoSave();
+          finishDelete(null);
+          return;
+        }
+        try {
+          const resp = await API.req("DELETE", `/api/materials/${m.id}`);
+          MATERIALS = resp.materials;
+          finishDelete(resp);
+        } catch (err) {
+          if (err && err.status === 409) {
+            /* ★ قلم در پروژه‌ها استفاده شده — سرور بدون تأییدِ صریح حذف نمی‌کند
+               (حذفِ بی‌صدا یعنی قیمت پروژه‌ها بی‌خبر ارزان می‌شد!) */
+            confirmAction(esc(err.message), async () => {
+              try {
+                const resp2 = await API.req("DELETE", `/api/materials/${m.id}`, { force: true });
+                MATERIALS = resp2.materials;
+                finishDelete(resp2);
+              } catch (err2) {
+                toast("حذف ناموفق: " + esc(err2.message), "error");
+              }
+            }, "حذف اجباری");
+            return;
+          }
+          toast("حذف ناموفق: " + esc(err.message), "error");
+        }
       }, "حذف متریال");
     } else if (tog) {
       const m = MATERIALS.find((x) => x.id === +tog.dataset.toggleMat);

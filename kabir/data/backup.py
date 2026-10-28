@@ -116,7 +116,10 @@ def export_json(path: Path, db: Optional[Database] = None) -> Tuple[bool, str]:
         "settings": db.all_settings(),
         "tables": {},
     }
-    for table in ("material_categories", "materials", "styles", "projects", "pages", "invoices"):
+    # ⚠ unit_templates هم صادر می‌شود — پیش‌تر در خروجی جا می‌ماند و هنگام
+    #   انتقال داده بین سیستم‌ها، الگوهای یونیت بی‌صدا از دست می‌رفتند.
+    for table in ("material_categories", "materials", "styles", "projects",
+                  "pages", "invoices", "unit_templates"):
         payload["tables"][table] = [dict(r) for r in db.q(f"SELECT * FROM {table}")]
     try:
         Path(path).write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -130,6 +133,10 @@ def import_json(path: Path, replace: bool = True, db: Optional[Database] = None)
     ورود داده از فایل JSON.
     replace=True  → داده‌های فعلی جایگزین می‌شوند
     replace=False → فقط رکوردهای جدید اضافه می‌شوند (بدون حذف)
+
+    ★ ستون‌های ناشناخته (مثلاً از نسخه‌های قدیمی/جدیدتر) به‌جای پرتابِ خطای
+      خام، با طرحِ فعلی پایگاه‌داده مقایسه و فیلتر می‌شوند و هر خطا با پیامِ
+      تمیز برمی‌گردد (تراکنش به‌طور کامل rollback می‌شود).
     """
     db = db or Database.instance()
     try:
@@ -137,28 +144,53 @@ def import_json(path: Path, replace: bool = True, db: Optional[Database] = None)
     except Exception as exc:                   # noqa: BLE001
         return False, f"فایل نامعتبر: {exc}"
 
+    if not isinstance(payload, dict):
+        return False, "ساختار فایل نامعتبر است (باید یک شیء JSON باشد)."
+
     tables = payload.get("tables", {})
-    if not tables:
+    if not isinstance(tables, dict) or not tables:
         return False, "هیچ داده‌ای در فایل پیدا نشد."
+
+    allowed_tables = ("material_categories", "materials", "styles",
+                      "projects", "pages", "invoices", "unit_templates")
+    # ستون‌های واقعی هر جدول در طرحِ فعلی
+    columns: Dict[str, set] = {}
+    for t in allowed_tables:
+        try:
+            cols = db.q(f"PRAGMA table_info({t})")
+            columns[t] = {r[1] for r in cols}
+        except Exception:                      # noqa: BLE001
+            columns[t] = set()
 
     create_backup(db, tag="before-import")
     inserted = 0
-    with db.tx() as conn:
-        for table, rows in tables.items():
-            if table not in ("material_categories", "materials", "styles", "projects", "pages", "invoices"):
-                continue
-            if replace and rows:
-                conn.execute(f"DELETE FROM {table}")
-            for row in rows:
-                cols = [k for k in row.keys()]
-                if not cols:
+    skipped_cols = 0
+    try:
+        with db.tx() as conn:
+            for table, rows in tables.items():
+                if table not in allowed_tables or not isinstance(rows, list):
                     continue
-                verb = "INSERT OR REPLACE" if replace else "INSERT OR IGNORE"
-                conn.execute(
-                    f"{verb} INTO {table}({','.join(cols)}) VALUES({','.join(['?'] * len(cols))})",
-                    [row[c] for c in cols])
-                inserted += 1
+                known = columns.get(table) or set()
+                if replace and rows:
+                    conn.execute(f"DELETE FROM {table}")
+                for row in rows:
+                    if not isinstance(row, dict):
+                        continue
+                    cols = [k for k in row.keys() if k in known]
+                    skipped_cols += len(row) - len(cols)
+                    if not cols:
+                        continue
+                    verb = "INSERT OR REPLACE" if replace else "INSERT OR IGNORE"
+                    conn.execute(
+                        f"{verb} INTO {table}({','.join(cols)}) VALUES({','.join(['?'] * len(cols))})",
+                        [row[c] for c in cols])
+                    inserted += 1
+    except Exception as exc:                   # noqa: BLE001
+        return False, f"ورود داده ناموفق بود (تغییری اعمال نشد): {exc}"
     for k, v in (payload.get("settings") or {}).items():
         if k not in ("first_run_done",):
             db.set_setting(k, v)
-    return True, f"{inserted} رکورد وارد شد."
+    msg = f"{inserted} رکورد وارد شد."
+    if skipped_cols:
+        msg += f" ({skipped_cols} ستونِ ناشناخته با طرح فعلی نادیده گرفته شد)"
+    return True, msg

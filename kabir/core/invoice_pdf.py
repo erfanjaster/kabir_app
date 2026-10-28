@@ -366,7 +366,8 @@ def build_pdf(data: Dict[str, Any], out_path: Path, *, accent: Tuple[float, floa
     tcmds: List[Tuple] = []
     if data.get("show_cost"):
         trows.append(trow("جمع هزینه‌ی تمام‌شده", f"{num(totals.get('total_cost', 0), data)} {cur}"))
-    trows.append(trow("جمع کل اقلام", f"{num(totals.get('total_cost', 0), data)} {cur}"))
+    else:
+        trows.append(trow("جمع کل اقلام", f"{num(totals.get('total_cost', 0), data)} {cur}"))
     mode_lbl = "مارکاپ" if totals.get("profit_mode") == "markup" else "مارجین"
     trows.append(trow(f"سود ({mode_lbl} {num(totals.get('profit_percent', 0), data)}٪)",
                       f"{num(totals.get('profit_amount', 0), data)} {cur}"))

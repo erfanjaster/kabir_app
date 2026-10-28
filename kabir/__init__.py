@@ -24,7 +24,7 @@
 * ``webui``         — رابط کاربری وب (HTML/CSS/JS خالص، بدون فریم‌ورک)
 """
 
-__version__ = "2.2.0"
+__version__ = "2.3.0"
 __app_name__ = "کبیر"
 __app_name_en__ = "Kabir Cabinet Costing"
 __author__ = "Kabir Team"

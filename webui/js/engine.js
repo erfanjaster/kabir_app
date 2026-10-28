@@ -89,26 +89,50 @@ function calcProjectLocal(project) {
                  total_ground_lm: 0, total_wall_lm: 0, total_sheets: 0, total_body_area: 0,
                  total_door_area: 0, total_back_area: 0, total_banding_m: 0,
                  subtotal: 0, overhead_amount: 0, total_cost: 0 };
-    const waste = _n(page.waste_percent, 8);
-    const BAND_BODY_F = _n(page.banding_body_factor, _n(S.banding_body_factor, 2.2));
-    const BAND_WASTE = _n(page.banding_waste_percent, _n(S.banding_waste_percent, 8));
+    const waste = _n(page.waste_percent, 10);
+    const BAND_BODY_F = _n(page.banding_body_factor, 2.2);
+    const BAND_WASTE = _n(page.banding_waste_percent, 8);
+    /* ★ ضریب نوار در — هم‌راستا با موتور پایتون (پیش‌تر در هیچ‌کدام اعمال
+       نمی‌شد و تنظیمِ بی‌اثر بود). */
+    const BAND_DOOR_F = (() => { const f = _n(page.banding_door_factor, 1); return f > 0 ? f : 1; })();
 
     for (const u of page.units || []) {
-      const n = Math.max(1, _n(u.qty, 1));
+      /* ★ تعداد یونیت ≤ ۰ یعنی یونیت کنار گذاشته می‌شود (بدون هزینه) + هشدار.
+         پیش‌تر qty=0 یا منفی «یک عدد» قیمت می‌خورد! (هم‌راستا با پایتون) */
+      const q0 = Math.trunc(_n(u.qty, 1));
+      if (q0 <= 0) {
+        warnings.push(`«${u.label || "یونیت"}»: تعداد یونیت ${q0} وارد شده — بدون هزینه نادیده گرفته شد. اگر این یونیت را می‌خواهید، تعداد را دست‌کم ۱ بگذارید.`);
+        continue;
+      }
+      const n = q0;
       const L = _n(u.length_cm), H = _n(u.height_cm), D = _n(u.depth_cm);
       const bodyM = matById(u.body_id), backM = matById(u.back_id);
       const t = bodyM && bodyM.thickness_mm ? bodyM.thickness_mm / 10 : 0; // cm
 
-      /* --- پنل‌های بدنه (مثل default_panels) --- */
+      /* --- پنل‌های بدنه (مثل panels_of/default_panels پایتون) ---
+         ★ اگر کاربر ریز بدنه را دستی عوض کرده باشد (custom_panels)، همان
+         ملاک است — پیش‌تر این موتور ریز دستی را نادیده می‌گرفت. */
       let bodyArea = 0, backArea = 0;
-      bodyArea += 2 * (D / 100) * (H / 100);                       // دو بغل
-      if (u.has_bottom_panel !== false) bodyArea += ((L - 2 * t) / 100) * (D / 100);
-      if (u.has_top_panel !== false && u.unit_type !== "ground") bodyArea += ((L - 2 * t) / 100) * (D / 100);
-      if (u.unit_type === "tall") bodyArea += ((L - 2 * t) / 100) * (D / 100);
-      if (_n(u.shelves) > 0) bodyArea += _n(u.shelves) * ((L - 2 * t) / 100) * (D / 100);
-      if (u.back_id) backArea += (L / 100) * (H / 100);
+      const cp = Array.isArray(u.custom_panels) && u.custom_panels.length ? u.custom_panels : null;
+      if (cp) {
+        for (const pn of cp) {
+          if (pn.enabled === false) continue;
+          const a = _n(pn.qty) * (_n(pn.w_cm) / 100) * (_n(pn.h_cm) / 100);
+          if ((pn.material_key || "body") === "back") backArea += a; else bodyArea += a;
+        }
+      } else {
+        bodyArea += 2 * (D / 100) * (H / 100);                     // دو بغل
+        if (u.has_bottom_panel !== false) bodyArea += ((L - 2 * t) / 100) * (D / 100);
+        if (u.has_top_panel !== false && u.unit_type !== "ground") bodyArea += ((L - 2 * t) / 100) * (D / 100);
+        if (u.unit_type === "tall") bodyArea += ((L - 2 * t) / 100) * (D / 100);
+        if (_n(u.shelves) > 0) bodyArea += _n(u.shelves) * ((L - 2 * t) / 100) * (D / 100);
+        if (u.back_id) backArea += (L / 100) * (H / 100);
+      }
 
       /* ورق بدنه — تعداد ورق در batchSheetsLocal و در سطح کل بخش گرد می‌شود */
+      if (bodyArea > 0 && !bodyM) {
+        warnings.push(`«${u.label || "یونیت"}»: ورق بدنه ${u.body_id ? "حذف شده" : "انتخاب نشده"} است — هزینه‌ی ${fmt(bodyArea * n, 1)} م² بدنه محاسبه نشد!`);
+      }
       if (bodyArea > 0 && bodyM) {
         const per = bodyArea * (1 + waste / 100);
         const sheetArea = (bodyM.sheet_width_cm * bodyM.sheet_height_cm) / 10000;
@@ -127,6 +151,9 @@ function calcProjectLocal(project) {
       pr.total_body_area += bodyArea * n;
 
       /* فیبر پشت */
+      if (backArea > 0 && !backM) {
+        warnings.push(`«${u.label || "یونیت"}»: متریال فیبر پشت ${u.back_id ? "حذف شده" : "انتخاب نشده"} است — هزینه‌ی ${fmt(backArea * n, 1)} م² فیبر پشت محاسبه نشد!`);
+      }
       if (backArea > 0 && backM) {
         const per = backArea * (1 + waste / 100);
         const sheetArea = (backM.sheet_width_cm * backM.sheet_height_cm) / 10000;
@@ -135,24 +162,24 @@ function calcProjectLocal(project) {
           `${fmt(net, 1)} م² (با ${fmt(waste)}٪ پرت)`, net, "م²", pp, net * pp, true,
           { mat_id: backM.id, mat_cat: "back_sheet", area_sqm: per * n,
             sheet_area_sqm: sheetArea > 0 ? sheetArea : 0 }));
-        pr.total_back_area += net;
       }
+      pr.total_back_area += backArea * n;
 
       /* نوار PVC بدنه */
       if (bodyArea > 0 && u.banding_id) {
         const bm = matById(u.banding_id);
         const meters = bodyArea * n * BAND_BODY_F * (1 + BAND_WASTE / 100);
-        if (bm) {
-          pItems.push(engineItem("banding_body", "نوار PVC بدنه", bm.name,
-            `ضریب ${fa(BAND_BODY_F)} × مساحت بدنه + ${fmt(BAND_WASTE)}٪ پرت`,
-            meters, "متر", bm.price, meters * bm.price));
-          pr.total_banding_m += meters;
-        }
+        const bprice = bm ? _n(bm.price) : _n(u.banding_price);
+        const bname = bm ? bm.name : (u.banding_name || "نوار PVC");
+        pItems.push(engineItem("banding_body", "نوار PVC بدنه", bname,
+          `ضریب ${fa(BAND_BODY_F)} × مساحت بدنه + ${fmt(BAND_WASTE)}٪ پرت`,
+          meters, "متر", bprice, meters * bprice));
+        pr.total_banding_m += meters;
       }
 
       /* --- درها --- */
       for (const dr of u.doors || []) {
-        const leaves = _n(dr.qty) * n;
+        const leaves = Math.trunc(_n(dr.qty)) * n;
         if (leaves <= 0) continue;
         const area = leaves * (_n(dr.w_cm) / 100) * (_n(dr.h_cm) / 100);
         pr.total_door_area += area;
@@ -192,83 +219,127 @@ function calcProjectLocal(project) {
             pItems.push(engineItem("door_sheet", "ورق در", dmat.name, `${fmt(leaves)} لنگه — ${fmt(area, 1)} م²`, area, "م²", pp, area * pp, true,
               { mat_id: dmat.id, mat_cat: "door_sheet", area_sqm: area }));
           }
+        } else if (dr.material_id) {
+          warnings.push(`«${dr.label || "در"}»: متریال در (${dr.material_name || "شناسهٔ " + dr.material_id}) در کتابخانه قیمت پیدا نشد — هزینه‌ی ${fmt(area, 1)} م² ورق در محاسبه نشد!`);
         }
         const dmodel = matById(dr.door_model_id);
-        if (dmodel) {
-          pItems.push(engineItem("door_model", "مدل و اجرت در", dmodel.name, `${fmt(leaves)} لنگه`,
-            leaves, "لنگه", dmodel.price, leaves * dmodel.price));
+        if (dr.door_model_id || _n(dr.door_model_price)) {
+          const dmp = dmodel ? _n(dmodel.price) : _n(dr.door_model_price);
+          const dmn = dmodel ? dmodel.name : (dr.door_model_name || "اجرت ساخت در");
+          /* اجرت‌های «مترمربعی» (CNC/رنگ) بر اساس مساحت در حساب می‌شوند */
+          const bySqm = dmodel && dmodel.unit === "sqm";
+          const dq = bySqm ? area : leaves;
+          pItems.push(engineItem("door_model", "مدل و اجرت در", dmn,
+            `${fmt(leaves)} لنگه` + (bySqm ? ` — ${fmt(area, 1)} م²` : ""),
+            dq, bySqm ? "م²" : "لنگه", dmp, dq * dmp));
         }
         if (dr.banding_id) {
           const bm = matById(dr.banding_id);
           const per = 2 * ((_n(dr.w_cm) + _n(dr.h_cm)) / 100);
-          const meters = per * leaves * (1 + BAND_WASTE / 100);
+          const meters = per * leaves * BAND_DOOR_F * (1 + BAND_WASTE / 100);
           if (bm) {
             pItems.push(engineItem("banding_door", "نوار PVC در", bm.name,
-              `محیط ${fmt(per, 1)} متر × ${fmt(leaves)} لنگه`, meters, "متر", bm.price, meters * bm.price));
+              `محیط ${fmt(per, 1)} متر × ${fmt(leaves)} لنگه` + (BAND_DOOR_F !== 1 ? ` × ضریب ${fa(BAND_DOOR_F)}` : ""),
+              meters, "متر", bm.price, meters * bm.price));
             pr.total_banding_m += meters;
           }
         }
-        const hinge = matById(dr.hinge_id);
-        if (hinge) {
+        if (dr.hinge_id || _n(dr.hinge_price)) {
+          const hinge = matById(dr.hinge_id);
           const q = _n(dr.hinges_per_leaf, 2) * leaves;
-          pItems.push(engineItem("hinge", "لولا", hinge.name, `${fmt(_n(dr.hinges_per_leaf, 2))} عدد در هر لنگه`, q, "عدد", hinge.price, q * hinge.price));
+          const price = hinge ? _n(hinge.price) : _n(dr.hinge_price);
+          const name = hinge ? hinge.name : (dr.hinge_name || "لولا");
+          pItems.push(engineItem("hinge", "لولا", name, `${fmt(_n(dr.hinges_per_leaf, 2))} عدد در هر لنگه × ${fmt(leaves)} لنگه`, q, "عدد", price, q * price));
         }
-        if (dr.gas_spring_id && _n(dr.gas_springs_per_leaf) > 0) {
+        if ((dr.gas_spring_id || _n(dr.gas_spring_price)) && _n(dr.gas_springs_per_leaf) > 0) {
           const g = matById(dr.gas_spring_id);
           const q = _n(dr.gas_springs_per_leaf) * leaves;
-          if (g) pItems.push(engineItem("gas_spring", "گازور / جک", g.name, "", q, "عدد", g.price, q * g.price));
+          const price = g ? _n(g.price) : _n(dr.gas_spring_price);
+          const name = g ? g.name : (dr.gas_spring_name || "گازور");
+          pItems.push(engineItem("gas_spring", "گازور / جک", name, `${fmt(_n(dr.gas_springs_per_leaf))} عدد در هر لنگه`, q, "عدد", price, q * price));
         }
-        const handle = matById(dr.handle_id);
-        if (handle) {
+        if (dr.handle_id || _n(dr.handle_price)) {
+          const handle = matById(dr.handle_id);
           const q = _n(dr.handles_per_leaf, 1) * leaves;
-          pItems.push(engineItem("handle", "دستگیره", handle.name, "", q, "عدد", handle.price, q * handle.price));
+          const price = handle ? _n(handle.price) : _n(dr.handle_price);
+          const name = handle ? handle.name : (dr.handle_name || "دستگیره");
+          pItems.push(engineItem("handle", "دستگیره", name, `${fmt(leaves)} لنگه`, q, "عدد", price, q * price));
         }
-        const asm = matById(dr.assembly_id);
-        if (asm) pItems.push(engineItem("assembly_door", "مونتاژ و خدمات", asm.name, `${fmt(leaves)} لنگه در`, leaves, "لنگه", asm.price, leaves * asm.price));
-        const pk = matById(dr.packaging_id);
-        if (pk) pItems.push(engineItem("packaging_door", "مونتاژ و خدمات", pk.name, `${fmt(leaves)} لنگه در`, leaves, "لنگه", pk.price, leaves * pk.price));
+        if (dr.assembly_id || _n(dr.assembly_price)) {
+          const asm = matById(dr.assembly_id);
+          const price = asm ? _n(asm.price) : _n(dr.assembly_price);
+          const name = asm ? asm.name : (dr.assembly_name || "مونتاژ در");
+          pItems.push(engineItem("assembly_door", "مونتاژ و خدمات", name, `${fmt(leaves)} لنگه در`, leaves, "لنگه", price, leaves * price));
+        }
+        if (dr.packaging_id || _n(dr.packaging_price)) {
+          const pk = matById(dr.packaging_id);
+          const price = pk ? _n(pk.price) : _n(dr.packaging_price);
+          const name = pk ? pk.name : (dr.packaging_name || "بسته‌بندی در");
+          pItems.push(engineItem("packaging_door", "مونتاژ و خدمات", name, `${fmt(leaves)} لنگه در`, leaves, "لنگه", price, leaves * price));
+        }
         pr.total_doors += leaves;
       }
 
       /* --- کشوها --- */
       for (const dw of u.drawers || []) {
-        const count = _n(dw.qty) * n;
+        const count = Math.trunc(_n(dw.qty)) * n;
         if (count <= 0) continue;
         const w = _n(dw.w_cm) / 100, h = _n(dw.h_cm) / 100, d = _n(dw.d_cm) / 100;
         const sheetM = matById(dw.sheet_id);
-        if (sheetM) {
+        if (dw.sheet_id || _n(dw.sheet_price_per_sqm)) {
+          const pp = sheetM ? pricePerSqm(sheetM) : _n(dw.sheet_price_per_sqm);
+          const dname = sheetM ? sheetM.name : (dw.sheet_name || "ورق بدنه‌ی کشو");
+          if (!sheetM && pp <= 0 && dw.sheet_id) {
+            warnings.push(`«${dw.label || "کشو"}»: متریال جعبه‌ی کشو در کتابخانه قیمت پیدا نشد و قیمت ثبت‌شده‌ای هم ندارد — هزینه‌ی ورق جعبه محاسبه نشد!`);
+          }
           const boxArea = (2 * d * h) + (w * d) + (w * h);
-          const pp = pricePerSqm(sheetM);
-          const sa = (sheetM.sheet_width_cm * sheetM.sheet_height_cm) / 10000;
-          pItems.push(engineItem("drawer_box", "جعبه‌ی کشو", sheetM.name,
+          const sa = sheetM ? (sheetM.sheet_width_cm * sheetM.sheet_height_cm) / 10000 : 0;
+          pItems.push(engineItem("drawer_box", "جعبه‌ی کشو", dname,
             `${fmt(count)} عدد × ${fmt(boxArea, 1)} م²`, boxArea * count, "م²", pp, boxArea * count * pp, true,
-            { mat_id: sheetM.id, mat_cat: "drawer_sheet", area_sqm: boxArea * count * (1 + waste / 100),
+            { mat_id: _n(dw.sheet_id), mat_cat: "drawer_sheet", area_sqm: boxArea * count * (1 + waste / 100),
               sheet_area_sqm: sa > 0 ? sa : 0 }));
         }
         const frontM = matById(dw.front_id);
-        if (frontM) {
+        if (dw.front_id || _n(dw.front_price_per_sqm)) {
+          const pp = frontM ? pricePerSqm(frontM) : _n(dw.front_price_per_sqm);
+          const fname = frontM ? frontM.name : (dw.front_name || "تیره‌ی کشو");
+          if (!frontM && pp <= 0 && dw.front_id) {
+            warnings.push(`«${dw.label || "کشو"}»: متریال تیره‌ی کشو در کتابخانه قیمت پیدا نشد و قیمت ثبت‌شده‌ای هم ندارد — هزینه‌ی تیره محاسبه نشد!`);
+          }
           const fa2 = w * h;
-          const pp = pricePerSqm(frontM);
-          const sa = (frontM.sheet_width_cm * frontM.sheet_height_cm) / 10000;
-          pItems.push(engineItem("drawer_front", "تیره‌ی کشو", frontM.name, `${fmt(count)} عدد × ${fmt(fa2, 1)} م²`, fa2 * count, "م²", pp, fa2 * count * pp, true,
-            { mat_id: frontM.id, mat_cat: "door_sheet", area_sqm: fa2 * count * (1 + waste / 100),
+          const sa = frontM ? (frontM.sheet_width_cm * frontM.sheet_height_cm) / 10000 : 0;
+          pItems.push(engineItem("drawer_front", "تیره‌ی کشو", fname, `${fmt(count)} عدد × ${fmt(fa2, 1)} م²`, fa2 * count, "م²", pp, fa2 * count * pp, true,
+            { mat_id: _n(dw.front_id), mat_cat: "door_sheet", area_sqm: fa2 * count * (1 + waste / 100),
               sheet_area_sqm: sa > 0 ? sa : 0 }));
           pr.total_door_area += fa2 * count;
         }
-        const slide = matById(dw.slide_id);
-        if (slide) pItems.push(engineItem("drawer_slide", "ریل کشو", slide.name, `${fmt(count)} عدد کشو`, count, "ست", slide.price, count * slide.price));
+        if (dw.slide_id || _n(dw.slide_price)) {
+          const slide = matById(dw.slide_id);
+          const price = slide ? _n(slide.price) : _n(dw.slide_price);
+          const name = slide ? slide.name : (dw.slide_name || "ریل کشو");
+          pItems.push(engineItem("drawer_slide", "ریل کشو", name, `${fmt(count)} عدد کشو`, count, "ست", price, count * price));
+        }
         if (dw.banding_id) {
           const bm = matById(dw.banding_id);
-          const meters = (2 * (2 * (d + h)) + 2 * (w + d) + 2 * (w + h)) * count;
+          /* پرت نوار برای کشو هم مثل بدنه و در اعمال می‌شود (هم‌راستا با پایتون) */
+          const meters = (2 * (2 * (d + h)) + 2 * (w + d) + 2 * (w + h)) * count * (1 + BAND_WASTE / 100);
           if (bm) {
             pItems.push(engineItem("banding_drawer", "نوار PVC کشو", bm.name, "", meters, "متر", bm.price, meters * bm.price));
             pr.total_banding_m += meters;
           }
         }
-        const dh = matById(dw.handle_id);
-        if (dh) pItems.push(engineItem("handle", "دستگیره", dh.name, `${fmt(count)} عدد کشو`, count, "عدد", dh.price, count * dh.price));
-        const da = matById(dw.assembly_id);
-        if (da) pItems.push(engineItem("assembly_drawer", "مونتاژ و خدمات", da.name, `${fmt(count)} عدد کشو`, count, "عدد", da.price, count * da.price));
+        if (dw.handle_id || _n(dw.handle_price)) {
+          const dh = matById(dw.handle_id);
+          const price = dh ? _n(dh.price) : _n(dw.handle_price);
+          const name = dh ? dh.name : (dw.handle_name || "دستگیره");
+          pItems.push(engineItem("handle", "دستگیره", name, `${fmt(count)} عدد کشو`, count, "عدد", price, count * price));
+        }
+        if (dw.assembly_id || _n(dw.assembly_price)) {
+          const da = matById(dw.assembly_id);
+          const price = da ? _n(da.price) : _n(dw.assembly_price);
+          const name = da ? da.name : (dw.assembly_name || "مونتاژ کشو");
+          pItems.push(engineItem("assembly_drawer", "مونتاژ و خدمات", name, `${fmt(count)} عدد کشو`, count, "عدد", price, count * price));
+        }
         pr.total_drawers += count;
       }
 
@@ -280,9 +351,11 @@ function calcProjectLocal(project) {
         if (cm) {
           const lm = (L / 100) * n;
           pItems.push(engineItem("countertop", "صفحه کابینت", cm.name, `${fmt(lm, 1)} متر طول`, lm, "متر", cm.price, lm * cm.price));
+        } else {
+          warnings.push(`«${u.label || "یونیت"}»: متریال صفحه‌ی کابینت در کتابخانه قیمت پیدا نشد (حذف شده؟) — هزینه‌ی صفحه محاسبه نشد!`);
         }
       }
-      if (u.crown_id && u.unit_type !== "ground") {
+      if (u.crown_id && (u.unit_type === "wall" || u.unit_type === "tall")) {
         const cm = matById(u.crown_id);
         if (cm) { const lm = (L / 100) * n; pItems.push(engineItem("crown", "تاج", cm.name, `${fmt(lm, 1)} متر طول`, lm, "متر", cm.price, lm * cm.price)); }
       }
@@ -290,26 +363,39 @@ function calcProjectLocal(project) {
         const cm = matById(u.underlight_id);
         if (cm) { const lm = (L / 100) * n; pItems.push(engineItem("underlight", "زیرچراغ", cm.name, `${fmt(lm, 1)} متر طول`, lm, "متر", cm.price, lm * cm.price)); }
       }
-      if (u.kickboard_id && u.unit_type !== "wall") {
+      if (u.kickboard_id && (u.unit_type === "ground" || u.unit_type === "tall")) {
         const cm = matById(u.kickboard_id);
         if (cm) { const lm = (L / 100) * n; pItems.push(engineItem("kickboard", "پاخور", cm.name, `${fmt(lm, 1)} متر طول`, lm, "متر", cm.price, lm * cm.price)); }
       }
-      if (u.leg_id && u.unit_type !== "wall") {
+      if (u.leg_id && (u.unit_type === "ground" || u.unit_type === "tall")) {
         const lm2 = matById(u.leg_id);
-        if (lm2) { const q = _n(u.legs_per_unit, 4) * n; pItems.push(engineItem("leg", "پایه", lm2.name, `${fmt(q)} عدد`, q, "عدد", lm2.price, q * lm2.price)); }
+        if (lm2 || _n(u.leg_price)) {
+          const q = _n(u.legs_per_unit, 4) * n;
+          const price = lm2 ? _n(lm2.price) : _n(u.leg_price);
+          const name = lm2 ? lm2.name : (u.leg_name || "پایه");
+          pItems.push(engineItem("leg", "پایه", name, `${fmt(q)} عدد`, q, "عدد", price, q * price));
+        }
       }
       if (u.shelf_pin_id && _n(u.shelves) > 0) {
         const sp = matById(u.shelf_pin_id);
-        if (sp) { const q = _n(u.pins_per_shelf, 4) * _n(u.shelves) * n; pItems.push(engineItem("shelf_pin", "خار طبقه", sp.name, "", q, "عدد", sp.price, q * sp.price)); }
+        if (sp || _n(u.shelf_pin_price)) {
+          const q = _n(u.pins_per_shelf, 4) * _n(u.shelves) * n;
+          const price = sp ? _n(sp.price) : _n(u.shelf_pin_price);
+          const name = sp ? sp.name : (u.shelf_pin_name || "خار طبقه");
+          pItems.push(engineItem("shelf_pin", "خار طبقه", name, "", q, "عدد", price, q * price));
+        }
       }
-      if (u.assembly_id) {
+      if (u.assembly_id || _n(u.assembly_price)) {
         const am = matById(u.assembly_id);
-        if (am) pItems.push(engineItem("assembly_unit", "مونتاژ و خدمات", am.name, `${fmt(n)} یونیت`, n, "یونیت", am.price, n * am.price));
+        const price = am ? _n(am.price) : _n(u.assembly_price);
+        const name = am ? am.name : (u.assembly_name || "مونتاژ یونیت");
+        pItems.push(engineItem("assembly_unit", "مونتاژ و خدمات", name, `${fmt(n)} یونیت`, n, "یونیت", price, n * price));
       }
 
       pr.total_units += n;
       if (u.unit_type === "wall") pr.total_wall_lm += (L / 100) * n;
-      else pr.total_ground_lm += (L / 100) * n;
+      else if (u.unit_type === "ground" || u.unit_type === "tall") pr.total_ground_lm += (L / 100) * n;
+      /* انواع دیگر (کشو/شلف باز) متر طول زمینی/دیواری ندارند — هم‌راستا با پایتون */
     }
 
     /* ★ تجمیع ورق‌ها در سطح بخش */
@@ -322,6 +408,8 @@ function calcProjectLocal(project) {
       if (cm) {
         const lm = _n(page.countertop_lm);
         pItems.push(engineItem("countertop", "صفحه کابینت", cm.name, `${fmt(lm, 1)} متر طول (ورودی کلی)`, lm, "متر", cm.price, lm * cm.price));
+      } else {
+        warnings.push(`«${page.name || "بخش"}»: متراژ صفحه‌ی کابینت (${fmt(_n(page.countertop_lm), 1)} متر) وارد شده ولی متریال صفحه در هیچ یونیتی انتخاب نشده (یا از کتابخانه حذف شده) — هزینه‌ی صفحه محاسبه نشد.`);
       }
     }
 
@@ -351,39 +439,47 @@ function calcProjectLocal(project) {
         _n(ex.qty, 1), UNITS[ex.unit] || ex.unit || "", _n(ex.price), amt, ex.visible !== false));
     }
 
-    /* خدمات (مبنا خودکار) */
+    /* خدمات (مبنا خودکار)
+       ★ مبنای «مترمربع» (sqm) پیش‌تر همیشه صفر بود و خدمات مترمربعی هیچ
+       هزینه‌ای نمی‌گرفتند؛ اکنون از مساحت کل قطعات بخش پر می‌شود. */
     const ctx = {
-      unit: pr.total_units, door: pr.total_doors, shelf: 0, sqm: 0,
+      unit: pr.total_units, door: pr.total_doors, shelf: 0,
+      sqm: pr.total_body_area + pr.total_door_area + pr.total_back_area,
       lm: pr.total_ground_lm + pr.total_wall_lm, fixed: 1, percent: 0,
     };
-    for (const u of page.units || []) ctx.shelf += _n(u.shelves) * Math.max(1, _n(u.qty, 1));
+    for (const u of page.units || []) ctx.shelf += Math.max(0, _n(u.shelves)) * Math.max(0, Math.trunc(_n(u.qty, 1)));
     const pctServices = [];
-    let fixedSvcTotal = 0;
     for (const s of page.services || []) {
       if (!s.label && !_n(s.price)) continue;
       if (s.basis === "percent") { pctServices.push(s); continue; }
       const basis = ctx[s.basis] !== undefined ? s.basis : "fixed";
       const q = ctx[basis];
       const amt = q * _n(s.price);
-      fixedSvcTotal += amt;
       pItems.push(engineItem("service", "خدمات", s.label || "خدمات", `مبنای محاسبه: ${SERVICE_BASIS[basis] || basis}`, q, "", _n(s.price), amt));
     }
 
-    /* نکته: موتور دسکتاپ مبلغ خدمات غیردرصدی را دو بار در جمع بخش
-       لحاظ می‌کند (یک‌بار در labor_cost و یک‌بار در service_cost).
-       برای یکی بودن اعداد وب و دسکتاپ، همان رفتار اینجا بازتولید شده است. */
-    /* نکته: موتور دسکتاپ (kabir/core/costing.py) مبلغ خدمات غیردرصدی را
-       دو بار در جمع بخش لحاظ می‌کند (یک‌بار در labor_cost از راه group_map
-       و یک‌بار در service_cost). برای اینکه قیمت‌های رابط وب و دسکتاپ
-       مو‌به‌مو یکی باشد، همان رفتار اینجا بازتولید شده است. */
-    subtotal = pItems.reduce((a, it) => a + it.amount, 0) + fixedSvcTotal;
-    /* خدمات درصدی */
-    for (const s of pctServices) {
-      const amt = subtotal * _n(s.price) / 100;
-      pItems.push(engineItem("service", "خدمات", s.label || "خدمات درصدی", `${fmt(_n(s.price), 1)}٪ از جمع بخش`, 1, "", _n(s.price), amt));
-      subtotal += amt;
+    /* ★ باگ قدیمی برطرف شد: مبلغ خدمات غیردرصدی پیش‌تر «دو بار» در جمع بخش
+       لحاظ می‌شد (یک‌بار داخل ردیف‌ها و یک‌بار با fixedSvcTotal) — و موتور
+       دسکتاپ هم همان دوباره‌شماری را داشت. اکنون هر دو موتور خدمات را
+       دقیقاً یک‌بار می‌شمارند. */
+    subtotal = pItems.reduce((a, it) => a + it.amount, 0);
+    /* خدمات درصدی — همه نسبت به جمعِ قبل از خدمات درصدی (بدون اثر مرکب) */
+    if (pctServices.length) {
+      const base = subtotal;
+      for (const s of pctServices) {
+        const pct = Math.max(0, _n(s.price));
+        const amt = base * pct / 100;
+        pItems.push(engineItem("service", "خدمات", s.label || "خدمات درصدی", `${fmt(pct, 1)}٪ از جمع بخش`, 1, "", pct, amt));
+        subtotal += amt;
+      }
     }
-    overhead = subtotal * _n(page.overhead_percent) / 100;
+    /* سربار + ردیف شفافِ آن در اقلام (هم‌راستا با پایتون: جمع اقلام == هزینه‌ی تمام‌شده) */
+    const ohPct = Math.max(0, _n(page.overhead_percent));
+    overhead = subtotal * ohPct / 100;
+    for (let i = pItems.length - 1; i >= 0; i--) if (pItems[i].key === "overhead") pItems.splice(i, 1);
+    if (overhead > 0) {
+      pItems.push(engineItem("overhead", "سربار", `سربار کارگاه (${fmt(ohPct)}٪)`, `${fmt(ohPct)}٪ از جمع اقلام بخش`, 1, "موردی", overhead, overhead));
+    }
     pr.subtotal = subtotal;
     pr.overhead_amount = overhead;
     pr.total_cost = subtotal + overhead;
@@ -403,9 +499,11 @@ function calcProjectLocal(project) {
     stats.extra_fixed = extraFixed;
   }
 
-  /* نصب */
+  /* نصب — مبلغ منفی پذیرفته نمی‌شود */
   let install = 0;
-  const im = project.install_mode || "none", iv = _n(project.install_value);
+  const im = project.install_mode || "none";
+  let iv = _n(project.install_value);
+  if (iv < 0) { warnings.push("مبلغ نصب منفی بود — صفر در نظر گرفته شد."); iv = 0; }
   if (im === "fixed") install = iv;
   else if (im === "per_meter") install = iv * (stats.total_ground_lm || 0);
   else if (im === "percent") install = pagesCost * iv / 100;
@@ -416,24 +514,37 @@ function calcProjectLocal(project) {
   }
   const totalCost = pagesCost + install;
 
-  /* سود */
+  /* سود — اعتبارسنجی درصد (هم‌راستا با پایتون) */
   const pMode = project.profit_mode || "markup";
-  const pPct = _n(project.profit_percent);
+  let pPct = _n(project.profit_percent);
+  if (pPct < 0) { warnings.push(`درصد سود منفی (${fmt(pPct)}٪) بود — صفر در نظر گرفته شد.`); pPct = 0; }
+  if (pMode === "margin" && pPct >= 100) {
+    warnings.push(`مارجین ${fmt(pPct)}٪ نامعتبر است (باید کمتر از ۱۰۰٪ باشد) — سود صفر محاسبه شد.`);
+  }
   let profit;
   if (pMode === "margin") profit = pPct >= 100 ? 0 : totalCost * pPct / (100 - pPct);
   else profit = totalCost * pPct / 100;
   const gross = totalCost + profit;
 
-  /* تخفیف و مالیات */
-  const discount = Math.min(gross * _n(project.discount_percent) / 100 + _n(project.discount_amount), gross);
+  /* تخفیف و مالیات — درصدها محدود به بازه‌ی معتبر (تخفیف منفی پیش‌تر
+     قیمت را از ناخالص «بالاتر» می‌برد!) */
+  let dPct = _n(project.discount_percent);
+  if (dPct < 0 || dPct > 100) {
+    warnings.push(`درصد تخفیف (${fmt(dPct)}٪) خارج از بازه‌ی ۰ تا ۱۰۰ بود — به ${fmt(Math.min(Math.max(dPct, 0), 100))}٪ محدود شد.`);
+    dPct = Math.min(Math.max(dPct, 0), 100);
+  }
+  let dAmt = _n(project.discount_amount);
+  if (dAmt < 0) { warnings.push("مبلغ تخفیف منفی بود — صفر در نظر گرفته شد."); dAmt = 0; }
+  const discount = Math.min(gross * dPct / 100 + dAmt, gross);
   const net = gross - discount;
-  const vatPct = project.vat_enabled ? _n(project.vat_percent) : 0;
+  let vatPct = project.vat_enabled ? _n(project.vat_percent) : 0;
+  if (vatPct < 0) { warnings.push("درصد مالیات منفی بود — صفر در نظر گرفته شد."); vatPct = 0; }
   const vat = net * vatPct / 100;
   const final = net + vat;
 
   /* پیش‌پرداخت (بیعانه) و باقی‌مانده */
-  const depPct = _n(project.deposit_percent);
-  const deposit = Math.max(0, Math.min(final * depPct / 100 + _n(project.deposit_amount), final));
+  const depPct = Math.min(Math.max(_n(project.deposit_percent), 0), 100);
+  const deposit = Math.max(0, Math.min(final * depPct / 100 + Math.max(0, _n(project.deposit_amount)), final));
 
   /* قیمت هر متر طول — «متری چند؟» */
   const glm = stats.total_ground_lm || 0;
@@ -443,7 +554,7 @@ function calcProjectLocal(project) {
     pages: pageResults,
     pages_cost: pagesCost, installation_cost: install, total_cost: totalCost,
     profit_mode: pMode, profit_percent: pPct, profit_amount: profit,
-    gross_price: gross, discount_percent: _n(project.discount_percent), discount_amount: discount,
+    gross_price: gross, discount_percent: dPct, discount_amount: discount,
     net_price: net, vat_percent: vatPct, vat_amount: vat, final_price: final,
     total_profit: final - totalCost - vat,
     deposit_percent: depPct, deposit_amount: deposit, remaining_amount: final - deposit,
@@ -633,8 +744,16 @@ const CAT_ORDER_LOCAL = ["body_sheet", "door_sheet", "back_sheet", "drawer_sheet
   "countertop", "crown", "underlight", "kickboard", "banding", "hinge", "gas_spring",
   "shelf_pin", "handle", "leg", "drawer_slide", "accessory", "service"];
 
-/* پنل‌های استاندارد بدنه — آینه‌ی CostingEngine.default_panels */
+/* پنل‌های استاندارد بدنه — آینه‌ی CostingEngine.panels_of/default_panels */
 function panelsOfUnit(u) {
+  /* ★ ریزِ دستیِ کاربر (custom_panels) مقدم بر فرمول پیش‌فرض است */
+  if (Array.isArray(u.custom_panels) && u.custom_panels.length) {
+    return u.custom_panels.map((p) => ({
+      label: p.label || "قطعه", qty: _n(p.qty), w: _n(p.w_cm), h: _n(p.h_cm),
+      mk: p.material_key || "body", banding: p.banding !== false,
+      enabled: p.enabled !== false,
+    })).filter((p) => p.enabled);
+  }
   const bm = matById(u.body_id);
   const t = bm && bm.thickness_mm ? bm.thickness_mm / 10 : 0;   // cm
   const L = _n(u.length_cm), H = _n(u.height_cm), D = _n(u.depth_cm);
@@ -674,7 +793,8 @@ function buildCutListLocal(project) {
   for (const page of project.pages || []) {
     const sec = page.name || "بخش";
     for (const u of page.units || []) {
-      const n = Math.max(1, Math.round(_n(u.qty, 1)));
+      const n = Math.trunc(_n(u.qty, 1));
+      if (n <= 0) continue;   /* یونیت با تعداد صفر/منفی در برش‌نامه هم نمی‌آید */
       const uLabel = u.label || "یونیت";
 
       for (const pn of panelsOfUnit(u)) {

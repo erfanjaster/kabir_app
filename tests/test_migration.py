@@ -277,7 +277,9 @@ class TestStandaloneUpdateFlow(unittest.TestCase):
         self.assertTrue((self.app / "update.py").is_file(), "update.py باید نصب شود")
         self.assertTrue((self.app / "kabir" / "data" / "migrate.py").is_file())
         self.assertTrue((self.app / "webui" / "index.html").is_file())
-        self.assertIn('2.2.0', (self.app / "kabir" / "__init__.py").read_text(encoding="utf-8"))
+        import kabir as _kabir
+        self.assertIn(_kabir.__version__,
+                      (self.app / "kabir" / "__init__.py").read_text(encoding="utf-8"))
 
         # فایل شخصی کاربر که در ZIP نبود، حذف نشده
         self.assertEqual((self.app / "user-notes.txt").read_text(), "keep me\n")
