@@ -8,7 +8,7 @@
 
 /* ------------------------------------------------------------- توست و مودال */
 const TOAST_LIFE = 3600;
-function toast(msg, type) {
+function toast(msg, type, action) {
   type = type || "info";
   const ic = type === "success" ? ICONS.check : type === "error" ? ICONS.x : type === "warn" ? ICONS.warn : ICONS.info;
   const box = el("toasts");
@@ -17,7 +17,11 @@ function toast(msg, type) {
   const t = document.createElement("div");
   t.className = "toast " + type;
   t.setAttribute("role", type === "error" ? "alert" : "status");
-  t.innerHTML = `<span class="t-ic">${ic}</span><span>${msg}</span>` +
+  /* ★ اکشنِ اختیاری (مثل «بازگردانی» بعد از حذف ردیف) — یک کلیکِ نجات‌بخش
+     به‌جای حسرتِ «ای کاش حذف نکرده بودم».                                       */
+  const actHtml = action && action.label
+    ? `<button class="t-action" type="button">${esc(action.label)}</button>` : "";
+  t.innerHTML = `<span class="t-ic">${ic}</span><span>${msg}</span>` + actHtml +
     `<button class="t-close" type="button" aria-label="بستن پیام">${ICONS.x}</button>` +
     `<span class="t-bar" aria-hidden="true"></span>`;
   const kill = () => {
@@ -25,9 +29,15 @@ function toast(msg, type) {
     t.classList.add("out");
     setTimeout(() => t.remove(), 260);
   };
+  if (action && action.label) {
+    t.querySelector(".t-action").addEventListener("click", () => {
+      kill();
+      if (action.cb) action.cb();
+    });
+  }
   t.querySelector(".t-close").addEventListener("click", kill);
   box.appendChild(t);
-  setTimeout(kill, TOAST_LIFE);
+  setTimeout(kill, action && action.label ? Math.max(TOAST_LIFE, 7000) : TOAST_LIFE);
 }
 
 /* اجرای یک کار ناهمزمان با نمایش اسپینر روی دکمه (حالت تجاری) */
@@ -337,7 +347,7 @@ function renderMaterials() {
           <td><span class="badge b-final" style="font-weight:500">${esc(catLabel(m.cat))}</span></td>
           <td class="sub nowrap">${m.thickness_mm ? fa(m.thickness_mm) + " میل" : "—"}${m.sheet_width_cm ? " • " + fa(m.sheet_width_cm) + "×" + fa(m.sheet_height_cm) : ""}${m.width_cm ? " • عرض " + fa(m.width_cm) : ""}</td>
           <td>${UNITS[m.unit] || m.unit}</td>
-          <td class="num">${fmt(m.price)}</td>
+          <td class="num price-cell" data-quick-price="${m.id}" title="ویرایش سریعِ قیمت — کلیک کنید، عدد را بزنید، Enter">${fmt(m.price)}</td>
           <td class="sub">${esc(m.supplier || "—")}</td>
           <td>${m.active ? '<span class="badge b-done">فعال</span>' : '<span class="badge b-cancel">غیرفعال</span>'}</td>
           <td><div class="actions">
@@ -625,6 +635,15 @@ function renderDimRibbon() {
         <b>${txt}</b>دیوار ${fmt(wallCm / 100, true)} م</span>`;
   }
 
+  /* ★ هشدارهای موتور محاسبه دیگر در مودالِ «ریز قیمت‌ها» پنهان نمی‌مانند —
+     همان‌جا که کاربر دارد ابعاد را تایپ می‌کند، یک تراشه‌ی هشدار زنده
+     ظاهر می‌شود (مثلاً «بدنه رایگان شد!» یا «تیکِ در از ورق بدنه نادیده
+     گرفته شد»). کلیک = دیدنِ فهرست کامل هشدارها.                              */
+  const warns = (r && r.warnings) || [];
+  const warnCell = warns.length
+    ? `<button class="dim-cell warn-chip" type="button" id="dimWarnChip" title="${esc(warns.slice(0, 3).join("\n"))}${warns.length > 3 ? "\n…" : ""}">⚠ <b>${fa(warns.length)}</b> هشدار محاسبه — ببینید</button>`
+    : "";
+
   host.innerHTML =
     cell("متر طول زمینی", fmt(ground, true), "", "جمع طول یونیت‌های زمینی و کمد ایستاده") +
     cell("متر طول دیواری", fmt(wall, true)) +
@@ -632,6 +651,7 @@ function renderDimRibbon() {
     cell("لنگه در", fa(leaves)) +
     cell("کشو", fa(drawers)) +
     (sheets ? cell("ورق لازم", fa(sheets), "accent", "تعداد ورق کاملی که باید بخرید — با تجمیع قطعات هم‌جنس محاسبه شده") : "") +
+    warnCell +
     diffCell;
 }
 
@@ -662,7 +682,12 @@ function fitDoorsToUnit(u) {
   doors.forEach((d) => {
     const share = totalW > 0 ? ((+d.qty || 0) * (+d.w_cm || 0)) / totalW : 1 / doors.length;
     d.w_cm = r1((avail * share) / Math.max(1, +d.qty || 1));
-    if (!(+d.h_cm) || d.h_cm > h + 5) d.h_cm = h; else d.h_cm = h;
+    /* ★ ارتفاعِ دستیِ معتبر حفظ می‌شود (مثلاً درِ کوتاهِ بالای ردیف کشو) —
+       پیش‌تر هر دو شاخه‌ی شرط یک مقدار می‌دادند و ارتفاعِ دلخواه همیشه با
+       ارتفاع یونیت بازنویسی می‌شد (شرطِ مرده). فقط ارتفاعِ خالی یا بزرگ‌تر
+       از یونیت اصلاح می‌شود.                                                     */
+    const dh = +d.h_cm || 0;
+    if (!dh || dh > h) d.h_cm = h;
   });
   return true;
 }
@@ -670,14 +695,17 @@ function fitDoorsToUnit(u) {
 /* ★ سلول «ورق در» با تیکِ «در از ورق بدنه»
    اگر لنگه روی ورقِ بدنه جا شود، کاربر می‌تواند تیک بزند تا لنگه‌ها از همان
    ورقِ بدنه برش بخورند: ورقِ جداگانه خریداری نمی‌شود و مساحتِ در با مساحتِ
-   بدنه یک‌جا گرد می‌شود (پس تعداد ورق و قیمت کم‌تر می‌شود).                  */
+   بدنه یک‌جا گرد می‌شود (پس تعداد ورق و قیمت کم‌تر می‌شود).
+   ★ اگر جنسِ در از قبل همان ورقِ بدنه باشد، ورق‌ها «همین حالا هم» یک‌جا گرد
+   می‌شوند و تیک، قیمت را عوض نمی‌کند — راهنما باید راستش را بگوید: فایده‌ی
+   تیک در این حالت، یکی‌شدن ردیف‌های فاکتور/برش‌نامه/خلاصه‌ی ورق است.        */
 function doorSheetCell(u, dr, ui, di) {
   const bodyM = matById(u.body_id);
   const fit = doorLeafFitsSheet(dr, bodyM);
   const on = !!dr.from_body;
   const attrs = `data-scope="door" data-k="from_body" data-ui="${ui}" data-di="${di}"`;
   const tip = fit.ok
-    ? "لنگه‌ها از همان ورقِ بدنه‌ی یونیت برش می‌خورند — ورقِ جداگانه خریداری نمی‌شود"
+    ? "لنگه‌ها از همان ورقِ بدنه‌ی یونیت برش می‌خورند — ورقِ جداگانه خریداری نمی‌شود و بهای در به نرخ ورق بدنه حساب می‌شود"
     : fit.why;
   let html = `<label class="check fb-check${fit.ok ? "" : " bad"}" title="${esc(tip)}">
       <input type="checkbox" ${attrs}${on ? " checked" : ""}${fit.ok ? "" : " disabled"}>
@@ -687,7 +715,7 @@ function doorSheetCell(u, dr, ui, di) {
   } else if (on && !fit.ok) {
     html += `<div class="fb-note bad">⚠ ${esc(fit.why)} — تیک نادیده گرفته شد</div>`;
   } else if (!on && fit.ok && bodyM && +dr.material_id === +u.body_id) {
-    html += `<div class="fb-note hint">💡 جنسِ در با ورق بدنه یکی است؛ تیک بزنید تا ورق کم‌تری بخرید</div>`;
+    html += `<div class="fb-note hint">💡 جنسِ در با ورق بدنه یکی است — ورق‌ها همین حالا هم یک‌جا شمرده می‌شوند؛ با تیک، ردیفِ «ورق در» در فاکتور و برش‌نامه با بدنه یکی می‌شود</div>`;
   }
   if (!(on && fit.ok)) {
     html += matSelect("door_sheet", dr.material_id,
@@ -771,8 +799,8 @@ function renderEditorTables() {
         <td>${inp("unit", "qty", u.qty, `data-ui="${i}"`, U_QTY, "w-qty")}</td>
         <td>${inp("unit", "shelves", u.shelves, `data-ui="${i}"`, U_QTY, "w-qty")}</td>
         <td><span class="cell-badges">
-              <span class="count-badge" title="مجموع لنگه‌های در این یونیت">در ${fa(u.doors.reduce((a, d) => a + (+d.qty || 0), 0) * (+u.qty || 1))}</span>
-              <span class="count-badge" title="مجموع کشوهای این یونیت">کشو ${fa(u.drawers.reduce((a, d) => a + (+d.qty || 0), 0) * (+u.qty || 1))}</span>
+              <button type="button" class="count-badge badge-btn" data-goto-tab="doors" data-ui="${i}" title="پرش به ردیف‌های درِ همین یونیت در تب «درها»">در ${fa(u.doors.reduce((a, d) => a + (+d.qty || 0), 0) * (+u.qty || 1))}</button>
+              <button type="button" class="count-badge badge-btn" data-goto-tab="drawers" data-ui="${i}" title="پرش به ردیف‌های کشوی همین یونیت در تب «کشوها»">کشو ${fa(u.drawers.reduce((a, d) => a + (+d.qty || 0), 0) * (+u.qty || 1))}</button>
             </span></td>
         <td><button class="expander${open ? " open" : ""}" type="button" data-expand="${i}" title="متریال و یراق یونیت">${ICONS.chev}</button></td>
         <td><div class="row-btns">${tplBtn(i)}${dup("unit", i)}${del("unit", i)}</div></td>
@@ -990,17 +1018,114 @@ function invPayload(p) {
 }
 
 let _calcTimer = null;
-function markDirty() {
+function markDirty(undoKey) {
   if (!state.dirty) {
     state.dirty = true;
-    const b = el("btnSaveProject");
-    if (b) b.classList.add("dirty");
   }
+  $$("#btnSaveProject, #btnTotalSave").forEach((b) => b && b.classList.add("dirty"));
+  undoCommit(undoKey);          /* هر تغییر = یک گام در تاریخچه‌ی واگرد */
+  scheduleDraftSave();          /* پیش‌نویسِ خودکار برای نسیدنِ کار */
 }
 function clearDirty() {
   state.dirty = false;
-  const b = el("btnSaveProject");
-  if (b) b.classList.remove("dirty");
+  $$("#btnSaveProject, #btnTotalSave").forEach((b) => b && b.classList.remove("dirty"));
+}
+
+/* ================================================================== واگرد
+   تاریخچه‌ی وضعیتِ ویرایشگر پروژه (بخش‌ها + یونیت‌ها + درها + کشوها…) با
+   Ctrl+Z / Ctrl+Shift+Z یا دکمه‌های نوار ویرایشگر. حذفِ اشتباهِ یک یونیت با
+   همه‌ی متریال‌هایش دیگر فاجعه نیست — یک کلید کافی است.                        */
+const UNDO = { stack: [], idx: -1, max: 80, lastKey: "", lastAt: 0, applying: false };
+
+function undoSnapshot() {
+  const p = state.editingProject;
+  if (!p) return "";
+  try { return JSON.stringify({ pages: p.pages, pageIdx: state.pageIdx }); }
+  catch (e) { return ""; }
+}
+function undoReset() {
+  UNDO.stack = [];
+  UNDO.idx = -1;
+  UNDO.lastKey = ""; UNDO.lastAt = 0;
+  const s = undoSnapshot();
+  if (s) { UNDO.stack.push(s); UNDO.idx = 0; }
+  updateUndoButtons();
+}
+function undoCommit(key) {
+  if (UNDO.applying) return;
+  const p = state.editingProject;
+  if (!p) return;
+  const now = Date.now();
+  /* ویرایشِ پیاپیِ یک فیلد = یک گام واگرد (تا ۹۰۰ میلی‌ثانیه) */
+  if (key && key === UNDO.lastKey && now - UNDO.lastAt < 900) { UNDO.lastAt = now; return; }
+  UNDO.lastKey = key || ""; UNDO.lastAt = now;
+  const s = undoSnapshot();
+  if (!s || (UNDO.idx >= 0 && UNDO.stack[UNDO.idx] === s)) return;
+  UNDO.stack = UNDO.stack.slice(0, UNDO.idx + 1);
+  UNDO.stack.push(s);
+  if (UNDO.stack.length > UNDO.max) UNDO.stack.shift();
+  UNDO.idx = UNDO.stack.length - 1;
+  updateUndoButtons();
+}
+function undoApplySnap() {
+  const p = state.editingProject;
+  const s = UNDO.stack[UNDO.idx];
+  if (!p || !s) return;
+  UNDO.applying = true;
+  try {
+    const d = JSON.parse(s);
+    p.pages = d.pages || [];
+    state.pageIdx = Math.min(Math.max(0, +d.pageIdx || 0), Math.max(0, p.pages.length - 1));
+    state.dirty = true;
+    $$("#btnSaveProject, #btnTotalSave").forEach((b) => b && b.classList.add("dirty"));
+    renderSectionPills(); renderSectionBar(); renderEditorTables();
+    scheduleRecalc(50);
+    scheduleDraftSave();
+  } finally { UNDO.applying = false; }
+  updateUndoButtons();
+}
+function doUndo() {
+  if (UNDO.idx <= 0) return false;
+  UNDO.idx--; undoApplySnap();
+  return true;
+}
+function doRedo() {
+  if (UNDO.idx < 0 || UNDO.idx >= UNDO.stack.length - 1) return false;
+  UNDO.idx++; undoApplySnap();
+  return true;
+}
+function updateUndoButtons() {
+  const u = el("btnUndo"), r = el("btnRedo");
+  if (u) u.disabled = UNDO.idx <= 0;
+  if (r) r.disabled = UNDO.idx < 0 || UNDO.idx >= UNDO.stack.length - 1;
+}
+
+/* ================================================== پیش‌نویسِ خودکار (درافت)
+   هر چند ثانیه یک‌بار، پروژه‌ی در حال ویرایش در localStorage ذخیره می‌شود؛
+   اگر مرورگر/برق برود، هنگام بازکردنِ دوباره‌ی پروژه پیشنهادِ بازیابی می‌دهیم.
+   با ذخیره‌ی موفق یا بستنِ ویرایشگر، پیش‌نویس پاک می‌شود.                     */
+const DRAFT_PREFIX = "kabir.draft.v1.";
+let _draftTimer = null;
+function scheduleDraftSave() {
+  if (!API.ok) return;                 /* حالت نمایشی ذخیره‌سازی کامل خودش را دارد */
+  clearTimeout(_draftTimer);
+  _draftTimer = setTimeout(saveDraftNow, 4000);
+}
+function saveDraftNow() {
+  const p = state.editingProject;
+  if (!p || !state.dirty || !API.ok) return;
+  try {
+    readEditorFieldsInto(p);
+    localStorage.setItem(DRAFT_PREFIX + p.id,
+      JSON.stringify({ ts: Date.now(), pageIdx: state.pageIdx, project: p }));
+  } catch (e) { /* حافظه پر بود — بی‌سروصدا رد شو */ }
+}
+function clearDraft(id) {
+  try { localStorage.removeItem(DRAFT_PREFIX + id); } catch (e) { /* ignore */ }
+}
+function readDraft(id) {
+  try { return JSON.parse(localStorage.getItem(DRAFT_PREFIX + id) || "null"); }
+  catch (e) { return null; }
 }
 function scheduleRecalc(delay) {
   clearTimeout(_calcTimer);
@@ -1090,11 +1215,20 @@ function readEditorFieldsInto(p) {
   readTotalbarInto(p);
 }
 
-function openProjectEditor(id) {
-  const p = PROJECTS.find((x) => x.id === Number(id));
+function openProjectEditor(id, withDraft) {
+  let p = PROJECTS.find((x) => x.id === Number(id));
   if (!p) return;
+  /* ★ بازیابی پیش‌نویسِ ذخیره‌نشده (بعد از بسته‌شدنِ مرورگر/قطع برق) */
+  if (withDraft && withDraft.project) {
+    try {
+      const np = normalizeProject(withDraft.project);
+      Object.assign(p, np);
+      p.id = Number(id);
+      state.pageIdx = Math.min(Math.max(0, +withDraft.pageIdx || 0), Math.max(0, (p.pages || []).length - 1));
+    } catch (e) { toast("بازیابی پیش‌نویس ناموفق بود", "error"); }
+  }
   state.editingProject = p;
-  state.pageIdx = 0;
+  if (!withDraft) state.pageIdx = 0;
   state.expanded.clear();
   el("projectEditor").hidden = false;
   el("edCode").value = p.code || "—";
@@ -1125,7 +1259,20 @@ function openProjectEditor(id) {
   renderTemplateSelect();
   renderEditorTables();
   refreshTbUnits();
+  undoReset();
   recalcTotals();
+  if (withDraft && withDraft.project) {
+    markDirty("draft-restore");
+    toast("پیش‌نویسِ ذخیره‌نشده بازیابی شد — برای قطعی‌شدن «ذخیره‌ی تغییرات» را بزنید", "warn");
+  } else if (API.ok) {
+    const d = readDraft(p.id);
+    if (d && d.project && d.ts) {
+      const when = new Date(d.ts);
+      const hh = String(when.getHours()).padStart(2, "0"), mm = String(when.getMinutes()).padStart(2, "0");
+      toast(`یک پیش‌نویسِ ذخیره‌نشده از ${hh}:${mm} پیدا شد — تغییراتی که ذخیره نکرده بودید`, "warn",
+        { label: "بازیابی پیش‌نویس", cb: () => openProjectEditor(id, d) });
+    }
+  }
   if (p.stale && API.ok) {
     toast("این پروژه با نرخ‌های قدیمی متریال ذخیره شده بود — مبالغ زیر با نرخ روز بازمحاسبه شد. برای قطعی‌شدن، پروژه را ذخیره کنید.", "warn");
   }
@@ -1134,8 +1281,11 @@ function openProjectEditor(id) {
 
 function closeProjectEditor() {
   const doClose = () => {
+    if (state.editingProject) clearDraft(state.editingProject.id);
+    clearTimeout(_draftTimer);
     state.editingProject = null;
     el("projectEditor").hidden = true;
+    undoReset();
   };
   if (state.dirty && API.ok) {
     confirmAction("تغییرات ذخیره‌نشده دارید. بدون ذخیره بستن؟", doClose, "بستن ویرایشگر", "بستن");
@@ -1159,6 +1309,8 @@ async function saveProject(silentToast) {
       state.editingProject = np;
       state.pageIdx = Math.min(state.pageIdx, np.pages.length - 1);
       clearDirty();
+      clearDraft(p.id);
+      undoReset();
       renderSectionPills(); renderSectionBar(); renderEditorTables();
       renderProjects(); renderDashboard(); fillInvoiceProjects();
       if (!silentToast) toast("تغییرات پروژه در پایگاه‌داده ذخیره شد", "success");
@@ -1683,20 +1835,22 @@ function renderWorkshop() {
       <th>مساحت قطعات (م²)</th><th>تعداد قطعه</th><th>ورق لازم</th><th>بهای هر ورق</th><th>جمع</th></tr></thead>
       <tbody>${(d.sheet_summary || []).map((r) => `<tr>
         <td><b>${esc(r.material)}</b></td>
-        <td class="sub">${esc(catLbl[r.cat] || r.cat)}</td>
+        <td class="sub">${esc(r.cats_label || catLbl[r.cat] || r.cat)}</td>
         <td class="num">${fa(r.thickness_mm)} میل</td>
         <td class="num ltr">${esc(r.sheet_size || "—")}</td>
         <td class="num">${fmt(r.area_sqm, true)}</td>
         <td class="num">${fa(r.pieces || 0)}</td>
-        <td class="num"><b class="sheet-badge">${fa(r.sheets)}</b></td>
+        <td class="num"${r.note ? ` title="${esc(r.note)}"` : ""}><b class="sheet-badge">${fa(r.sheets)}</b></td>
         <td class="num">${r.price ? fmt(scaled(r.price)) : "—"}</td>
         <td class="num">${r.cost ? fmt(scaled(r.cost)) : "—"}</td>
       </tr>`).join("") || `<tr><td colspan="9"><div class="empty">ورقی لازم نیست.</div></td></tr>`}
       </tbody>
     </table></div>
     <p class="tiny muted" style="margin-top:.5rem">
-      تعداد ورق با تجمیع قطعات هم‌جنس در سطح هر بخش و یک‌بار گردکردن به بالا
-      محاسبه می‌شود — یعنی همان چیزی که واقعاً از انبار برمی‌دارید.
+      هر ردیف = یک متریالِ خریدنی؛ قطعاتِ هم‌جنس (مثلاً بدنه و در از یک ورق)
+      در یک ردیف جمع می‌شوند. تعداد ورق با تجمیع در سطح هر بخش، احتساب پرت و
+      یک‌بار گردکردن به بالا محاسبه می‌شود — دقیقاً همان چیزی که در فاکتور
+      پولش گرفته شده و از انبار برمی‌دارید.
     </p>`;
 
   /* --- لیست خرید --- */
@@ -1947,6 +2101,17 @@ function wire() {
       e.preventDefault();
       saveProject();
     }
+    /* ★ واگرد/بازانجامِ ویرایشگر — وقتی فوکوس داخل فیلد متنی نیست
+       (داخل فیلد، واگردِ خودِ مرورگر برای تایپ کار می‌کند). */
+    if ((e.ctrlKey || e.metaKey) && state.editingProject &&
+        !el("projectEditor").hidden && el("modalBackdrop").hidden) {
+      const ae = document.activeElement;
+      const inText = ae && /input|textarea/i.test(ae.tagName) && ae.type !== "checkbox";
+      if (!inText && (e.key.toLowerCase() === "z" || e.key.toLowerCase() === "y")) {
+        const did = (e.key.toLowerCase() === "y" || e.shiftKey) ? doRedo() : doUndo();
+        if (did) e.preventDefault();
+      }
+    }
   });
   window.addEventListener("beforeunload", (e) => {
     if (state.dirty && API.ok) { e.preventDefault(); e.returnValue = ""; }
@@ -2091,6 +2256,62 @@ function wire() {
       } else { m.active = !m.active; demoSave(); }
       afterMaterialsChanged();
       toast(`«${esc(m.name)}» ${m.active ? "فعال" : "غیرفعال"} شد`);
+    }
+
+    /* ★ ویرایش سریعِ قیمت، درجا در همان سلول — پرتکرارترین کارِ روزمره
+       (نرخِ صبحِ بازار) بدونِ بازشدنِ مودال و گشتن دنبال فیلد قیمت.
+       کلیک → عدد را بزنید → Enter. سرور خودش همه‌ی پروژه‌ها را با نرخِ
+       جدید بازمحاسبه می‌کند و قیمت‌های کهنه هشدار می‌گیرند.                   */
+    const qp = e.target.closest("[data-quick-price]");
+    if (qp && !qp.querySelector("input")) {
+      const m = MATERIALS.find((x) => x.id === +qp.dataset.quickPrice);
+      if (!m) return;
+      const old = m.price;
+      qp.textContent = "";
+      const inp2 = document.createElement("input");
+      inp2.type = "text";
+      inp2.inputMode = "numeric";
+      inp2.value = String(Math.round(+old || 0));
+      inp2.setAttribute("aria-label", `قیمت ${m.name}`);
+      qp.appendChild(inp2);
+      inp2.focus();
+      inp2.select();
+      let done = false;
+      const cancel = () => { if (done) return; done = true; renderMaterials(); };
+      const commit = async () => {
+        if (done) return;
+        done = true;
+        const nv = parseNum(inp2.value);
+        if (!(nv > 0)) { toast("قیمت معتبر وارد کنید", "error"); renderMaterials(); return; }
+        if (Math.abs(nv - old) < 0.005) { renderMaterials(); return; }
+        if (API.ok) {
+          try {
+            const resp = await API.req("PUT", `/api/materials/${m.id}`, { price: nv });
+            MATERIALS = resp.materials;
+            const nRecalc = ingestPriceRefresh(resp);
+            afterMaterialsChanged();
+            toast(`«${esc(m.name)}»: ${fmt(old)} ← <b>${fmt(nv)}</b> ${CUR.name}`
+              + (nRecalc ? ` — قیمت ${fa(nRecalc)} پروژه هم به‌روز شد` : ""), "success");
+          } catch (err) {
+            toast("ذخیره ناموفق: " + esc(err.message), "error");
+            renderMaterials();
+          }
+        } else {
+          HISTORY.unshift({ id: Date.now(), date: TODAY_FA, name: m.name, old, price: nv,
+            pct: (nv - old) / (old || 1) * 100, reason: "ویرایش سریع" });
+          m.price = nv;
+          demoSave();
+          afterMaterialsChanged();
+          toast(`«${esc(m.name)}»: ${fmt(old)} ← <b>${fmt(nv)}</b> ${CUR.name}`, "success");
+        }
+      };
+      inp2.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") { ev.preventDefault(); commit(); }
+        else if (ev.key === "Escape") { ev.preventDefault(); cancel(); }
+        ev.stopPropagation();
+      });
+      inp2.addEventListener("blur", () => setTimeout(commit, 120));
+      return;
     }
   });
 
@@ -2458,7 +2679,7 @@ function wire() {
     }, "اعمال سبک", "اعمال");
   });
   ["secWaste", "secOverhead", "secCounterLm", "secWallLen", "facadeTotalSqm", "facadeTotalPrice"].forEach((id) =>
-    el(id) && el(id).addEventListener("input", () => { readSectionBarInto(); markDirty(); renderDimRibbon(); scheduleRecalc(); }));
+    el(id) && el(id).addEventListener("input", () => { readSectionBarInto(); markDirty("sec." + id); renderDimRibbon(); scheduleRecalc(); }));
   el("secCounter").addEventListener("change", () => {
     const pg = curPage();
     if (!pg) return;
@@ -2582,9 +2803,41 @@ function wire() {
     else if (k.endsWith("_id")) row[k] = Number(t.value) || 0;
     else row[k] = t.value;
     if (scope === "unit" && t.dataset.ui !== undefined) state.lastUnitIdx = +t.dataset.ui;
-    markDirty();
+    markDirty(`${scope}.${k}.${t.dataset.ui ?? ""}.${t.dataset.di ?? ""}.${t.dataset.ri ?? ""}`);
     scheduleRecalc();
     updateComputedCells();
+  });
+
+  /* ★ ناوبری صفحه‌کلیدیِ جدول‌ها (مثل اسپرده‌یت):
+     — Enter: پرش به همان ستون در ردیف بعدی
+     — ArrowUp/ArrowDown: یکی‌یکی زیاد/کم کردن مقدار عددی (با Shift ده‌تا)
+     کارِ تکراریِ «تعداد را از ۳ بکن ۵» یا «ارتفاع همه‌ی یونیت‌ها ۷۲» با
+     دو کلید انجام می‌شود، بدونِ گرفتنِ موس و انتخابِ متن.                     */
+  el("projectEditor").addEventListener("keydown", (e) => {
+    const t = e.target;
+    if (!t.dataset || !t.dataset.scope || !t.dataset.k) return;
+    const k = t.dataset.k;
+    if ((e.key === "ArrowUp" || e.key === "ArrowDown") && NUM_KEYS.has(k) && t.type === "text") {
+      e.preventDefault();
+      const step = (e.shiftKey ? 10 : 1) * (e.key === "ArrowUp" ? 1 : -1);
+      const cur = parseNum(t.value);
+      const nv = Math.max(0, Math.round((cur + step) * 1000) / 1000);
+      t.value = String(nv);
+      t.dispatchEvent(new Event("input", { bubbles: true }));
+      /* کارشناسِ جداکننده‌ی هزارگان مقدار را بازنمایش می‌کند؛ مکان‌نما انتها */
+      if (t.setSelectionRange) { try { t.setSelectionRange(t.value.length, t.value.length); } catch (err) { /* noop */ } }
+      return;
+    }
+    if (e.key === "Enter" && (t.tagName === "INPUT" || t.tagName === "SELECT")) {
+      e.preventDefault();
+      const scope = t.dataset.scope;
+      if (scope === "doormove" || scope === "drawermove") return;
+      const list = Array.from(document.querySelectorAll(
+        `#projectEditor [data-scope="${scope}"][data-k="${k}"]`));
+      const i = list.indexOf(t);
+      if (i >= 0 && i + 1 < list.length) { list[i + 1].focus(); if (list[i + 1].select) list[i + 1].select(); }
+      else t.blur();
+    }
   });
 
   el("projectEditor").addEventListener("change", (e) => {
@@ -2681,16 +2934,52 @@ function wire() {
       const kind = d.dataset.delRow;
       const ui = d.dataset.ui !== "" ? +d.dataset.ui : null;
       const di = d.dataset.di !== "" ? +d.dataset.di : null;
-      if (kind === "unit") pg.units.splice(ui, 1);
-      else if (kind === "door") pg.units[ui].doors.splice(di, 1);
-      else if (kind === "drawer") pg.units[ui].drawers.splice(di, 1);
-      else if (kind === "facade") pg.detail_rows.splice(di, 1);
-      else if (kind === "extra") pg.extras.splice(di, 1);
-      else if (kind === "service") pg.services.splice(di, 1);
+      /* ★ حذفِ قابلِ بازگردانی: ردیف را نگه می‌داریم تا با یک کلیکِ «بازگردانی»
+         در توست، سرِ جایش برگردد — حذفِ اشتباهِ یک یونیتِ پرمتریال دیگر
+         یعنی دوباره‌کاریِ ده‌دقیقه‌ای.                                        */
+      let arr = null, idx = -1, removed = null;
+      if (kind === "unit") { arr = pg.units; idx = ui; }
+      else if (kind === "door") { arr = pg.units[ui] && pg.units[ui].doors; idx = di; }
+      else if (kind === "drawer") { arr = pg.units[ui] && pg.units[ui].drawers; idx = di; }
+      else if (kind === "facade") { arr = pg.detail_rows; idx = di; }
+      else if (kind === "extra") { arr = pg.extras; idx = di; }
+      else if (kind === "service") { arr = pg.services; idx = di; }
+      if (arr && idx !== null && idx >= 0 && idx < arr.length) removed = arr.splice(idx, 1)[0];
+      const labelOf = { unit: "یونیت", door: "در", drawer: "کشو", facade: "ردیف درنما", extra: "قلم", service: "خدمت" };
       markDirty();
       renderEditorTables();
       scheduleRecalc(50);
-      toast("ردیف حذف شد");
+      toast(`ردیفِ «${esc(labelOf[kind] || "")}» حذف شد`, "info", removed && arr ? {
+        label: "بازگردانی",
+        cb: () => {
+          arr.splice(Math.min(idx, arr.length), 0, removed);
+          markDirty();
+          renderEditorTables();
+          scheduleRecalc(50);
+          toast("ردیف برگشت", "success");
+        },
+      } : null);
+      return;
+    }
+
+    /* ★ پرش از نشانِ «در/کشو»ِ ردیف یونیت به همان ردیف‌ها در تب مربوطه —
+       به‌جای گشتن دستی بین تب‌ها و پیدا کردن یونیت در کشوی بلند.            */
+    const gotoTab = e.target.closest("[data-goto-tab]");
+    if (gotoTab) {
+      const tab = gotoTab.dataset.gotoTab;
+      const ui = +gotoTab.dataset.ui;
+      const tabBtn = document.querySelector(`#secTabs .tab[data-tab="${tab}"]`);
+      if (tabBtn) tabBtn.click();
+      const tblId = tab === "doors" ? "tblDoors" : "tblDrawers";
+      requestAnimationFrame(() => {
+        const first = document.querySelector(`#${tblId} [data-scope="${tab === "doors" ? "door" : "drawer"}"][data-ui="${ui}"]`);
+        const row = first && first.closest("tr");
+        if (row) {
+          row.classList.add("hl-row");
+          if (row.scrollIntoView) row.scrollIntoView({ block: "center", behavior: "smooth" });
+          setTimeout(() => row.classList.remove("hl-row"), 2600);
+        }
+      });
     }
   });
 
@@ -2710,8 +2999,8 @@ function wire() {
   /* --- نوار جمع --- */
   ["tbProfitMode", "tbProfitPct", "tbInstallMode", "tbInstallVal",
     "tbDiscPct", "tbDiscAmt", "tbVat", "tbVatPct", "tbExtraFixed"].forEach((id) => {
-    el(id).addEventListener("input", () => { markDirty(); scheduleRecalc(); refreshTbUnits(); });
-    el(id).addEventListener("change", () => { markDirty(); scheduleRecalc(); refreshTbUnits(); });
+    el(id).addEventListener("input", () => { markDirty("tb." + id); scheduleRecalc(); refreshTbUnits(); });
+    el(id).addEventListener("change", () => { markDirty("tb." + id); scheduleRecalc(); refreshTbUnits(); });
   });
   el("btnBreakdown").addEventListener("click", async () => {
     if (!state.editingProject) return;
@@ -2719,6 +3008,29 @@ function wire() {
     renderBreakdown();
     openModal("breakdown");
   });
+
+  /* ★ تراشه‌ی هشدارِ نوار متراژ → همان مودالِ ریزِ قیمت‌ها (با فهرست هشدارها) */
+  el("dimRibbon").addEventListener("click", (e) => {
+    if (e.target.closest("#dimWarnChip")) {
+      renderBreakdown();
+      openModal("breakdown");
+    }
+  });
+
+  /* ★ دکمه‌های همسانِ نوار جمع (چسبانِ پایین) — «ذخیره» و «برش‌نامه» همیشه
+     در دسترس‌اند، حتی وقتی کاربر وسطِ جدولِ یونیت‌هاست و تا بالای صفحه
+     فاصله دارد. همان کارِ دکمه‌های سرِ کارت، بدونِ اسکرول.                  */
+  const btnTotalSave = el("btnTotalSave");
+  if (btnTotalSave) btnTotalSave.addEventListener("click", () => busy(btnTotalSave, () => saveProject()));
+  const btnTotalWorkshop = el("btnTotalWorkshop");
+  if (btnTotalWorkshop) btnTotalWorkshop.addEventListener("click", () => openWorkshopModal());
+
+  /* ★ واگرد/بازانجامِ تغییراتِ ویرایشگر (Ctrl+Z / Ctrl+Shift+Z) */
+  const btnUndo = el("btnUndo");
+  if (btnUndo) btnUndo.addEventListener("click", () => { doUndo(); });
+  const btnRedo = el("btnRedo");
+  if (btnRedo) btnRedo.addEventListener("click", () => { doRedo(); });
+
   el("btnBreakdownInvoice").addEventListener("click", async () => {
     closeModal();
     await gotoInvoiceForCurrent();
@@ -3040,8 +3352,8 @@ function wire() {
   ["tbDepositPct", "tbDepositAmt"].forEach((id) => {
     const n = el(id);
     if (!n) return;
-    n.addEventListener("input", () => { markDirty(); scheduleRecalc(); refreshTbUnits(); });
-    n.addEventListener("change", () => { markDirty(); scheduleRecalc(); refreshTbUnits(); });
+    n.addEventListener("input", () => { markDirty("tb." + id); scheduleRecalc(); refreshTbUnits(); });
+    n.addEventListener("change", () => { markDirty("tb." + id); scheduleRecalc(); refreshTbUnits(); });
   });
 
   /* --- قیمت‌گیری سریع --- */

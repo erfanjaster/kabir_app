@@ -2101,3 +2101,117 @@ tr:has(.shop-check:checked) td:last-child { text-decoration: none; opacity: 1; }
 @media print {
   .warn-box { break-inside: avoid; }
 }
+
+/* ==========================================================================
+   ۲۴) افزوده‌های ۲٫۴ — بازگردانی حذف، هشدار زنده، واگرد، قیمت سریع
+   ========================================================================== */
+
+/* --- دکمه‌ی اکشن داخل توست (مثل «بازگردانی» بعد از حذف ردیف) --- */
+.toast .t-action {
+  flex-shrink: 0;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.toast .t-action:hover { background: var(--accent); color: var(--on-accent); }
+.toast .t-action:active { transform: scale(0.96); }
+[data-theme="dark"] .toast .t-action { color: var(--accent); }
+
+/* --- تراشه‌ی هشدارِ زنده در نوار متراژ --- */
+.dim-cell.warn-chip {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--warning);
+  background: var(--warning-soft);
+  border: 1px solid var(--warning);
+  border-radius: 999px;
+  padding: 0.15rem 0.7rem;
+  font-weight: 600;
+  animation: warnPulse 2.2s ease-in-out infinite;
+}
+.dim-cell.warn-chip b { color: var(--warning); }
+.dim-cell.warn-chip:hover { filter: brightness(0.97); }
+@keyframes warnPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(217, 145, 32, 0.35); }
+  50% { box-shadow: 0 0 0 6px rgba(217, 145, 32, 0); }
+}
+
+/* --- نشانِ قابلِ کلیکِ «در/کشو» در ردیف یونیت --- */
+.count-badge.badge-btn {
+  cursor: pointer;
+  font-family: inherit;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.count-badge.badge-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.count-badge.badge-btn:active { transform: scale(0.94); }
+
+/* --- برجسته‌سازی موقتیِ ردیفِ مقصد (پرش از نشان) --- */
+@keyframes rowFlash {
+  0% { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); }
+  100% { background: transparent; box-shadow: inset 0 0 0 2px transparent; }
+}
+tr.hl-row > td { animation: rowFlash 2.6s ease both; }
+
+/* --- دکمه‌های آیکونیِ واگرد/بازانجام --- */
+.btn.icon-only { padding-inline: 0.5rem; display: inline-grid; place-items: center; }
+.btn.icon-only svg { width: 1.05rem; height: 1.05rem; }
+.btn.icon-only:disabled { opacity: 0.35; cursor: not-allowed; }
+.undo-group { display: inline-flex; gap: 0.2rem; align-items: center; }
+
+/* --- ویرایش سریعِ قیمت در جدول متریال --- */
+.price-cell { cursor: text; position: relative; }
+.price-cell::after {
+  content: "✎";
+  position: absolute;
+  inset-inline-start: 0.35rem;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  color: var(--text-3);
+  font-size: 0.75rem;
+  transition: opacity 0.12s ease;
+}
+.price-cell:hover { background: var(--accent-soft); }
+.price-cell:hover::after { opacity: 1; }
+.price-cell input {
+  width: 8.5rem;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- نوار جمع در موبایل: کنش‌ها همیشه در دسترس بمانند --- */
+@media (max-width: 720px) {
+  .tb-actions { margin-inline-start: 0; width: 100%; }
+  .tb-actions .btn { flex: 1; justify-content: center; }
+  .tb-figures { justify-content: space-between; width: 100%; }
+}
+
+/* --- ستونِ اولِ چسبان در جدول‌های ویرایشگر (موبایل) --- */
+@media (max-width: 720px) {
+  #tblUnits th:first-child, #tblUnits td:first-child,
+  #tblDoors th:first-child, #tblDoors td:first-child,
+  #tblDrawers th:first-child, #tblDrawers td:first-child {
+    position: sticky;
+    inset-inline-start: 0;
+    background: var(--surface);
+    z-index: 2;
+    box-shadow: 6px 0 10px -8px rgba(0, 0, 0, 0.35);
+  }
+  #tblUnits tr:hover td:first-child,
+  #tblDoors tr:hover td:first-child,
+  #tblDrawers tr:hover td:first-child { background: var(--surface-2); }
+}

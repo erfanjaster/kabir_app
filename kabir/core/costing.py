@@ -599,6 +599,21 @@ def round_up_sheets(area_sqm: float, sheet_area: float, waste_percent: float = 0
     return math.ceil(round(a / sheet_area, 6))
 
 
+#: کلیدواژه‌هایی که نشان می‌دهند ورق «راستای طرح» دارد (چرخاندنِ قطعه روی آن
+#: نقش چوب/راه‌راه را خراب می‌کند). همان فهرستی که برش‌نامه برای علامتِ
+#: «راستا» استفاده می‌کند — یکی بودنِ این دو، رفتار را در کل برنامه هم‌راستا
+#: نگه می‌دارد.
+GRAIN_KEYWORDS = ("طرح چوب", "راه‌راه", "راشه", "گردو", "طرح‌دار")
+
+
+def material_has_grain(mat: Optional["Material"]) -> bool:
+    """آیا ورق راستای طرح دارد؟ (بر اساس نام/یادداشتِ قلم در کتابخانه قیمت)"""
+    if mat is None:
+        return False
+    hay = f"{mat.name} {mat.note or ''}"
+    return any(k in hay for k in GRAIN_KEYWORDS)
+
+
 def door_leaf_fits_sheet(dr: "DoorRow", mat: Optional["Material"]) -> Tuple[bool, str]:
     """
     ★ آیا یک لنگه‌ی در روی این ورق جا می‌شود؟
@@ -606,6 +621,10 @@ def door_leaf_fits_sheet(dr: "DoorRow", mat: Optional["Material"]) -> Tuple[bool
     شرطِ لازم (نه کافی) برای «در از ورق بدنه»: بزرگ‌ترین لنگه باید در یکی از دو
     جهت روی ورق بنشیند. چیدمان بهینه‌ی برش مسئله‌ی دیگری است، ولی اگر همین شرط
     ساده برقرار نباشد، ساختنِ در از آن ورق قطعاً ممکن نیست و نباید تیک بخورد.
+
+    ★ ورقِ طرح‌دار (راستای نقش) استثنا دارد: قطعه فقط «بدون چرخش» قابل برش است،
+    وگرنه نقشِ در کج می‌افتد. پیش‌تر چرخش برای همه‌ی ورق‌ها مجاز بود و برنامه
+    برای ورق طرح چوب، تیکی را مجاز می‌کرد که در عمل نقش را خراب می‌کرد.
 
     خروجی: (امکان‌پذیر است؟، دلیلِ فارسی در صورت رد)
     """
@@ -619,7 +638,12 @@ def door_leaf_fits_sheet(dr: "DoorRow", mat: Optional["Material"]) -> Tuple[bool
     w, h = _f(dr.w_cm), _f(dr.h_cm)
     if w <= 0 or h <= 0:
         return False, "ابعاد لنگه‌ی در وارد نشده است."
-    if (w <= sw and h <= sh) or (w <= sh and h <= sw):
+    if w <= sw and h <= sh:
+        return True, ""
+    if w <= sh and h <= sw:
+        if material_has_grain(mat):
+            return False, (f"«{mat.name}» راستای طرح دارد؛ لنگه‌ی {w:g}×{h:g} سانت فقط "
+                           f"با چرخاندن روی ورق {sw:g}×{sh:g} جا می‌شود و طرح کج می‌افتد.")
         return True, ""
     return False, (f"لنگه‌ی {w:g}×{h:g} سانت روی ورق {sw:g}×{sh:g} سانت جا نمی‌شود.")
 

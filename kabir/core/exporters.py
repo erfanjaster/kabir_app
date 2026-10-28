@@ -371,7 +371,8 @@ def export_workshop_xlsx(pack: Dict[str, Any], path: Path,
                   "door_sheet": "در", "drawer_sheet": "جعبه کشو"}
     for r in sheets:
         ws2.append([
-            r.get("material", ""), cat_labels.get(r.get("cat"), r.get("cat", "")),
+            r.get("material", ""),
+            r.get("cats_label") or cat_labels.get(r.get("cat"), r.get("cat", "")),
             f"{r.get('thickness_mm', 0):g} میل", r.get("sheet_size", ""),
             r.get("area_sqm", 0), r.get("pieces", 0), r.get("sheets", 0),
             r.get("price", 0), r.get("cost", 0),

@@ -184,7 +184,13 @@ console.log("\n— در از ورق بدنه —");
   ok("در حالت نادیده‌گرفتن، ورقِ در سرِ جایش می‌ماند",
      rBig.items.some((i) => i.key === "door_sheet"));
   const rNoBody = T.calcProjectLocal(mk(true, 44.55, 71.7, 0));
-  ok("بدون ورق بدنه → هشدار", (rNoBody.warnings || []).length === 1);
+  /* دو هشدارِ درست: هم «بدنه رایگان شد» هم «تیک نادیده گرفته شد» —
+     مهم محتوای هشدار است نه تعدادش (پیش‌تر این تست روی تعدادِ ۱ قفل بود). */
+  ok("بدون ورق بدنه → هشدارِ نادیده‌گرفتنِ تیک",
+     (rNoBody.warnings || []).some((w) => w.includes("نادیده گرفته شد")),
+     JSON.stringify(rNoBody.warnings));
+  ok("بدون ورق بدنه → هشدارِ هزینه‌ی محاسبه‌نشده‌ی بدنه",
+     (rNoBody.warnings || []).some((w) => w.includes("محاسبه نشد")));
 
   /* برش‌نامه هم باید همان ورق بدنه را نشان دهد */
   const cutOn = T.buildCutListLocal(mk(true));
@@ -214,6 +220,71 @@ console.log("\n— در از ورق بدنه —");
     .reduce((a, c) => a + c.area_sqm, 0);
   ok("مساحت خلاصه‌ی ورق = جمع مساحت قطعات برش‌نامه", near(bodyRow.area_sqm, cutArea, 1e-3),
      `${bodyRow.area_sqm} vs ${cutArea}`);
+
+  /* ★ بازگشتی ۲٫۴ — جنسِ در == ورقِ بدنه: خلاصه نباید دو برابرِ فاکتور ورق بگوید */
+  const pSame = mk(false, 44.55, 71.7, BODY.id, BODY.id);
+  const rSame = T.calcProjectLocal(pSame);
+  const packSame = T.buildWorkshopLocal(pSame);
+  const sameRows = packSame.sheet_summary.filter((r) => r.material === BODY.name);
+  ok("جنسِ یکی: یک ردیفِ خرید برای یک متریال (نه دو ردیفِ هم‌نام)",
+     sameRows.length === 1, `${sameRows.length} ردیف`);
+  const sumSheets = packSame.sheet_summary.reduce((a, r) => a + r.sheets, 0);
+  const invSheets = (rSame.items || []).filter((i) => T.SHEET_KEYS.includes(i.key))
+    .reduce((a, i) => a + i.sheets, 0);
+  ok("جنسِ یکی: جمعِ ورقِ خلاصه == ورقِ فاکتور (بدونِ دوباره‌شماری)",
+     near(sumSheets, invSheets, 1e-6), `${sumSheets} vs ${invSheets}`);
+  const sumCost = packSame.sheet_summary.reduce((a, r) => a + r.cost, 0);
+  const invCost = (rSame.items || []).filter((i) => T.SHEET_KEYS.includes(i.key))
+    .reduce((a, i) => a + i.amount, 0);
+  ok("جنسِ یکی: بهای ورقِ خلاصه == بهای ورقِ فاکتور", near(sumCost, invCost, 1),
+     `${sumCost} vs ${invCost}`);
+  ok("جنسِ یکی: برچسبِ ترکیبی «بدنه + در» دارد",
+     String(sameRows[0] && sameRows[0].cats_label || "").includes("بدنه")
+     && String(sameRows[0] && sameRows[0].cats_label || "").includes("در"),
+     String(sameRows[0] && sameRows[0].cats_label));
+  const rSameOn = T.calcProjectLocal(mk(true, 44.55, 71.7, BODY.id, BODY.id));
+  ok("جنسِ یکی: تیک، قیمت را عوض نمی‌کند (راهنمای صادقانه)",
+     near(rSameOn.total_cost, rSame.total_cost, 1),
+     `${rSameOn.total_cost} vs ${rSame.total_cost}`);
+
+  /* ★ بازگشتی ۲٫۴ — ورقِ طرح‌دار: چرخاندنِ لنگه مجاز نیست (نقش کج می‌افتد) */
+  const GRAIN = MATS.find((m) => m.name.includes("طرح چوب"));
+  if (GRAIN) {
+    ok("طرح‌دار: لنگه‌ی فقط-چرخشی رد می‌شود",
+       T.doorLeafFitsSheet({ w_cm: 200, h_cm: 100 }, GRAIN).ok === false);
+    ok("طرح‌دار: دلیلِ رد، راستای طرح است",
+       T.doorLeafFitsSheet({ w_cm: 200, h_cm: 100 }, GRAIN).why.includes("راستای طرح"));
+    ok("طرح‌دار: لنگه‌ی مستقیم جا می‌شود",
+       T.doorLeafFitsSheet({ w_cm: 100, h_cm: 200 }, GRAIN).ok === true);
+    ok("بدون طرح: چرخش مجاز است",
+       T.doorLeafFitsSheet({ w_cm: 200, h_cm: 100 }, BODY).ok === true);
+    const rGrain = T.calcProjectLocal(mk(true, 200, 100, GRAIN.id));
+    ok("طرح‌دار: تیک نادیده + هشدارِ راستای طرح + بازگشت به ورقِ در",
+       (rGrain.warnings || []).some((w) => w.includes("راستای طرح"))
+       && rGrain.items.some((i) => i.key === "door_sheet"));
+  } else {
+    ok("متریالِ طرح‌دار در داده‌ی نمونه هست", false, "GRAIN پیدا نشد");
+  }
+
+  /* ★ بازگشتی ۲٫۴ — «هم‌اندازه‌سازی درها» ارتفاعِ دستیِ معتبر را له نکند */
+  {
+    const uFit = Object.assign(T.defaultUnit("ground"), {
+      length_cm: 90, height_cm: 72, depth_cm: 55,
+      doors: [Object.assign(T.defaultDoor(), { qty: 1, w_cm: 88, h_cm: 40 })],
+    });
+    T.fitDoorsToUnit(uFit);
+    ok("هم‌اندازه‌سازی: ارتفاعِ کوتاهِ عمدی (درِ بالای کشو) حفظ می‌شود",
+       near(uFit.doors[0].h_cm, 40, 0.01), `h=${uFit.doors[0].h_cm}`);
+    ok("هم‌اندازه‌سازی: عرض با طولِ یونیت بازتوزیع می‌شود",
+       uFit.doors[0].w_cm > 85 && uFit.doors[0].w_cm < 90, `w=${uFit.doors[0].w_cm}`);
+    const uTall = Object.assign(T.defaultUnit("ground"), {
+      length_cm: 90, height_cm: 72, depth_cm: 55,
+      doors: [Object.assign(T.defaultDoor(), { qty: 2, w_cm: 44, h_cm: 95 })],
+    });
+    T.fitDoorsToUnit(uTall);
+    ok("هم‌اندازه‌سازی: ارتفاعِ بزرگ‌تر از یونیت به اندازه‌ی یونیت برمی‌گردد",
+       near(uTall.doors[0].h_cm, 71.7, 0.01), `h=${uTall.doors[0].h_cm}`);
+  }
 }
 
 /* ====================================== ۳-ب) رندرِ سلول «ورق در» در رابط */

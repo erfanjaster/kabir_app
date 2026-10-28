@@ -88,7 +88,7 @@
   <div class="sidebar-foot">
     <div class="ver"><span class="dot"></span> <span id="appVer">کبیر — رابط وب</span></div>
     <div id="connBadge" class="conn demo"><span class="dot"></span> در حال اتصال…</div>
-    <div class="tiny" style="opacity:.7">میان‌بر: <b>/</b> جست‌وجو • <b>Alt+۱..۶</b> صفحه‌ها</div>
+    <div class="tiny" style="opacity:.7">میان‌بر: <b>/</b> جست‌وجو • <b>Alt+۱..۶</b> صفحه‌ها • <b>Ctrl+S</b> ذخیره • <b>Ctrl+Z</b> واگرد</div>
   </div>
 </aside>
 <div class="scrim" id="scrim"></div>
@@ -186,7 +186,7 @@
               <li>قیمت روز ورق، یراق و خدمات را در <a data-goto="materials">متریال و خدمات</a> وارد کنید.</li>
               <li>ترکیب پرکاربرد خود را یک‌بار در <a data-goto="styles">سبک‌ها</a> ذخیره کنید.</li>
               <li>در <a data-goto="projects">پروژه‌ها</a> یونیت‌ها، درها و کشوها را با ابعاد دقیق بسازید.</li>
-              <li>سود، نصب، تخفیف و مالیات را در نوار پایین تنظیم و <b>محاسبه‌ی دقیق</b> کنید.</li>
+              <li>سود، نصب، تخفیف و مالیات را در نوار پایین تنظیم و <b>ریز قیمت‌ها</b> را ببینید.</li>
               <li>از صفحه‌ی <a data-goto="invoice">فاکتور</a> چاپ، PDF یا اکسل بگیرید.</li>
             </ol>
           </div>
@@ -252,6 +252,16 @@
           <div class="card-head">
             <h3>مشخصات پروژه <span class="badge b-open" id="edStatusBadge"></span></h3>
             <div class="card-actions">
+              <span class="undo-group" role="group" aria-label="واگرد و بازانجام">
+                <button class="btn ghost sm icon-only" id="btnUndo" type="button" disabled
+                        title="واگردِ آخرین تغییر (Ctrl+Z)" aria-label="واگرد">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></svg>
+                </button>
+                <button class="btn ghost sm icon-only" id="btnRedo" type="button" disabled
+                        title="بازانجام (Ctrl+Shift+Z)" aria-label="بازانجام">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 15-6.7L21 13"/></svg>
+                </button>
+              </span>
               <button class="btn ghost sm" id="btnCloseEditor" type="button">بستن</button>
               <button class="btn ghost sm" id="btnDupProject" type="button">کپی پروژه</button>
               <button class="btn outline sm" id="btnWorkshop" type="button" title="فهرست قطعات با ابعاد دقیق + آنچه باید بخرید">
@@ -473,9 +483,17 @@
               <div class="tb-fig tb-due" id="tbDueWrap" hidden><span>باقی‌مانده پس از پیش‌پرداخت</span><b id="tbDue">—</b></div>
             </div>
             <div class="tb-actions">
-              <button class="btn outline" id="btnBreakdown" type="button">
+              <button class="btn outline" id="btnTotalSave" type="button" title="ذخیره‌ی تغییرات (Ctrl+S)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                ذخیره
+              </button>
+              <button class="btn outline" id="btnTotalWorkshop" type="button" title="برش‌نامه، خلاصه‌ی ورق و لیست خرید">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.1-.6-.6-2.1z"/></svg>
+                برش‌نامه
+              </button>
+              <button class="btn outline" id="btnBreakdown" type="button" title="ریز گروه‌های هزینه + هشدارهای محاسبه">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="12" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="12" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="13" y2="18"/></svg>
-                محاسبه‌ی دقیق
+                ریز قیمت‌ها
               </button>
               <button class="btn success" id="btnGoInvoice" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18l-2.4-1.6L14 21l-2-1.6L10 21l-2.6-1.6L5 21z"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/></svg>

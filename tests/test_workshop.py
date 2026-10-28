@@ -418,3 +418,102 @@ def test_invoice_stats_show_price_per_metre():
     assert tot["price_per_ground_lm"] > 0
     assert tot["price_per_total_lm"] > 0
     assert tot["stats"]["total_ground_lm"] > 0
+
+
+# ---------------------------------------------------------------------------
+# ★ شورای منتقد ۲٫۴ — «در از ورق بدنه» و خلاصه‌ی ورق
+# ---------------------------------------------------------------------------
+
+GRAINY = Material(11, "ام‌دی‌اف طرح چوب راش ۱۶ میل", "body_sheet", "sheet",
+                  6_300_000, 183, 366, 16)
+
+
+def _engine_with_grain() -> CostingEngine:
+    return CostingEngine(MATS + [GRAINY], {})
+
+
+def _same_material_page(from_body):
+    """در و بدنه از «یک» متریال (سناریوی پرتکرارِ کابینتِ یک‌رنگ)."""
+    return _door_page(from_body, door_mat=1)
+
+
+def test_sheet_summary_no_double_count_same_material():
+    """🔴 بازگشتی: جنسِ در == ورقِ بدنه → خلاصه نباید دو برابرِ فاکتور ورق بگوید.
+
+    پیش‌تر ردیف‌های (نام، دسته) جدا بودند و «ورقِ فاکتورشده» به هر دو ردیفِ
+    هم‌نام تزریق می‌شد: فاکتور ۱ ورق، خلاصه ۲ ورق!
+    """
+    eng = make_engine()
+    pages = _same_material_page(False)
+    res = calc(pages, profit_percent=0)
+    pack = ws.build_workshop_pack(eng, pages, res)
+    body_rows = [r for r in pack["sheet_summary"] if r["material"] == "ورق بدنه"]
+    assert len(body_rows) == 1, "یک متریال باید دقیقاً یک ردیفِ خرید داشته باشد"
+    invoiced = res.stats["total_sheets"]
+    assert abs(sum(r["sheets"] for r in pack["sheet_summary"]) - invoiced) < 1e-6, \
+        "جمعِ ورقِ خلاصه باید با ورقِ فاکتور یکی باشد"
+    sheet_cost = sum(r["cost"] for r in pack["sheet_summary"])
+    invoiced_cost = sum(i.amount for i in res.items
+                        if i.key in CostingEngine.SHEET_ITEM_KEYS)
+    assert abs(sheet_cost - invoiced_cost) < 1.0, \
+        "بهای ورق در خلاصه باید با فاکتور یکی باشد"
+
+
+def test_sheet_summary_total_matches_invoice_mixed():
+    """در پروژه‌ی ترکیبی (چند متریال)، جمعِ ورق و بهای خلاصه == فاکتور."""
+    eng = make_engine()
+    pages = make_pages()
+    res = calc(pages, profit_percent=0)
+    pack = ws.build_workshop_pack(eng, pages, res)
+    assert abs(pack["stats"]["total_sheets"] - res.stats["total_sheets"]) < 0.01
+    invoiced_cost = sum(i.amount for i in res.items
+                        if i.key in CostingEngine.SHEET_ITEM_KEYS)
+    assert abs(sum(r["cost"] for r in pack["sheet_summary"]) - invoiced_cost) < 1.0
+
+
+def test_same_material_row_has_combined_label():
+    """ردیفِ ادغام‌شده برچسب ترکیبی «بدنه + در» می‌گیرد تا کاربر بداند
+    چه قطعاتی از این ورق برش می‌خورند."""
+    eng = make_engine()
+    pages = _same_material_page(False)
+    pack = ws.build_workshop_pack(eng, pages, calc(pages))
+    row = next(r for r in pack["sheet_summary"] if r["material"] == "ورق بدنه")
+    assert "بدنه" in row["cats_label"] and "در" in row["cats_label"]
+
+
+def test_from_body_on_same_material_keeps_invoice_identical():
+    """با جنسِ یکسان، تیک قیمت را عوض نمی‌کند (ورق‌ها از قبل هم‌گروه‌اند) —
+    فقط ردیف‌ها تمیزتر می‌شوند. راهنمای رابط هم باید همین راستش را بگوید."""
+    off = calc(_same_material_page(False), profit_percent=30)
+    on = calc(_same_material_page(True), profit_percent=30)
+    assert abs(off.total_cost - on.total_cost) < 1.0
+    assert abs(off.final_price - on.final_price) < 1.0
+    assert not any(i.key == "door_sheet" for i in on.items)
+
+
+def test_grain_sheet_forbids_rotation():
+    """🔴 بازگشتی: ورقِ طرح‌دار را نمی‌شود چرخاند — لنگه فقط بدونِ چرخش جا
+    می‌شود، وگرنه نقشِ در کج می‌افتد. پیش‌تر چرخش برای همه مجاز بود."""
+    from kabir.core.costing import door_leaf_fits_sheet, material_has_grain
+    assert material_has_grain(GRAINY)
+    assert not material_has_grain(MATS[0])
+    dr_rot = DoorRow(qty=1, w_cm=200, h_cm=100, material_id=11)  # فقط با چرخش جا می‌شود
+    ok, why = door_leaf_fits_sheet(dr_rot, GRAINY)
+    assert not ok and "راستای طرح" in why
+    ok2, _ = door_leaf_fits_sheet(dr_rot, MATS[0])   # ورق بدون طرح: چرخش مجاز
+    assert ok2
+    dr_straight = DoorRow(qty=1, w_cm=100, h_cm=200, material_id=11)
+    assert door_leaf_fits_sheet(dr_straight, GRAINY)[0]
+
+
+def test_grain_from_body_ignored_with_warning():
+    """تیکِ «در از ورق بدنه» روی ورقِ طرح‌دارِ ناسازگار → نادیده + هشدارِ
+    دلیل‌دار (چرخاندن، طرح را خراب می‌کند)."""
+    dr = DoorRow(qty=1, w_cm=200, h_cm=100, material_id=3, from_body=True)
+    u = UnitRow(label="زمینی", unit_type="ground", qty=1, length_cm=210,
+                height_cm=110, depth_cm=55, doors=[dr], body_id=11)
+    pages = [Page(name="بخش ۱", units=[u], waste_percent=10, overhead_percent=0,
+                  banding_body_factor=2.0, banding_waste_percent=0)]
+    r = _engine_with_grain().calc_project(pages)
+    assert any("راستای طرح" in w for w in r.warnings)
+    assert any(i.key == "door_sheet" for i in r.items), "باید به ورقِ در برگردد"

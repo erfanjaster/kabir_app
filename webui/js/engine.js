@@ -59,7 +59,9 @@ function batchSheetsLocal(pItems) {
 }
 
 /* ★ آیا یک لنگه‌ی در روی این ورق جا می‌شود؟ (شرطِ لازم برای «در از ورق بدنه»)
-   هم‌راستا با costing.door_leaf_fits_sheet در موتور پایتون.                     */
+   هم‌راستا با costing.door_leaf_fits_sheet در موتور پایتون.
+   ورقِ طرح‌دار (راستای نقش) فقط «بدون چرخش» قابل برش است — وگرنه نقش کج
+   می‌افتد؛ پس چرخاندنِ لنگه روی آن مجاز نیست.                                */
 function doorLeafFitsSheet(dr, mat) {
   if (!mat) return { ok: false, why: "ورق بدنه‌ی یونیت انتخاب نشده است." };
   if (mat.unit !== "sheet") return { ok: false, why: `«${mat.name}» ورق نیست.` };
@@ -67,7 +69,11 @@ function doorLeafFitsSheet(dr, mat) {
   if (sw <= 0 || sh <= 0) return { ok: false, why: `ابعاد ورقِ «${mat.name}» ثبت نشده است.` };
   const w = _n(dr.w_cm), h = _n(dr.h_cm);
   if (w <= 0 || h <= 0) return { ok: false, why: "ابعاد لنگه‌ی در وارد نشده است." };
-  if ((w <= sw && h <= sh) || (w <= sh && h <= sw)) return { ok: true, why: "" };
+  if (w <= sw && h <= sh) return { ok: true, why: "" };
+  if (w <= sh && h <= sw) {
+    if (_isGrain(mat)) return { ok: false, why: `«${mat.name}» راستای طرح دارد؛ لنگه‌ی ${fmt(w)}×${fmt(h)} سانت فقط با چرخاندن روی ورق ${fmt(sw)}×${fmt(sh)} جا می‌شود و طرح کج می‌افتد.` };
+    return { ok: true, why: "" };
+  }
   return { ok: false, why: `لنگه‌ی ${fmt(w)}×${fmt(h)} سانت روی ورق ${fmt(sw)}×${fmt(sh)} سانت جا نمی‌شود.` };
 }
 
@@ -863,22 +869,49 @@ function buildCutListLocal(project) {
   return out;
 }
 
-function summarizeSheetsLocal(parts) {
+const SHEET_CAT_LABELS_LOCAL = { body_sheet: "بدنه", door_sheet: "در", back_sheet: "فیبر پشت", drawer_sheet: "جعبه کشو" };
+
+/* ★ خلاصه‌ی ورق — آینه‌ی workshop.summarize_sheets در موتور پایتون.
+   یک ردیف به ازای هر «متریال» (نه هر دسته): ورقِ یک متریال در کارگاه یک‌جا
+   خریداری و برش می‌خورد. اگر نتیجه‌ی محاسبه (result) در دسترس باشد، تعداد ورق
+   «همان عددِ فاکتورشده» است (با پرت و تجمیعِ بخش) تا خلاصه و فاکتور هیچ‌وقت
+   از هم جدا نیفتند — پیش‌تر وقتی جنسِ در با ورقِ بدنه یکی بود، این خلاصه دو
+   برابرِ فاکتور ورق می‌گفت!                                                     */
+function summarizeSheetsLocal(parts, result) {
+  const invoiced = {};
+  if (result && Array.isArray(result.items)) {
+    for (const it of result.items) {
+      if (!SHEET_ITEM_KEYS.includes(it.key) || !it.mat_id) continue;
+      const m = matById(it.mat_id);
+      const name = m ? m.name : it.title;
+      if (!name) continue;
+      invoiced[name] = (invoiced[name] || 0) + _n(it.sheets);
+    }
+  }
   const agg = new Map();
+  const catArea = new Map();
   for (const p of parts) {
-    const k = `${p.material}|${p.mat_cat}`;
+    const k = p.material;
     if (!agg.has(k)) agg.set(k, { material: p.material, cat: p.mat_cat, area_sqm: 0,
       thickness_mm: p.thickness_mm, parts: 0, pieces: 0, sheets: 0, sheet_size: "", price: 0, cost: 0 });
     const a = agg.get(k);
     a.area_sqm += p.area_sqm; a.parts += 1; a.pieces += p.qty;
+    if (!catArea.has(k)) catArea.set(k, {});
+    const ca = catArea.get(k);
+    ca[p.mat_cat] = (ca[p.mat_cat] || 0) + p.area_sqm;
   }
   const fb = { body_sheet: [_n(SETTINGS.sheet_width_cm, 183), _n(SETTINGS.sheet_height_cm, 366)],
     door_sheet: [_n(SETTINGS.sheet_width_cm, 183), _n(SETTINGS.sheet_height_cm, 366)],
     drawer_sheet: [_n(SETTINGS.sheet_width_cm, 183), _n(SETTINGS.sheet_height_cm, 366)],
     back_sheet: [_n(SETTINGS.fiber_sheet_width_cm, 122), _n(SETTINGS.fiber_sheet_height_cm, 244)] };
   const rows = [];
-  for (const a of agg.values()) {
+  for (const [name, a] of agg) {
     a.area_sqm = Math.round(a.area_sqm * 1000) / 1000;
+    /* دسته‌ی غالب (بیشترین مساحت) + برچسب ترکیبی مثل «بدنه + در» */
+    const cats = Object.entries(catArea.get(name) || {}).sort((x, y) => y[1] - x[1]);
+    if (cats.length) a.cat = cats[0][0];
+    const labels = cats.map(([c]) => SHEET_CAT_LABELS_LOCAL[c] || c);
+    a.cats_label = labels.length > 1 ? labels.join(" + ") : (labels[0] || "");
     const m = MATERIALS.find((x) => x.name === a.material);
     let sa = 0, size = "", price = 0;
     if (m && m.sheet_width_cm && m.sheet_height_cm) {
@@ -888,8 +921,14 @@ function summarizeSheetsLocal(parts) {
       const [fw, fh] = fb[a.cat]; sa = (fw * fh) / 10000; size = `${fw}×${fh}`; price = 0;
     }
     a.sheet_size = size; a.price = price;
-    a.sheets = sa > 0 ? Math.ceil(Math.round((a.area_sqm / sa) * 1e6) / 1e6) : 0;
-    a.cost = a.sheets * price;
+    if (invoiced[name] !== undefined) {
+      a.sheets = Math.round(invoiced[name] * 1000) / 1000;
+      a.cost = a.sheets * price;
+      a.note = "همان تعداد ورقِ فاکتورشده (با پرت و تجمیع بخش)";
+    } else {
+      a.sheets = sa > 0 ? Math.ceil(Math.round((a.area_sqm / sa) * 1e6) / 1e6) : 0;
+      a.cost = a.sheets * price;
+    }
     rows.push(a);
   }
   rows.sort((x, y) => {
@@ -946,7 +985,9 @@ function shoppingGroupsLocal(lines) {
 function buildWorkshopLocal(project) {
   const result = calcProjectLocal(project);
   const parts = buildCutListLocal(project);
-  const sheets = summarizeSheetsLocal(parts);
+  /* ★ نتیجه‌ی محاسبه به خلاصه پاس داده می‌شود تا «ورق لازم» دقیقاً همان عددِ
+     فاکتور باشد (با پرت و تجمیعِ بخش) — نه تقریبِ بدونِ پرت.                  */
+  const sheets = summarizeSheetsLocal(parts, result);
   const lines = buildShoppingLocal(result);
   const byCat = {};
   for (const p of parts) {

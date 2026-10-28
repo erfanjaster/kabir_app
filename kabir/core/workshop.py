@@ -150,11 +150,8 @@ def build_cut_list(engine: CostingEngine, pages: List[Page]) -> List[CutPart]:
         return m.name if m is not None else (fallback or "—")
 
     def grain_of(mid: int) -> bool:
-        m = engine.mat(mid)
-        if m is None:
-            return False
-        hay = f"{m.name} {m.note or ''}"
-        return any(k in hay for k in ("طرح چوب", "راه‌راه", "راشه", "گردو", "طرح‌دار"))
+        # هم‌راستا با موتور محاسبه — یک تعریف برای «راستای طرح» در کل برنامه
+        return costing.material_has_grain(engine.mat(mid))
 
     for page in pages:
         sec = page.name or "بخش"
@@ -283,17 +280,32 @@ def _drawer_parts(sec: str, u_label: str, dw: DrawerRow, n: int,
     return parts
 
 
+#: برچسب فارسی دسته‌های ورق (برای ستون «نوع» در خلاصه‌ی ورق)
+SHEET_CAT_LABELS = {
+    "body_sheet": "بدنه",
+    "door_sheet": "در",
+    "back_sheet": "فیبر پشت",
+    "drawer_sheet": "جعبه کشو",
+}
+
+
 def summarize_sheets(parts: List[CutPart], engine: CostingEngine,
                      settings: Optional[Dict[str, str]] = None,
                      result: Optional[costing.ProjectResult] = None) -> List[Dict[str, Any]]:
     """
     چند ورق از هر متریال لازم است؟
 
+    ★ یک ردیف به ازای هر «متریال» (نه هر دسته): در کارگاه، ورقِ یک متریال یک‌جا
+    خریداری و برش می‌خورد — فرقی نمی‌کند قطعه‌اش بدنه باشد یا در. پیش‌تر ردیف‌ها
+    بر اساس (نام، دسته) ساخته می‌شدند و «تعداد ورقِ فاکتورشده» به هر دو ردیفِ
+    هم‌نام تزریق می‌شد؛ یعنی وقتی جنسِ در با ورقِ بدنه یکی بود، خلاصه دو برابرِ
+    فاکتور ورق می‌گفت (۲ ورق در برابر ۱ ورقِ فاکتور!) و کارگاه یک ورق اضافه
+    می‌خرید. اکنون ردیف‌های هم‌نام ادغام می‌شوند و جمعِ «ورق لازم» همیشه با
+    فاکتور یکی است.
+
     اگر نتیجه‌ی محاسبه‌ی قیمت (result) در دسترس باشد، تعداد ورق «همان عددی»
-    است که در فاکتور پولش گرفته شده (با پرت و گردشدن در سطح بخش) — پیش‌تر
-    این خلاصه بدون پرت محاسبه می‌شد و می‌توانست کمتر از ورقِ فاکتور بگوید
-    (کارگاه یک ورق کمتر می‌خرید و کار می‌خوابید!). در غیر این صورت، بر
-    اساس مساحت قطعات برش‌نامه تقریب زده می‌شود.
+    است که در فاکتور پولش گرفته شده (با پرت و گردشدن در سطح بخش). در غیر این
+    صورت، بر اساس مساحت قطعات برش‌نامه تقریب زده می‌شود.
     """
     st = settings or {}
 
@@ -323,9 +335,11 @@ def summarize_sheets(parts: List[CutPart], engine: CostingEngine,
         "back_sheet": (_num("fiber_sheet_width_cm", 122), _num("fiber_sheet_height_cm", 244)),
     }
 
-    agg: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    # ★ تجمیع بر اساس «نام متریال» — یک متریال = یک ردیف خرید
+    agg: Dict[str, Dict[str, Any]] = {}
+    cat_area: Dict[str, Dict[str, float]] = {}
     for p in parts:
-        k = (p.material, p.mat_cat)
+        k = p.material
         a = agg.setdefault(k, {"material": p.material, "cat": p.mat_cat,
                                "area_sqm": 0.0, "thickness_mm": p.thickness_mm,
                                "parts": 0, "pieces": 0, "sheets": 0.0,
@@ -333,8 +347,16 @@ def summarize_sheets(parts: List[CutPart], engine: CostingEngine,
         a["area_sqm"] += p.area_sqm
         a["parts"] += 1
         a["pieces"] += p.qty
-    for a in agg.values():
+        ca = cat_area.setdefault(k, {})
+        ca[p.mat_cat] = ca.get(p.mat_cat, 0.0) + p.area_sqm
+    for name, a in agg.items():
         a["area_sqm"] = round(a["area_sqm"], 3)
+        # دسته‌ی غالب (بیشترین مساحت) برای ترتیبِ نمایش + برچسب ترکیبی همه‌ی
+        # دسته‌هایی که از این متریال برش می‌خورند (مثلاً «بدنه + در»)
+        cats = sorted(cat_area[name].items(), key=lambda kv: -kv[1])
+        a["cat"] = cats[0][0] if cats else a["cat"]
+        labels = [SHEET_CAT_LABELS.get(c, c) for c, _ in cats]
+        a["cats_label"] = " + ".join(labels) if len(labels) > 1 else (labels[0] if labels else "")
         mid = _find_material_id(engine, a["material"], a["cat"])
         m = engine.mat(mid) if mid else None
         if m is not None and m.sheet_area_sqm > 0:

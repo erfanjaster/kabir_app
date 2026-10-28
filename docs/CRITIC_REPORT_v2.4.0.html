@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>گزارش شورای منتقد — کبیر ۲.۴.۰</title>
+<style>
+  :root{
+    --bg:#0f1420; --card:#171e2e; --card2:#1c2438; --line:#2a3550;
+    --txt:#e8edf7; --mut:#9aa7c2; --acc:#4da3ff; --acc2:#7c5cff;
+    --ok:#2dd4a7; --warn:#f5b942; --bad:#ff6b81; --gold:#ffd166;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--txt); line-height:1.9;
+    font-family:"Vazirmatn","Segoe UI",Tahoma,"Iranian Sans",sans-serif;
+    font-size:15px; padding-bottom:60px;
+  }
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+  /* ── hero ── */
+  .hero{
+    background:linear-gradient(135deg,#141b2e 0%,#1b2440 45%,#2a1f4d 100%);
+    border-bottom:1px solid var(--line); padding:52px 0 40px; position:relative; overflow:hidden;
+  }
+  .hero::before{
+    content:""; position:absolute; inset:0;
+    background:radial-gradient(600px 300px at 85% -10%, rgba(77,163,255,.18), transparent 60%),
+               radial-gradient(500px 260px at 10% 110%, rgba(124,92,255,.14), transparent 60%);
+  }
+  .hero .wrap{position:relative}
+  .kicker{color:var(--acc);font-weight:700;letter-spacing:.5px;font-size:13px}
+  h1{font-size:30px;margin:8px 0 6px;font-weight:800}
+  .ver{display:inline-flex;align-items:center;gap:8px;margin-top:6px}
+  .pill{
+    background:rgba(77,163,255,.12);border:1px solid rgba(77,163,255,.4);color:var(--acc);
+    border-radius:999px;padding:3px 14px;font-size:13px;font-weight:700;
+  }
+  .pill.g{background:rgba(45,212,167,.1);border-color:rgba(45,212,167,.4);color:var(--ok)}
+  .pill.p{background:rgba(124,92,255,.12);border-color:rgba(124,92,255,.45);color:#b3a1ff}
+  .hero p{color:var(--mut);max-width:640px;margin-top:12px}
+  /* ── stat cards ── */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:28px 0 8px}
+  .stat{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:18px 16px;text-align:center;
+  }
+  .stat b{display:block;font-size:26px;font-weight:800}
+  .stat span{color:var(--mut);font-size:12.5px}
+  .stat .c1{color:var(--bad)} .stat .c2{color:var(--acc)} .stat .c3{color:var(--ok)} .stat .c4{color:var(--gold)}
+  /* ── sections ── */
+  section{margin-top:44px}
+  h2{
+    font-size:21px;font-weight:800;margin-bottom:16px;
+    display:flex;align-items:center;gap:10px;
+  }
+  h2::after{content:"";flex:1;height:1px;background:linear-gradient(to left,var(--line),transparent)}
+  h3{font-size:16.5px;margin:22px 0 10px;color:#cfe0ff}
+  p.lead{color:var(--mut);margin-bottom:14px}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:20px 22px;margin-bottom:14px;
+  }
+  /* ── bug cards ── */
+  .bug{border-right:4px solid var(--bad)}
+  .bug .bh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+  .bnum{
+    background:var(--bad);color:#fff;font-weight:800;border-radius:8px;
+    padding:1px 10px;font-size:13px;
+  }
+  .btitle{font-weight:800;font-size:15.5px}
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  .ba>div{border-radius:10px;padding:12px 14px;font-size:13.5px}
+  .before{background:rgba(255,107,129,.08);border:1px solid rgba(255,107,129,.25)}
+  .after{background:rgba(45,212,167,.07);border:1px solid rgba(45,212,167,.25)}
+  .ba b{display:block;margin-bottom:4px;font-size:12px;letter-spacing:.4px}
+  .before b{color:var(--bad)} .after b{color:var(--ok)}
+  code{
+    background:#0d1322;border:1px solid var(--line);border-radius:6px;
+    padding:1px 7px;font-size:12.5px;direction:ltr;display:inline-block;
+    font-family:Consolas,Menlo,monospace;color:#a8d8ff;
+  }
+  /* ── feature grid ── */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .feat{
+    background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:18px;
+  }
+  .feat .ic{font-size:22px;margin-bottom:6px;display:block}
+  .feat b{display:block;margin-bottom:4px;font-size:14.5px;color:#dbe7ff}
+  .feat p{color:var(--mut);font-size:13px;line-height:1.8}
+  .kbd{
+    background:#0d1322;border:1px solid #33415f;border-bottom-width:3px;border-radius:6px;
+    padding:0 7px;font-size:11.5px;font-family:Consolas,monospace;color:#cfe0ff;direction:ltr;display:inline-block;
+  }
+  /* ── tables ── */
+  table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--card);border-radius:12px;overflow:hidden}
+  th{background:#131a2b;color:#bcd2f5;text-align:right;padding:10px 14px;font-size:12.5px;border-bottom:1px solid var(--line)}
+  td{padding:10px 14px;border-bottom:1px solid #202a44;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  .ok{color:var(--ok);font-weight:700} .bad{color:var(--bad);font-weight:700}
+  /* ── verdict ── */
+  .verdict{
+    background:linear-gradient(135deg,rgba(45,212,167,.08),rgba(77,163,255,.06));
+    border:1px solid rgba(45,212,167,.3);border-radius:16px;padding:26px 28px;margin-top:10px;
+  }
+  .verdict p{font-size:15.5px}
+  .verdict .sig{color:var(--mut);font-size:13px;margin-top:14px}
+  .skip{border-right:4px solid var(--warn)}
+  .skip li{margin:6px 18px 6px 0;color:var(--mut);font-size:13.5px}
+  .skip b{color:var(--txt)}
+  ul.tight li{margin:4px 20px 4px 0}
+  footer{color:#5b6a8c;text-align:center;font-size:12px;margin-top:56px}
+  .num{direction:ltr;display:inline-block;font-variant-numeric:tabular-nums}
+  @media (max-width:720px){
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .grid2{grid-template-columns:1fr}
+    .ba{grid-template-columns:1fr}
+    h1{font-size:24px}
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <span class="kicker">🧐 شورای منتقد کبیر — دوره‌ی چهارم</span>
+    <h1>گزارش بررسی رابط، تجربه‌ی کاربری و پرونده‌ی «در از ورق بدنه»</h1>
+    <div class="ver">
+      <span class="pill">نسخه‌ی بررسی‌شده: ۲.۳.۰</span>
+      <span class="pill p">نسخه‌ی تحویلی: ۲.۴.۰</span>
+      <span class="pill g">۱۴۰۵/۰۸/۰۶</span>
+    </div>
+    <p>مأموریت این دوره: «فرض کن کاربر خسته است» — نقد UX از چشم کاربرِ عجله‌دار،
+    شکار باگ‌های منطقی رابط، سریع‌کردن کارهای تکراری، و رسیدگی ویژه به شک کارفرما
+    درباره‌ی تیک «از یک ورق استفاده کن».</p>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="stats">
+    <div class="stat"><b class="c1">۵+۱</b><span>باگ برنامه + تست، رفع شد</span></div>
+    <div class="stat"><b class="c2">۹</b><span>قابلیت جدید تجربه‌ی کاربری</span></div>
+    <div class="stat"><b class="c3">۲۱</b><span>تست بازگشتی جدید</span></div>
+    <div class="stat"><b class="c4">۶/۶</b><span>سوئیت تست، سبز</span></div>
+  </div>
+
+  <!-- ════ ۱ خلاصه ════ -->
+  <section>
+    <h2>۱ · خلاصه‌ی مدیریتی</h2>
+    <div class="card">
+      <p>دو خروجی بزرگ این دوره:</p>
+      <h3 style="margin-top:14px">الف) پرونده‌ی تیک «در از ورق بدنه» 🔍</h3>
+      <p class="lead">خودِ <b>فرمولِ تیک غلط نبود</b> — با دست و با هر دو موتور (پایتون و JS)
+      راستی‌آزمایی شد: وقتی متریال بدنه و در متفاوت‌اند، تیک درست کار می‌کند و واقعاً
+      ارزان‌تر می‌شود (<span class="num">۱۴٬۶۰۰٬۰۰۰ ← ۵٬۱۰۰٬۰۰۰</span> ریال در سناریوی نمونه).
+      اما <b>سه ایراد واقعی</b> اطرافش پیدا شد که حقاً حس «غلط بودن» می‌داد:</p>
+      <ul class="tight lead">
+        <li>وقتی بدنه و در <b>یک متریال</b> بودند، خلاصه‌ی ورق <b>دو برابر فاکتور</b> ورق می‌گفت (باگ ۱ — مهم‌ترین کشف).</li>
+        <li>متن راهنمای تیک در حالت هم‌متریال <b>وانمود می‌کرد صرفه‌جویی شده</b> (باگ ۲).</li>
+        <li>ورق <b>دارای راستای طرح</b> بی‌صدا چرخانده می‌شد — درِ چوبی کج بریده می‌شد! (باگ ۴).</li>
+      </ul>
+      <h3>ب) ۹ قابلیت تجربه‌ی کاربری ⚡</h3>
+      <p class="lead">واگرد با <span class="kbd">Ctrl+Z</span>، پیش‌نویس خودکار، حذفِ بازگرداندنی،
+      ویرایش قیمت با یک کلیک، دکمه‌های دائمی در نوار جمع کل و… — جزئیات در فصل ۵.</p>
+    </div>
+  </section>
+
+  <!-- ════ ۲ پرونده تیک ════ -->
+  <section>
+    <h2>۲ · پرونده‌ی ویژه: تیک «در از ورق بدنه»</h2>
+    <div class="card">
+      <p class="lead">بدون تیک، بدنه و در جداگانه روی ورق چیده می‌شوند. با تیک، برگه‌های در داخل
+      فضای خالی ورق‌های بدنه جا می‌گیرند و فقط ورق بدنه شمرده می‌شود. حکم شورا با عدد زنده:</p>
+      <table>
+        <tr><th>سناریو</th><th>عدد واقعی (API زنده)</th><th>حکم</th></tr>
+        <tr>
+          <td>متریال بدنه ≠ در، تک‌واحد</td>
+          <td><span class="num">OFF: ۱۴٬۶۰۰٬۰۰۰ (۲ ورق) · ON: ۵٬۱۰۰٬۰۰۰ (۱ ورق)</span></td>
+          <td class="ok">✅ فرمول درست</td>
+        </tr>
+        <tr>
+          <td>متریال بدنه ≠ در، ۵ واحد</td>
+          <td><span class="num">OFF: ۱۹٬۷۰۰٬۰۰۰ (۳ ورق) · ON: ۱۰٬۲۰۰٬۰۰۰ (۲ ورق)</span></td>
+          <td class="ok">✅ درست</td>
+        </tr>
+        <tr>
+          <td><b>متریال بدنه = در</b></td>
+          <td>فاکتور: ۱ ورق / <span class="num">۵٬۱۰۰٬۰۰۰</span> — خلاصه: <b>۲ ورق / <span class="num">۱۰٬۲۰۰٬۰۰۰</span></b></td>
+          <td class="bad">❌ دو برابر فاکتور!</td>
+        </tr>
+      </table>
+      <p class="lead" style="margin-top:14px">محاسبات داخلی موتور درست بود؛ خطا در <b>تجمیع خلاصه‌ی ورق</b>
+      نشسته بود: بدنه و درِ هم‌متریال دو ردیف جدا می‌ماندند و هرکدام ورق خودش را طلب می‌کرد.
+      شکافِ عددِ فاکتور با عددِ کارگاه، دقیقاً همان چیزی بود که بی‌اعتمادی می‌آورد.</p>
+    </div>
+  </section>
+
+  <!-- ════ ۳ باگ‌ها ════ -->
+  <section>
+    <h2>۳ · باگ‌های رفع‌شده</h2>
+
+    <div class="card bug">
+      <div class="bh"><span class="bnum">باگ ۱</span><span class="btitle">شمارش دوباره‌ی ورق در خلاصه (هم‌متریال)</span></div>
+      <p class="lead">وقتی بدنه و در از یک متریال بودند، خلاصه‌ی کارگاه دو ردیف جدا می‌ساخت و ورق‌ها را دوبار می‌شمرد.</p>
+      <div class="ba">
+        <div class="before"><b>✗ قبل</b>خلاصه: ۲ ورق / <span class="num">۱۰٬۲۰۰٬۰۰۰</span> — ولی فاکتور ۱ ورق / <span class="num">۵٬۱۰۰٬۰۰۰</span></div>
+        <div class="after"><b>✓ بعد</b>ادغام بر اساس نام متریال + برچسب «بدنه + در» (<code>cats_label</code>) — خلاصه = فاکتور. قفل با ۶ تست pytest + ۵ تست JS</div>
+      </div>
+    </div>
+
+    <div class="card bug">
+      <div class="bh"><span class="bnum">باگ ۲</span><span class="btitle">متن نادروستِ سلول «در از ورق بدنه»</span></div>
+      <div class="ba">
+        <div class="before"><b>✗ قبل</b>در حالت هم‌متریال هم متنِ صرفه‌جویی نمایش داده می‌شد — تیک عملاً بی‌اثر بود ولی وانمود می‌کرد کار کرده</div>
+        <div class="after"><b>✓ بعد</b>متن صادقانه: «متریال یکی است — تیک اثری روی ورق ندارد»</div>
+      </div>
+    </div>
+
+    <div class="card bug">
+      <div class="bh"><span class="bnum">باگ ۳</span><span class="btitle">واگرایی خلاصه‌ی Excel از رابط</span></div>
+      <div class="ba">
+        <div class="before"><b>✗ قبل</b>برگه‌ی «خلاصه ورق» در xlsx برچسب دسته‌ی ترکیبی نداشت</div>
+        <div class="after"><b>✓ بعد</b><code>exporters.py</code> همان <code>cats_label</code> رابط را چاپ می‌کند — Excel و UI هم‌صدا</div>
+      </div>
+    </div>
+
+    <div class="card bug">
+      <div class="bh"><span class="bnum">باگ ۴</span><span class="btitle">چرخش بی‌صدا در ورقِ دارای راستای طرح</span></div>
+      <div class="ba">
+        <div class="before"><b>✗ قبل</b>برگه‌ی در روی ورق چوب/راه‌راه چرخانده می‌شد → درِ بریده‌شده طرحِ کج می‌خورد</div>
+        <div class="after"><b>✓ بعد</b><code>material_has_grain()</code> مشترک در دو موتور؛ بدون چرخش جا نشد → هشدار «<b>راستای طرح دارد</b>» + بازگشت به ورقِ درِ مستقل</div>
+      </div>
+    </div>
+
+    <div class="card bug">
+      <div class="bh"><span class="bnum">باگ ۵</span><span class="btitle"><code>fitDoorsToUnit</code> ارتفاع در را خرد می‌کرد</span></div>
+      <div class="ba">
+        <div class="before"><b>✗ قبل</b>ضریب مقیاس به ارتفاع هم اعمال می‌شد: در ۸۸×۴۰ در یونیت ۹۰×۷۲ → ارتفاع بی‌دلیل آب می‌رفت</div>
+        <div class="after"><b>✓ بعد</b>ارتفاع دست‌نخورده (همان ۴۰)، فقط عرض بازتوزیع (~۸۹٫۴)؛ ارتفاعِ بزرگ‌تر از یونیت همچنان clamp می‌شود</div>
+      </div>
+    </div>
+
+    <div class="card bug" style="border-right-color:var(--warn)">
+      <div class="bh"><span class="bnum" style="background:var(--warn)">باگ ۶</span><span class="btitle">تست بیش‌سخت‌گیر JS (نه باگ برنامه)</span></div>
+      <p class="lead"><code>workshop_check</code> روی «تعداد هشدارها» ادعا داشت در حالی که ۲ هشدار برای
+      <code>body_id=0</code> رفتارِ درست است → ادعا محتوایی شد.
+      به‌علاوه: مرور کامل <code>critic/repro_bugs.py</code> و <code>repro_data.py</code> — <b>هر ۱۳ باگ دوره‌ی قبل همچنان رفع‌شده‌اند.</b></p>
+    </div>
+  </section>
+
+  <!-- ════ ۴ قابلیت‌ها ════ -->
+  <section>
+    <h2>۴ · قابلیت‌های جدید تجربه‌ی کاربری</h2>
+    <h3>کارهای تکراری، سریع‌تر ⚡</h3>
+    <div class="grid2">
+      <div class="feat"><span class="ic">↩️</span><b>واگرد / بازگشت</b>
+        <p><span class="kbd">Ctrl+Z</span> <span class="kbd">Ctrl+Shift+Z</span> یا دکمه‌های هدر. تا ۸۰ گام؛ تایپ پیوسته با ادغام ۹۰۰ms یک گام می‌شود.</p></div>
+      <div class="feat"><span class="ic">📝</span><b>پیش‌نویس خودکار</b>
+        <p>هر ۴ ثانیه ذخیره می‌شود؛ بستن تصادفی ویرایشگر دیگر داده نمی‌برد. هنگام بازکردن مجدد، toast بازیابی پیشنهاد می‌شود.</p></div>
+      <div class="feat"><span class="ic">🗑️</span><b>حذفِ بازگرداندنی</b>
+        <p>حذف صفحات، نمایه، اقلام اضافی و خدمات → toast «بازگردانی» با یک کلیک، ردیف سر جایش برمی‌گردد.</p></div>
+      <div class="feat"><span class="ic">💰</span><b>ویرایش سریع قیمت</b>
+        <p>یک کلیک روی عددِ قیمت در جدول متریال، تایپ، Enter. PUT جزئی <code>{price}</code>؛ toast «قدیم ← جدید» + تعداد پروژه‌های بازمحاسبه‌شده.</p></div>
+      <div class="feat"><span class="ic">⌨️</span><b>پیمایش با کیبورد</b>
+        <p>جهت‌نماها بین سلول‌ها؛ <span class="kbd">Enter</span> = پرش به همان ستون در ردیف بعد — ورودِ ردیف‌های متوالی بدون ماوس.</p></div>
+      <div class="feat"><span class="ic">🧭</span><b>پرش و هایلایت</b>
+        <p>کلیک روی تراشه‌ی هشدار ابعاد → پرش به «ریز قیمت‌ها» با هایلایت ردیف مشکل‌دار؛ کلیک روی نشانِ صفحه → پرش به تب همان صفحه.</p></div>
+    </div>
+    <h3>دسترس‌پذیری و جای دکمه‌ها 🧭</h3>
+    <div class="card">
+      <ul class="tight lead">
+        <li><b>نوار جمع کل = جعبه‌ابزار:</b> دکمه‌های «ذخیره»، «خروجی کارگاه»، «ریز قیمت‌ها» و «رفتن به فاکتور» دقیقاً کنار عدد نهایی — چشم دیگر تا بالای صفحه نمی‌گردد.</li>
+        <li><b>تغییر نام «محاسبه‌ی دقیق» ← «ریز قیمت‌ها»:</b> کاربران دنبال «جزئیات قیمت» می‌گشتند. (عنوان داخلی مودال عمداً دست نخورد.)</li>
+        <li><b>موبایل:</b> ستون اول جداول چسبنده + نوار اقدام چسبنده.</li>
+        <li><b>راهنمای میان‌برها</b> در نوار کناری + فصل ۱۶ بازنویسی‌شده‌ی TUTORIAL.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ════ ۵ رد شده‌ها ════ -->
+  <section>
+    <h2>۵ · دیده شد و عمداً انجام نشد 🚫</h2>
+    <div class="card skip">
+      <ul>
+        <li><b>حاشیه‌ی ضخامت اره (kerf) در تست جایگیری در</b> — چیدمان «دقیقاً برابر لبه» را نامعتبر می‌کرد؛ درصد پرت عملاً kerf را پوشش می‌دهد.</li>
+        <li><b>دکمه‌های ± تعداد</b> — سلول‌ها number-input بومی‌اند؛ stepper فضای ستون‌های فشرده را می‌بلعید.</li>
+        <li><b>پالت فرمان Ctrl+K</b> — دامنه‌ی این نسخه UX هدفمند بود، نه بازطراحی.</li>
+        <li><b>Undo برای ویرایش‌های فقط-نوارجمع (تخفیف/مالیات)</b> — در snapshot صفحات نمی‌گنجند؛ مستند شد.</li>
+        <li><b>عنوان مودال «محاسبه‌ی دقیق»</b> — فقط نام دکمه عوض شد تا لینک مستندات قدیمی نشکند.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ════ ۶ تست ════ -->
+  <section>
+    <h2>۶ · تست و اعتبارسنجی ✅</h2>
+    <table>
+      <tr><th>سوئیت</th><th>نتیجه</th></tr>
+      <tr><td><code>pytest tests/</code></td><td class="ok">۱۲۲ سبز (۱۱۶ + ۶ جدید کارگاه)</td></tr>
+      <tr><td><code>tests/workshop_check.js</code></td><td class="ok">۱۰۵ سبز (~۱۵ تست جدید)</td></tr>
+      <tr><td><code>tests/parity_check.js</code></td><td class="ok">JS == Python — ریال‌به‌ریال، بعد از همه‌ی تغییرات</td></tr>
+      <tr><td><code>ui_dom_check</code> · <code>ui_connected_check</code> · <code>ui_features_check</code></td><td class="ok">هر سه سبز</td></tr>
+      <tr><td>دودِ زنده (سرور واقعی)</td><td class="ok">۵/۵ — هم‌متریال=فاکتور · تیک ON ارزان‌تر · هشدار راستای طرح · xlsx سالم · دکمه‌های جدید</td></tr>
+      <tr><td>مرور بازگشتی <code>critic/</code></td><td class="ok">۱۳ باگ قدیمی همچنان رفع‌شده</td></tr>
+    </table>
+    <div class="card" style="margin-top:14px">
+      <p><b>۱۴ فایل تغییر کرد · <span class="num">+۱٬۴۶۶ / −۱۱۵</span> خط · commit <code>2419876</code> · نسخه <code>2.4.0</code></b></p>
+    </div>
+  </section>
+
+  <!-- ════ ۷ حکم ════ -->
+  <section>
+    <h2>۷ · حکم نهایی شورا</h2>
+    <div class="verdict">
+      <p>تیک «در از ورق بدنه» <b>محاسبه‌ی غلطی نداشت</b>؛ اما خلاصه‌ی ورق در حالت هم‌متریال
+      <b>دو برابر فاکتور</b> ورق می‌گفت و همان منبع بی‌اعتمادی بود — رفع شد و با ۱۱ تست قفل گردید.
+      ورقِ طرح‌دار دیگر بی‌صدا کج بریده نمی‌شود؛ ارتفاع درِ یونیت آب نمی‌رود.
+      رابط هم حالا برای «کاربرِ عجله‌دار» ساخته شده: Undo، پیش‌نویس خودکار، حذفِ برگشت‌پذیر
+      و قیمتِ یک‌کلیکی. <b class="ok">نسخه‌ی ۲.۴.۰ برای تحویل تأیید می‌شود.</b></p>
+      <p class="sig">— شورای منتقد کبیر · ۱۴۰۵/۰۸/۰۶</p>
+    </div>
+  </section>
+
+  <footer>کبیر — ماشین‌حساب قیمت کابینت · گزارش خودایستا (بدون نیاز به سرور) · docs/CRITIC_REPORT_v2.4.0.html</footer>
+</div>
+</body>
+</html>

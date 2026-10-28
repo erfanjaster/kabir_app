@@ -43,9 +43,13 @@ const jsCode = ["data.js", "engine.js", "ui.js"]
   .join("\n") + `
 ;window.__k = {
   init, navigate, openProjectEditor, curPage, calcProjectLocal, parseNum, renderEditorTables,
+  doUndo, doRedo, recalcTotals,
   get API() { return API; },
   get PROJECTS() { return PROJECTS; },
   get SETTINGS() { return SETTINGS; },
+  get MATERIALS() { return MATERIALS; },
+  get state() { return state; },
+  get UNDO() { return UNDO; },
 };`;
 window.eval(jsCode);
 const K = window.__k;
@@ -155,6 +159,130 @@ const selectValue = (elm, value) => {
   const mfPrice = document.getElementById("mfPrice");
   check("material modal price grouped", /[٬]/.test(mfPrice.value) || K.parseNum(document.getElementById("mfPrice").value) > 0,
     mfPrice.value);
+
+  /* ================== بررسی‌های ۲٫۴ — تجربه‌ی کاربری ================== */
+
+  /* --- ویرایش سریعِ قیمت، درجا در سلول --- */
+  const qCell = document.querySelector("[data-quick-price]");
+  check("quick-price cell rendered", !!qCell);
+  if (qCell) {
+    const matId = +qCell.dataset.quickPrice;
+    click(qCell);
+    await sleep(30);
+    const qInp = qCell.querySelector("input");
+    check("quick-price input opens on click", !!qInp);
+    if (qInp) {
+      qInp.value = "1234567";
+      qInp.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      await sleep(80);
+      check("quick-price commit changes material price", matPriceOf(matId) === 1234567,
+        String(matPriceOf(matId)));
+    }
+  }
+  function matPriceOf(id) {
+    const m = K.MATERIALS.find((x) => x.id === id);
+    return m ? m.price : NaN;
+  }
+
+  /* --- دکمه‌های چسبانِ نوار جمع (ذخیره/برش‌نامه) --- */
+  K.navigate("projects");
+  K.openProjectEditor(1);
+  await sleep(80);
+  check("sticky totalbar save button exists", !!document.getElementById("btnTotalSave"));
+  check("sticky totalbar workshop button exists", !!document.getElementById("btnTotalWorkshop"));
+  check("breakdown button renamed", /ریز قیمت/.test(document.getElementById("btnBreakdown").textContent));
+
+  /* --- واگرد / بازانجام --- */
+  const n0 = K.curPage().units.length;
+  check("undo button exists & initially disabled", !!document.getElementById("btnUndo") &&
+    document.getElementById("btnUndo").disabled === true);
+  click(document.querySelector('[data-add="unit:ground"]'));
+  await sleep(60);
+  check("unit added", K.curPage().units.length === n0 + 1);
+  check("undo button enabled after change", document.getElementById("btnUndo").disabled === false);
+  K.doUndo();
+  await sleep(60);
+  check("Ctrl+Z: added unit removed", K.curPage().units.length === n0);
+  K.doRedo();
+  await sleep(60);
+  check("redo: unit is back", K.curPage().units.length === n0 + 1);
+  K.doUndo();
+  await sleep(40);
+
+  /* --- حذفِ بازگردانی‌پذیر --- */
+  const nBefore = K.curPage().units.length;
+  const delBtn = document.querySelector('[data-del-row="unit"][data-ui="0"]');
+  check("delete button rendered", !!delBtn);
+  click(delBtn);
+  await sleep(60);
+  check("unit deleted", K.curPage().units.length === nBefore - 1);
+  const undoToast = document.querySelector("#toasts .toast .t-action");
+  check("toast offers «بازگردانی»", !!undoToast && /بازگردانی/.test(undoToast.textContent));
+  if (undoToast) {
+    click(undoToast);
+    await sleep(60);
+    check("deleted unit restored from toast", K.curPage().units.length === nBefore);
+  }
+
+  /* --- کلیدهای پیکان: یکی‌یکی زیاد/کم کردن qty --- */
+  const qtyInp = document.querySelector('#tblUnits input[data-scope="unit"][data-k="qty"][data-ui="0"]');
+  check("qty input rendered", !!qtyInp);
+  if (qtyInp) {
+    const q0 = K.parseNum(qtyInp.value);
+    qtyInp.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
+    await sleep(40);
+    const q1 = K.parseNum(document.querySelector('#tblUnits input[data-scope="unit"][data-k="qty"][data-ui="0"]').value);
+    check("ArrowUp increments qty by 1", q1 === q0 + 1, `${q0} → ${q1}`);
+    document.querySelector('#tblUnits input[data-scope="unit"][data-k="qty"][data-ui="0"]')
+      .dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    await sleep(40);
+    const q2 = K.parseNum(document.querySelector('#tblUnits input[data-scope="unit"][data-k="qty"][data-ui="0"]').value);
+    check("ArrowDown decrements qty", q2 === q0, `${q1} → ${q2}`);
+  }
+
+  /* --- Enter: پرش به همان ستون در ردیف بعدی --- */
+  if (K.curPage().units.length >= 2) {
+    const a = document.querySelector('#tblUnits input[data-k="length_cm"][data-ui="0"]');
+    const b = document.querySelector('#tblUnits input[data-k="length_cm"][data-ui="1"]');
+    a.focus();
+    a.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    await sleep(20);
+    check("Enter jumps to same column, next row", document.activeElement === b);
+  }
+
+  /* --- نشانِ «در» → پرش به تبِ درها --- */
+  const badge = document.querySelector('#tblUnits [data-goto-tab="doors"]');
+  check("door badge is clickable", !!badge);
+  if (badge) {
+    click(badge);
+    await sleep(60);
+    const doorsTab = document.querySelector('#secTabs .tab[data-tab="doors"]');
+    check("badge click switches to doors tab", doorsTab.classList.contains("active"));
+    document.querySelector('#secTabs .tab[data-tab="units"]').click();
+    await sleep(30);
+  }
+
+  /* --- تراشه‌ی هشدارِ زنده در نوار متراژ --- */
+  const pgx = K.curPage();
+  const savedBody = pgx.units[0].body_id;
+  pgx.units[0].body_id = 0;                       /* بدنه بی‌متریال → هشدارِ موتور */
+  await K.recalcTotals();
+  await sleep(60);
+  const chip = document.getElementById("dimWarnChip");
+  check("live warning chip appears in dim ribbon", !!chip, "هشدار باید در نوار متراژ دیده شود");
+  if (chip) {
+    click(chip);
+    await sleep(60);
+    check("warning chip opens breakdown modal",
+      document.getElementById("modalBackdrop").hidden === false &&
+      /هشدار/.test(document.getElementById("breakdownBody").textContent));
+    document.querySelectorAll("[data-close]").forEach((b) => { if (b.closest("#modalBackdrop")) click(b); });
+    await sleep(30);
+  }
+  pgx.units[0].body_id = savedBody;
+  await K.recalcTotals();
+  await sleep(40);
+  check("warning chip disappears when warnings resolved", !document.getElementById("dimWarnChip"));
 
   console.log(fail ? `\n❌ ${fail} بررسی ناموفق` : "\n✅ همه‌ی بررسی‌های DOM پاس شدند");
   window.close();
