@@ -205,6 +205,7 @@ function forceCloseEditor() {
   state.dirty = false;
   paintDirtyState2();
   el("projectEditor").hidden = true;
+  syncStickyOffsets();
   undoReset();
 }
 
@@ -1409,6 +1410,25 @@ function setTbDrawer(open, persist) {
   b.setAttribute("aria-expanded", open ? "true" : "false");
   b.classList.toggle("open", !!open);
   if (persist !== false) { try { localStorage.setItem("kabir.tbDrawer", open ? "1" : "0"); } catch (e) {} }
+  syncStickyOffsets();
+}
+
+/* ★ تعمیرِ چیدمانِ چسبان: نوارِ جمعِ پایین (sticky bottom) ارتفاعش با باز/بسته‌شدن
+   کشوی مالی و با جمع‌شدنِ سطرها عوض می‌شود. نوارِ «افزودن» چسبان و توست‌ها باید
+   بالای آن بنشینند، وگرنه زیر/روی آن گم می‌شوند. ارتفاعِ زنده در متغیرِ --tb-h
+   نوشته می‌شود و CSS با calc(… + var(--tb-h)) فاصله می‌گیرد. */
+function syncStickyOffsets() {
+  const tb = el("totalBar");
+  if (!tb) return;
+  const vis = !!(tb.offsetParent) && tb.getBoundingClientRect().height > 0;
+  const h = vis ? Math.ceil(tb.getBoundingClientRect().height) : 0;
+  document.documentElement.style.setProperty("--tb-h", h + "px");
+  /* نوارِ «افزودنِ» چسبانِ تبِ فعال هم لایه‌ی پایینیِ دیگری است که توست‌ها
+     نباید رویش بیفتند. */
+  const ab = document.querySelector("#projectEditor .tab-panel.active .add-bar");
+  const stickyAb = ab && ab.offsetParent && getComputedStyle(ab).position === "sticky";
+  const ah = stickyAb ? Math.ceil(ab.getBoundingClientRect().height) + 8 : 0;
+  document.documentElement.style.setProperty("--addbar-h", ah + "px");
 }
 function readTotalbarInto(p) {
   p.profit_mode = el("tbProfitMode").value;
@@ -1522,10 +1542,12 @@ function openProjectEditor(id, withDraft) {
   if (el("tbDepositPct")) el("tbDepositPct").value = p.deposit_percent ? fa(p.deposit_percent) : "";
   if (el("tbDepositAmt")) el("tbDepositAmt").value = p.deposit_amount ? fmtInp(p.deposit_amount) : "";
   if (el("tbRoundStep")) el("tbRoundStep").value = "0";
-  /* وضعیتِ کشوی مالی سلیقه‌ی کاربر است، نه ویژگیِ پروژه → از localStorage */
+  /* وضعیتِ کشوی مالی سلیقه‌ی کاربر است، نه ویژگیِ پروژه → از localStorage.
+     ★ پیش‌فرض «بسته» است: نوارِ جمع باید باریک بماند تا فضای جدول داده نگردد
+     (پیش‌تر برعکس بود و کشو با هر بار بازکردنِ ویرایشگر باز می‌ماند). */
   {
-    let openD = true;
-    try { openD = localStorage.getItem("kabir.tbDrawer") !== "0"; } catch (e) {}
+    let openD = false;
+    try { openD = localStorage.getItem("kabir.tbDrawer") === "1"; } catch (e) {}
     setTbDrawer(openD, false);
   }
   updateTbSummary();
@@ -1552,6 +1574,7 @@ function openProjectEditor(id, withDraft) {
   if (p.stale && API.ok) {
     toast("این پروژه با نرخ‌های قدیمی متریال ذخیره شده بود — مبالغ زیر با نرخ روز بازمحاسبه شد. برای قطعی‌شدن، پروژه را ذخیره کنید.", "warn");
   }
+  syncStickyOffsets();
   el("projectEditor").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -3170,6 +3193,7 @@ function wire() {
     if (!t) return;
     $$("#secTabs .tab").forEach((x) => x.classList.toggle("active", x === t));
     $$(".tab-panel").forEach((pn) => pn.classList.toggle("active", pn.id === "tab-" + t.dataset.tab));
+    syncStickyOffsets();
   });
 
   /* --- افزودن ردیف --- */
@@ -3533,13 +3557,24 @@ function wire() {
   if (btnTbDrawer) {
     let saved = null;
     try { saved = localStorage.getItem("kabir.tbDrawer"); } catch (e) {}
-    setTbDrawer(saved === null ? true : saved === "1", false);
+    /* پیش‌فرض «بسته»: نوارِ جمع باریک می‌ماند و فضای جدول داده صرفِ
+       ورودی‌های کم‌مصرف نمی‌شود؛ وضعیتِ کاربر از localStorage بازیابی می‌شود. */
+    setTbDrawer(saved === "1", false);
     btnTbDrawer.addEventListener("click", () => {
       const d = el("tbDrawer");
       setTbDrawer(!!d && d.hidden);
       updateTbSummary();
     });
   }
+
+  /* ★ همگام‌سازیِ زنده‌ی ارتفاعِ نوارِ جمع (متغیرِ --tb-h) تا نوارِ «افزودنِ»
+     چسبان و توست‌ها هرگز زیر/روی آن نیفتند. */
+  if (typeof ResizeObserver !== "undefined") {
+    const tbEl = el("totalBar");
+    if (tbEl) { try { new ResizeObserver(() => syncStickyOffsets()).observe(tbEl); } catch (e) {} }
+  }
+  window.addEventListener("resize", syncStickyOffsets);
+  syncStickyOffsets();
 
   /* ★ واگرد/بازانجامِ تغییراتِ ویرایشگر (Ctrl+Z / Ctrl+Shift+Z) */
   const btnUndo = el("btnUndo");

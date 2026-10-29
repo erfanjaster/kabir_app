@@ -39,8 +39,10 @@ function toast(msg, type, action) {
   const ic = type === "success" ? ICONS.check : type === "error" ? ICONS.x : type === "warn" ? ICONS.warn : ICONS.info;
   const box = el("toasts");
   if (!box) return;
-  /* حداکثر ۴ توست هم‌زمان — قدیمی‌ترین حذف می‌شود */
-  while (box.children.length >= 4) box.firstElementChild.remove();
+  /* حداکثر ۴ توست هم‌زمان — قدیمی‌ترین حذف می‌شود.
+     ★ در نمایشگرِ کوچک فقط ۲ تا: انبوهِ توست نباید نیمه‌ی صفحه را بپوشاند. */
+  const cap = (window.matchMedia && window.matchMedia("(max-width: 720px)").matches) ? 2 : 4;
+  while (box.children.length >= cap) box.firstElementChild.remove();
   const t = document.createElement("div");
   t.className = "toast " + type;
   t.setAttribute("role", type === "error" ? "alert" : "status");

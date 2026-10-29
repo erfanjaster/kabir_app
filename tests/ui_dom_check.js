@@ -339,12 +339,12 @@ const selectValue = (elm, value) => {
   const tbT = document.getElementById("btnTbDrawer"), tbD = document.getElementById("tbDrawer");
   check("financial drawer exists + toggle wired", !!tbT && !!tbD &&
     tbT.getAttribute("aria-controls") === "tbDrawer");
-  check("drawer starts open by default (کشف‌پذیری)", tbD.hidden === false &&
-    tbT.getAttribute("aria-expanded") === "true");
+  check("drawer starts closed by default (افشای تدریجی — نوارِ جمع باریک)", tbD.hidden === true &&
+    tbT.getAttribute("aria-expanded") === "false");
   click(tbT);
-  check("drawer toggles closed", tbD.hidden === true && tbT.getAttribute("aria-expanded") === "false");
+  check("drawer toggles open", tbD.hidden === false && tbT.getAttribute("aria-expanded") === "true");
   click(tbT);
-  check("drawer toggles back open", tbD.hidden === false);
+  check("drawer toggles back closed", tbD.hidden === true);
   check("drawer keeps all 8 financial inputs inside",
     ["tbProfitMode","tbProfitPct","tbInstallMode","tbInstallVal","tbDiscPct","tbDiscAmt",
      "tbVat","tbVatPct","tbExtraFixed","tbDepositPct","tbDepositAmt","tbRoundStep"]

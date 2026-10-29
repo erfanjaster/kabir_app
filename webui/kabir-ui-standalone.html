@@ -1060,10 +1060,10 @@ select {
 .editor-stack { display: flex; flex-direction: column; }
 
 .section-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+  gap: 0.7rem 0.9rem;
+  align-items: end;
   background: color-mix(in srgb, var(--accent) 5%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
   border-radius: 12px;
@@ -1081,15 +1081,18 @@ select {
 }
 .section-bar label {
   display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 0.79rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.3rem;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--accent-text);
 }
 [data-theme="dark"] .section-bar label { color: var(--accent); }
-.section-bar select, .section-bar input { width: auto; min-width: 8rem; background: var(--surface); }
-.section-bar input.narrow { width: 5.5rem; min-width: 0; }
+.section-bar select, .section-bar input { width: 100%; min-width: 0; flex: 1 1 auto; background: var(--surface); }
+.section-bar input.narrow { width: 100%; max-width: 7rem; min-width: 0; flex: 0 1 auto; }
+.section-bar > span { grid-column: 1 / -1; display: flex; gap: 0.9rem; flex-wrap: wrap; }
+.section-bar > span > label { flex: 1 1 10rem; }
 
 .add-row { margin-top: 0.7rem; border-style: dashed; }
 
@@ -1515,8 +1518,12 @@ input[type="range"]::-moz-range-thumb {
    ========================================================================== */
 .toasts {
   position: fixed;
-  bottom: 1.25rem;
-  inset-inline-start: 1.25rem;
+  /* ★ تعمیر: توست‌ها پیش‌تر گوشه‌ی پایینِ «شروع» (راست در RTL) می‌نشستند — دقیقاً
+     روی دکمه‌ی اصلیِ «افزودن ردیف» و نوارِ جمعِ چسبان. حالا در عرضِ زیاد به گوشه‌ی
+     «پایان» (چپ) می‌روند و بالایِ نوارهای چسبان می‌مانند؛ در موبایل به بالای صفحه
+     منتقل می‌شوند تا نیمه‌ی نمایشگر را نپوشانند. */
+  bottom: calc(1.25rem + var(--tb-h, 0px) + var(--addbar-h, 0px));
+  inset-inline-end: 1.25rem;
   z-index: 200;
   display: flex;
   flex-direction: column;
@@ -2544,6 +2551,14 @@ input.invalid:focus, select.invalid:focus, textarea.invalid:focus {
   background: var(--surface);
   box-shadow: -6px 0 10px -8px rgba(0, 0, 0, 0.45);
 }
+/* ★ تعمیر: سرستونِ ستونِ چسبان هم باید هم‌رنگِ بقیه‌ی سرستون باشد (پیش‌تر سفید
+   می‌ماند و سرستون دو تکه دیده می‌شد) و برچسبش بالایِ ورودیِ نام ردیف بنشیند
+   (نه وسطِ یک ستونِ ۲۸۰ پیکسلی). */
+.table-wrap.grid-head thead th:first-child {
+  background: var(--surface-2);
+  text-align: start;
+}
+[data-theme="dark"] .table-wrap.grid-head thead th:first-child { background: var(--surface-3); }
 .table-wrap.grid-head tbody tr:hover td:first-child { background: var(--surface-2); }
 .table-wrap.grid-head td:first-child:focus-within { background: var(--surface-2); }
 
@@ -2627,11 +2642,14 @@ input.invalid:focus, select.invalid:focus, textarea.invalid:focus {
 .btn-hero:active { transform: translateY(1px); }
 .btn-hero .kbd { opacity: .72; font-weight: 600; }
 
-/* نوارِ افزودنِ چسبان — همیشه در «ناحیه‌ی شست» و در دید، بدون اسکرول */
+/* نوارِ افزودنِ چسبان — همیشه در «ناحیه‌ی شست» و در دید، بدون اسکرول.
+   ★ تعمیر: پیش‌تر `bottom: 0` بود و نوارِ جمعِ چسبان (z=20) دقیقاً رویش را
+   می‌پوشاند — پرتکرارترین کنشِ ویرایشگر ناپدید می‌شد. حالا فاصله‌اش از پایین
+   برابرِ ارتفاعِ زنده‌ی نوار جمع است (--tb-h) تا همیشه بالای آن بنشیند. */
 .add-bar {
   position: sticky;
-  bottom: 0;
-  z-index: 12;
+  bottom: calc(var(--tb-h, 0px) + 0.5rem);
+  z-index: 21;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -2650,6 +2668,10 @@ input.invalid:focus, select.invalid:focus, textarea.invalid:focus {
   color: var(--text-3);
   display: flex; align-items: center; gap: .4rem;
 }
+/* ★ تعمیر: کلاسِ `.add-row` حاشیه‌ی بالای ۰٫۷rem دارد (برای حالتِ غیرِ-flex)؛
+   داخلِ نوارِ چسبان همان حاشیه دکمه‌ی اصلیِ Split را ۱۰ پیکسل پایین‌تر از
+   فلشِ کنارش می‌کشید و دکمه «شکسته» دیده می‌شد. */
+.add-bar .add-row, .split > .add-row { margin-top: 0; }
 
 /* ---------- Split-Button: کنش اصلی بزرگ + واریانت‌های کم‌کاربرد کوچک ----
    «یونیت زمینی» ≈ ۸۰٪ موارد → بدنه‌ی بزرگ؛ «دیواری/ایستاده» → فلشِ کوچک.   */
@@ -2769,8 +2791,83 @@ tr.row-detail-l2 > td { background: var(--surface-2); }
 .btn-hero.block { width: 100%; }
 /* فاصله‌ی kbd داخل دکمه‌ی hero */
 .btn-hero .kbd { margin-inline-start: .25rem; }
-/* نوارِ چسبان نباید زیرِ نوارِ جمعِ پایین پنهان شود */
-.add-bar { bottom: 0.4rem; }
+/* ★ تعمیرِ پیشینِ «پنهان‌شدنِ نوارِ افزودن زیرِ نوارِ جمع» حالا در تعریفِ اصلیِ
+   `.add-bar` با متغیرِ زنده‌ی --tb-h انجام می‌شود؛ این بازنویسیِ ثابت حذف شد
+   چون فاصله‌ی نوار جمع را نادیده می‌گرفت. */
+
+/* ==========================================================================
+   ۲۷) تعمیراتِ بخشِ «ویرایش پروژه» — بازبینیِ رابط
+   --------------------------------------------------------------------------
+   این بلوک فقط پس‌ازِ همه‌ی لایه‌ها می‌آید تا چهار ایرادِ چیدمانِ ویرایشگر را
+   یک‌جا و قابل‌ردیاب ببندد:
+   ۱) منوی سرریز با نویسه‌ی «⋯» ساخته می‌شد که در برخی فونت/سیستم نامرئی است
+      → حالا آیکونِ SVG دارد و اندازه‌اش این‌جا مهار می‌شود.
+   ۲) نوارِ فرمانِ چسبان هنگامِ پیچیدنِ سطرها فاصله‌ی عمودی نداشت.
+   ۳) نوارِ جمع در عرض‌های کم، سطرها را روی هم می‌ریخت.
+   ۴) نوارِ «افزودن» و توست‌ها باید بالایِ نوارِ جمعِ چسبان بنشینند (--tb-h).
+   ========================================================================== */
+.ovf-btn svg { width: 1.15rem; height: 1.15rem; display: block; }
+.editor-bar { row-gap: 0.45rem; }
+.eb-actions { row-gap: 0.45rem; }
+
+@media (max-width: 900px) {
+  .tb-figures { gap: 0.8rem 1rem; }
+  .tb-fig b { font-size: 0.9rem; }
+  .tb-final b { font-size: 1.05rem; }
+}
+@media (max-width: 720px) {
+  /* ★ تعمیر: نوارِ بالا در عرضِ کم از صفحه بیرون می‌زد (۲۷ پیکسل اسکرولِ افقیِ
+     ناخواسته) چون ساعت + جست‌وجو + دکمه‌ی قهرمان در یک سطرِ بدونِ پیچیدن بودند. */
+  .topbar { gap: 0.6rem; padding: 0.6rem 0.8rem; }
+  .topbar-actions { gap: 0.4rem; }
+  .clock-chip { display: none; }
+  .search-wrap input { width: 7.5rem; }
+  .search-wrap input:focus { width: 9.5rem; }
+  #btnQuickProject { padding: 0 1rem; font-size: 0.9rem; }
+  #btnQuickProject .kbd { display: none; }
+  /* توست‌ها در موبایل بالای صفحه (زیرِ نوارِ عنوان) و تمام‌عرضِ امن */
+  .toasts { inset-inline: 0.6rem; max-width: none; bottom: auto; top: calc(var(--topbar-h) + 0.5rem); }
+  .toast { font-size: 0.8rem; padding: 0.6rem 0.8rem; }
+
+  .add-bar { padding: 0.5rem; gap: 0.4rem; }
+  .add-bar .split { width: 100%; }
+  .add-bar .split > .split-main { flex: 1 1 auto; justify-content: center; }
+  .add-bar > .btn-hero { width: 100%; justify-content: center; }
+  /* ★ تعمیر: نوارِ جمع در موبایل به یک ستونِ ~۵۰۰ پیکسلی تبدیل می‌شد و نیمی از
+     نمایشگر را می‌بلعید (و نوارِ «افزودن» چسبان را وسطِ جدول می‌انداخت). حالا:
+     ردیفِ کشو + ردیفِ ارقام با اسکرولِ افقی + ردیفِ کنش‌ها ≈ ۱۵۰ پیکسل. */
+  .totalbar .tb-slim { flex-direction: column; align-items: stretch; gap: 0.45rem; padding: 0.5rem 0.6rem; }
+  .totalbar .tb-slim .tb-figures {
+    width: 100%;
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    justify-content: flex-start;
+    gap: 1rem;
+    padding-bottom: 0.15rem;
+    scrollbar-width: thin;
+  }
+  .tb-fig { text-align: start; flex: 0 0 auto; }
+  .tb-final { flex: 0 0 auto; display: flex; align-items: center; gap: 0.55rem; padding: 0.35rem 0.9rem; }
+  .tb-final span { font-size: 0.62rem; }
+  .tb-final b { font-size: 1.02rem; }
+  .totalbar .tb-slim .tb-actions { margin-inline-start: 0; width: 100%; }
+  .totalbar .tb-slim .tb-actions .btn { flex: 1 1 auto; justify-content: center; }
+  .tb-drawer-toggle { width: 100%; }
+  .tb-save-hint { margin-inline-start: auto; }
+}
+@media (max-width: 520px) {
+  .section-bar { grid-template-columns: 1fr 1fr; }
+  /* ستونِ چسبانِ ردیف در نمایشگرِ باریک جمع‌وجورتر می‌شود تا ستون‌های داده جای بیشتری داشته باشند */
+  .row-id-cell { gap: 0.3rem; }
+  .row-id-cell .cell-input { min-width: 5.6rem; font-size: 0.76rem; }
+  .row-btns .row-actions { width: 2.1rem; height: 2.1rem; }
+  .row-btns .row-actions svg { width: 1rem; height: 1rem; }
+  .row-sep { margin-inline: 0.2rem; }
+  .cell-input { min-width: 3.6rem; }
+  .cell-input.w-dim { min-width: 4.4rem; }
+  .cell-input.w-qty { min-width: 4rem; }
+}
 
 </style>
 <script>
@@ -4963,8 +5060,10 @@ function toast(msg, type, action) {
   const ic = type === "success" ? ICONS.check : type === "error" ? ICONS.x : type === "warn" ? ICONS.warn : ICONS.info;
   const box = el("toasts");
   if (!box) return;
-  /* حداکثر ۴ توست هم‌زمان — قدیمی‌ترین حذف می‌شود */
-  while (box.children.length >= 4) box.firstElementChild.remove();
+  /* حداکثر ۴ توست هم‌زمان — قدیمی‌ترین حذف می‌شود.
+     ★ در نمایشگرِ کوچک فقط ۲ تا: انبوهِ توست نباید نیمه‌ی صفحه را بپوشاند. */
+  const cap = (window.matchMedia && window.matchMedia("(max-width: 720px)").matches) ? 2 : 4;
+  while (box.children.length >= cap) box.firstElementChild.remove();
   const t = document.createElement("div");
   t.className = "toast " + type;
   t.setAttribute("role", type === "error" ? "alert" : "status");
@@ -5862,6 +5961,7 @@ function forceCloseEditor() {
   state.dirty = false;
   paintDirtyState2();
   el("projectEditor").hidden = true;
+  syncStickyOffsets();
   undoReset();
 }
 
@@ -7066,6 +7166,25 @@ function setTbDrawer(open, persist) {
   b.setAttribute("aria-expanded", open ? "true" : "false");
   b.classList.toggle("open", !!open);
   if (persist !== false) { try { localStorage.setItem("kabir.tbDrawer", open ? "1" : "0"); } catch (e) {} }
+  syncStickyOffsets();
+}
+
+/* ★ تعمیرِ چیدمانِ چسبان: نوارِ جمعِ پایین (sticky bottom) ارتفاعش با باز/بسته‌شدن
+   کشوی مالی و با جمع‌شدنِ سطرها عوض می‌شود. نوارِ «افزودن» چسبان و توست‌ها باید
+   بالای آن بنشینند، وگرنه زیر/روی آن گم می‌شوند. ارتفاعِ زنده در متغیرِ --tb-h
+   نوشته می‌شود و CSS با calc(… + var(--tb-h)) فاصله می‌گیرد. */
+function syncStickyOffsets() {
+  const tb = el("totalBar");
+  if (!tb) return;
+  const vis = !!(tb.offsetParent) && tb.getBoundingClientRect().height > 0;
+  const h = vis ? Math.ceil(tb.getBoundingClientRect().height) : 0;
+  document.documentElement.style.setProperty("--tb-h", h + "px");
+  /* نوارِ «افزودنِ» چسبانِ تبِ فعال هم لایه‌ی پایینیِ دیگری است که توست‌ها
+     نباید رویش بیفتند. */
+  const ab = document.querySelector("#projectEditor .tab-panel.active .add-bar");
+  const stickyAb = ab && ab.offsetParent && getComputedStyle(ab).position === "sticky";
+  const ah = stickyAb ? Math.ceil(ab.getBoundingClientRect().height) + 8 : 0;
+  document.documentElement.style.setProperty("--addbar-h", ah + "px");
 }
 function readTotalbarInto(p) {
   p.profit_mode = el("tbProfitMode").value;
@@ -7179,10 +7298,12 @@ function openProjectEditor(id, withDraft) {
   if (el("tbDepositPct")) el("tbDepositPct").value = p.deposit_percent ? fa(p.deposit_percent) : "";
   if (el("tbDepositAmt")) el("tbDepositAmt").value = p.deposit_amount ? fmtInp(p.deposit_amount) : "";
   if (el("tbRoundStep")) el("tbRoundStep").value = "0";
-  /* وضعیتِ کشوی مالی سلیقه‌ی کاربر است، نه ویژگیِ پروژه → از localStorage */
+  /* وضعیتِ کشوی مالی سلیقه‌ی کاربر است، نه ویژگیِ پروژه → از localStorage.
+     ★ پیش‌فرض «بسته» است: نوارِ جمع باید باریک بماند تا فضای جدول داده نگردد
+     (پیش‌تر برعکس بود و کشو با هر بار بازکردنِ ویرایشگر باز می‌ماند). */
   {
-    let openD = true;
-    try { openD = localStorage.getItem("kabir.tbDrawer") !== "0"; } catch (e) {}
+    let openD = false;
+    try { openD = localStorage.getItem("kabir.tbDrawer") === "1"; } catch (e) {}
     setTbDrawer(openD, false);
   }
   updateTbSummary();
@@ -7209,6 +7330,7 @@ function openProjectEditor(id, withDraft) {
   if (p.stale && API.ok) {
     toast("این پروژه با نرخ‌های قدیمی متریال ذخیره شده بود — مبالغ زیر با نرخ روز بازمحاسبه شد. برای قطعی‌شدن، پروژه را ذخیره کنید.", "warn");
   }
+  syncStickyOffsets();
   el("projectEditor").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -8827,6 +8949,7 @@ function wire() {
     if (!t) return;
     $$("#secTabs .tab").forEach((x) => x.classList.toggle("active", x === t));
     $$(".tab-panel").forEach((pn) => pn.classList.toggle("active", pn.id === "tab-" + t.dataset.tab));
+    syncStickyOffsets();
   });
 
   /* --- افزودن ردیف --- */
@@ -9190,13 +9313,24 @@ function wire() {
   if (btnTbDrawer) {
     let saved = null;
     try { saved = localStorage.getItem("kabir.tbDrawer"); } catch (e) {}
-    setTbDrawer(saved === null ? true : saved === "1", false);
+    /* پیش‌فرض «بسته»: نوارِ جمع باریک می‌ماند و فضای جدول داده صرفِ
+       ورودی‌های کم‌مصرف نمی‌شود؛ وضعیتِ کاربر از localStorage بازیابی می‌شود. */
+    setTbDrawer(saved === "1", false);
     btnTbDrawer.addEventListener("click", () => {
       const d = el("tbDrawer");
       setTbDrawer(!!d && d.hidden);
       updateTbSummary();
     });
   }
+
+  /* ★ همگام‌سازیِ زنده‌ی ارتفاعِ نوارِ جمع (متغیرِ --tb-h) تا نوارِ «افزودنِ»
+     چسبان و توست‌ها هرگز زیر/روی آن نیفتند. */
+  if (typeof ResizeObserver !== "undefined") {
+    const tbEl = el("totalBar");
+    if (tbEl) { try { new ResizeObserver(() => syncStickyOffsets()).observe(tbEl); } catch (e) {} }
+  }
+  window.addEventListener("resize", syncStickyOffsets);
+  syncStickyOffsets();
 
   /* ★ واگرد/بازانجامِ تغییراتِ ویرایشگر (Ctrl+Z / Ctrl+Shift+Z) */
   const btnUndo = el("btnUndo");
@@ -10059,7 +10193,7 @@ if (typeof module !== "undefined" && module.exports) {
            سرریز رفتند تا نوار بالا فقط «شروع کار» و «جست‌وجو» داشته باشد. -->
       <div class="ovf" id="ovfTop">
         <button class="ovf-btn" id="btnTopMenu" type="button" aria-label="ابزارها و تنظیمات نمایش"
-                aria-haspopup="true" aria-expanded="false" title="ابزارها (پوسته، راهنمای کلیدها)">⋯</button>
+                aria-haspopup="true" aria-expanded="false" title="ابزارها (پوسته، راهنمای کلیدها)"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
         <div class="ovf-menu" role="menu" aria-label="ابزارها">
           <button class="ovf-item" id="btnRefresh" type="button" role="menuitem"
                   title="به‌روزرسانی داده‌ها از پایگاه‌داده">
@@ -10261,7 +10395,7 @@ if (typeof module !== "undefined" && module.exports) {
                     «ذخیره» و «صدور فاکتور» بدون رقیبِ بصری، بزرگ‌ترین هدف‌اند. -->
             <div class="ovf" id="ovfEditor">
               <button class="ovf-btn" id="btnEditorMenu" type="button" aria-label="کنش‌های بیشترِ پروژه و بخش"
-                      aria-haspopup="true" aria-expanded="false" title="کنش‌های بیشتر">⋯</button>
+                      aria-haspopup="true" aria-expanded="false" title="کنش‌های بیشتر"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
               <div class="ovf-menu" role="menu" aria-label="کنش‌های بیشتر">
                 <div class="ovf-label" role="presentation">پروژه</div>
                 <button class="ovf-item" id="btnDupProject" type="button" role="menuitem"
@@ -10644,7 +10778,7 @@ if (typeof module !== "undefined" && module.exports) {
              پایانِ سطر را می‌بیند) قرار گرفت. -->
         <div class="ovf" id="ovfMat">
           <button class="ovf-btn" id="btnMatMenu" type="button" aria-label="ابزارهای متریال"
-                  aria-haspopup="true" aria-expanded="false" title="ابزارهای متریال">⋯</button>
+                  aria-haspopup="true" aria-expanded="false" title="ابزارهای متریال"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
           <div class="ovf-menu" role="menu" aria-label="ابزارهای متریال">
             <button class="ovf-item" id="btnBulkPrice" type="button" role="menuitem"
                     title="اعمال یک درصد افزایش/کاهش روی دسته‌ای از قیمت‌ها">تغییر دسته‌جمعی قیمت</button>
@@ -10748,7 +10882,7 @@ if (typeof module !== "undefined" && module.exports) {
               <button class="btn outline" id="btnPdfInv" type="button" style="flex:1">PDF</button>
               <div class="ovf" id="ovfInv" style="flex:0 0 auto">
                 <button class="ovf-btn" id="btnInvMenu" type="button" aria-label="خروجی‌های دیگر"
-                        aria-haspopup="true" aria-expanded="false" title="خروجی‌های دیگر">⋯</button>
+                        aria-haspopup="true" aria-expanded="false" title="خروجی‌های دیگر"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
                 <div class="ovf-menu" role="menu" aria-label="خروجی‌های دیگر">
                   <button class="ovf-item" id="btnXlsInv" type="button" role="menuitem">خروجی اکسل</button>
                 </div>
