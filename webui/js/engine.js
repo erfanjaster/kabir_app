@@ -10,6 +10,36 @@
 
 function _n(v, d) { const x = parseFloat(v); return isFinite(x) ? x : (d || 0); }
 
+/* ★ سه هلپرِ تازه — آینه‌ی `_f` / `_i` / `_pos` در kabir/core/costing.py.
+   `_n` به‌تنهایی کافی نبود چون «مقدار ناموجود» و «مقدارِ موجود ولی خراب» را
+   یکسان به پیش‌فرض می‌برد؛ موتور پایتون این دو را جدا می‌کند:
+     ناموجود (undefined/null/"")  → پیش‌فرضِ خودِ فیلد
+     خراب     (NaN / Infinity)    → صفر (و در calc_unit هشدار می‌گیرد)
+   بدون این تفکیک، یک فیلد خالی در مرورگر قیمت می‌خورد و روی سرور حذف می‌شد. */
+function _co(v, miss, bad) {
+  if (v === undefined || v === null || (typeof v === "string" && v.trim() === "")) return miss;
+  const x = parseFloat(v);
+  return isFinite(x) ? x : (bad === undefined ? 0 : bad);
+}
+function _ci(v, miss, bad) { return Math.trunc(_co(v, miss, bad === undefined ? 0 : bad)); }
+/* عددِ نامنفی — برای ابعاد/تعدادها/ضرایب فیزیکی. منفی‌ها پیش‌تر مساحت منفی و
+   در نتیجه «قیمت کل منفی» می‌ساختند (−380,820 روی سند مالی). */
+function _pos(v, d) { const x = _n(v, d === undefined ? 0 : d); return x > 0 ? x : 0; }
+/* ★ بولین — آینه‌ی شاخه‌ی `bools` در `_coerce` پایتون.
+   «ناموجود» → پیش‌فرض (معمولاً true)؛ «موجود» → ارزشِ درستیِ خودش.
+   پیش‌تر از `!== false` استفاده می‌شد که `0` و `""` را **درست** می‌گرفت، در
+   حالی که پایتون `if u.has_bottom_panel:` آن‌ها را **نادرست** می‌گرفت. نتیجه:
+   با `has_bottom_panel: 0` موتور JS یک ورقِ اضافه و ۲ برابر قیمت می‌داد. */
+function _bool(v, d) {
+  if (v === undefined || v === null) return d !== false;
+  if (typeof v === "string") { const t = v.trim().toLowerCase(); return !(t === "" || t === "0" || t === "false" || t === "no" || t === "off"); }
+  return !!v;
+}
+
+/* ثبتِ متنِ پایه‌ی «detail» هر ردیفِ ورقی — برای idempotent بودنِ
+   batchSheetsLocal وقتی دو بار (بخش، سپس کل پروژه) صدا زده می‌شود. */
+const SHEET_DETAIL_BASE = new Map();
+
 function engineItem(key, group, title, detail, qty, unit_label, unit_price, amount, visible, extra) {
   return Object.assign({
     key, group, title, detail: detail || "", qty: _n(qty), unit_label: unit_label || "",
@@ -25,10 +55,11 @@ function engineItem(key, group, title, detail, qty, unit_label, unit_price, amou
    --------------------------------------------------------------------------- */
 const SHEET_ITEM_KEYS = ["body_sheet", "back_sheet", "door_sheet", "drawer_front", "drawer_box"];
 
-function batchSheetsLocal(pItems) {
+function batchSheetsLocal(pItems, scope) {
+  const SCOPE = scope || "این بخش";
   const groups = new Map();
   for (const it of pItems) {
-    if (SHEET_ITEM_KEYS.includes(it.key) && it.mat_id && it.sheet_area_sqm > 0) {
+    if (SHEET_ITEM_KEYS.includes(it.key) && it.mat_id && _n(it.sheet_area_sqm) > 0) {
       if (!groups.has(it.mat_id)) groups.set(it.mat_id, []);
       groups.get(it.mat_id).push(it);
     }
@@ -36,26 +67,70 @@ function batchSheetsLocal(pItems) {
   let total = 0;
   for (const [mid, its] of groups) {
     const m = matById(mid);
-    const gross = its.reduce((a, i) => a + _n(i.area_sqm), 0);
-    const net = its.reduce((a, i) => a + _n(i.qty), 0);
+    const gross = its.reduce((a, i) => a + _pos(i.area_sqm), 0);
+    const net = its.reduce((a, i) => a + _pos(i.qty), 0);
     const sa = _n(its[0].sheet_area_sqm);
     if (gross <= 0 || sa <= 0) continue;
     const sheets = Math.ceil(Math.round((gross / sa) * 1e6) / 1e6);
     const price = m ? _n(m.price) : 0;
     const cost = sheets * price;
     const eff = net > 0 ? cost / net : 0;
-    const size = m ? `${m.sheet_width_cm}×${m.sheet_height_cm}` : "";
+    const size = m ? `${fmt(_n(m.sheet_width_cm))}×${fmt(_n(m.sheet_height_cm))}` : "";
     for (const i of its) {
-      const share = gross ? _n(i.area_sqm) / gross : 0;
+      const share = gross ? _pos(i.area_sqm) / gross : 0;
       i.sheets = sheets * share;
       i.unit_label = "م²";
       i.unit_price = eff;
       i.amount = cost * share;
-      i.detail = (i.detail || "") + ` — از ${fa(sheets)} ورق ${size}ِ این بخش`;
+      let base = SHEET_DETAIL_BASE.get(i);
+      if (base === undefined) { base = i.detail || ""; SHEET_DETAIL_BASE.set(i, base); }
+      i.detail = base + ` — از ${fa(sheets)} ورق ${size}ِ ${SCOPE}`;
     }
     total += sheets;
   }
   return total;
+}
+
+/* ★ پاسِ دومِ تجمیع ورق در سطح **کل پروژه** (آینه‌ی repool_sheets_project در
+   costing.py — رفع باگ F-01). ورقِ یک متریال در کارگاه یک‌جا برش می‌خورد، نه
+   بخش‌بخش؛ بدون این پاس، تقسیمِ یک آشپزخانه به N بخش تعداد ورق را تا N برابر
+   باد می‌کرد. چون ceil(Σ) ≤ Σ ceil است، این پاس هرگز قیمت را بالا نمی‌برد. */
+function repoolSheetsProjectLocal(pageResults) {
+  if (pageResults.length < 2) return false;
+  const all = [];
+  for (const pr of pageResults) for (const i of pr.items) all.push(i);
+  const before = new Map(all.map((i) => [i, [i.amount, i.sheets]]));
+  batchSheetsLocal(all, "کل پروژه");
+  for (const i of all) {
+    const b = before.get(i);
+    if (b && (Math.abs(b[0] - i.amount) > 1e-6 || Math.abs(b[1] - i.sheets) > 1e-9)) return true;
+  }
+  return false;
+}
+
+/* دسته‌هایی که قیمتشان بر مبنای ورق است — هم‌راستا با SHEET_CATEGORIES پایتون */
+const SHEET_CATS = ["body_sheet", "door_sheet", "back_sheet", "drawer_sheet"];
+
+/* ★ آینه‌ی CostingEngine._sheet_price_check در costing.py.
+   قلمی که واحدش «ورق» است ولی ابعاد ورق ندارد، pricePerSqm = 0 می‌دهد و در
+   نتیجه کل بدنه **رایگان و بی‌صدا** محاسبه می‌شد. حالتِ معکوسش هم بود: قلمی
+   با دسته‌ی ورق و واحد «عدد»، قیمتِ هر عدد را به‌جای قیمتِ هر مترمربع ضرب
+   می‌کرد. هر دو حالا هشدارِ صریح می‌گیرند. */
+function sheetPriceCheck(m, what, areaTotal, warns) {
+  const pp = pricePerSqm(m);
+  if (!m) return pp;
+  const warnings = warns || [];
+  const hasDims = _pos(m.sheet_width_cm) > 0 && _pos(m.sheet_height_cm) > 0;
+  if (m.unit === "sheet" && !hasDims) {
+    warnings.push(`«${m.name}» به‌عنوان ${what} انتخاب شده ولی ابعاد ورقِ آن ثبت نشده است — قیمتِ هر مترمربع صفر به دست می‌آید و ${fmt(areaTotal, 1)} م² ${what} رایگان محاسبه شد! ابعاد ورق را در کتابخانه‌ی قیمت‌ها کامل کنید.`);
+  } else if (SHEET_CATS.includes(m.cat || m.category) && m.unit !== "sheet" && m.unit !== "sqm") {
+    /* ⚠ کلیدِ دسته در رابط وب و در JSON سرور ``cat`` است (نه ``category``) —
+       هر دو پذیرفته می‌شوند تا این هشدار در مرورگر هم واقعاً اجرا شود. */
+    warnings.push(`«${m.name}» در دسته‌ی ${what} است ولی واحدش «${m.unit}» ثبت شده — قیمتِ هر عدد به‌جای قیمتِ هر مترمربع در محاسبه می‌رود و مبلغ درست نیست.`);
+  } else if (pp <= 0) {
+    warnings.push(`«${m.name}» (${what}) قیمتِ مؤثرِ صفر دارد — ${fmt(areaTotal, 1)} م² بدون هزینه ثبت شد.`);
+  }
+  return pp;
 }
 
 /* ★ آیا یک لنگه‌ی در روی این ورق جا می‌شود؟ (شرطِ لازم برای «در از ورق بدنه»)
@@ -87,17 +162,26 @@ function calcProjectLocal(project) {
   const pageResults = [];
   const warnings = [];
   let pagesCost = 0;
+  /* متنِ پایه‌ی «detail» هر ردیفِ ورقی — چون batchSheetsLocal حالا دو بار
+     صدا زده می‌شود (یک‌بار برای بخش، یک‌بار برای کل پروژه). */
+  SHEET_DETAIL_BASE.clear();
+  /* بخش‌هایی که جمع‌بندیشان به پاسِ ۲ موکول شده است. */
+  const deferred = [];
 
   for (const page of project.pages || []) {
     const pItems = [];
-    let subtotal = 0, overhead = 0, detailCost = 0;
+    let detailCost = 0;   /* جمع/سربار در پاسِ ۲ ساخته می‌شود */
     const pr = { name: page.name, items: pItems, total_units: 0, total_doors: 0, total_drawers: 0,
                  total_ground_lm: 0, total_wall_lm: 0, total_sheets: 0, total_body_area: 0,
                  total_door_area: 0, total_back_area: 0, total_banding_m: 0,
                  subtotal: 0, overhead_amount: 0, total_cost: 0 };
-    const waste = _n(page.waste_percent, 10);
-    const BAND_BODY_F = _n(page.banding_body_factor, 2.2);
-    const BAND_WASTE = _n(page.banding_waste_percent, 8);
+    /* ★ پرت/ضریبِ منفی پیش‌تر مساحت و متراژ منفی می‌ساخت و بی‌صدا از جمع کل
+       کم می‌شد. همه کرانِ صفر دارند و هشدارش به کاربر می‌رسد. */
+    const _wasteRaw = _n(page.waste_percent, 10);
+    const waste = _wasteRaw < 0 ? (warnings.push(`پرتِ ورق منفی (${fmt(_wasteRaw)}٪) بود — صفر در نظر گرفته شد.`), 0) : _wasteRaw;
+    const _bbfRaw = _n(page.banding_body_factor, 2.2);
+    const BAND_BODY_F = _bbfRaw < 0 ? (warnings.push(`ضریب نوار بدنه منفی (${fmt(_bbfRaw)}) بود — صفر در نظر گرفته شد.`), 0) : _bbfRaw;
+    const BAND_WASTE = _pos(page.banding_waste_percent, 8);
     /* ★ ضریب نوار در — هم‌راستا با موتور پایتون (پیش‌تر در هیچ‌کدام اعمال
        نمی‌شد و تنظیمِ بی‌اثر بود). */
     const BAND_DOOR_F = (() => { const f = _n(page.banding_door_factor, 1); return f > 0 ? f : 1; })();
@@ -105,15 +189,33 @@ function calcProjectLocal(project) {
     for (const u of page.units || []) {
       /* ★ تعداد یونیت ≤ ۰ یعنی یونیت کنار گذاشته می‌شود (بدون هزینه) + هشدار.
          پیش‌تر qty=0 یا منفی «یک عدد» قیمت می‌خورد! (هم‌راستا با پایتون) */
-      const q0 = Math.trunc(_n(u.qty, 1));
+      /* هم‌راستا با `_coerce` پایتون: «ناموجود» → پیش‌فرضِ فیلد (۱)،
+         «موجود ولی خراب» (NaN/"abc") → ۰ = یونیت کنار گذاشته می‌شود + هشدار. */
+      const q0 = _ci(u.qty, 1, 0);
       if (q0 <= 0) {
         warnings.push(`«${u.label || "یونیت"}»: تعداد یونیت ${q0} وارد شده — بدون هزینه نادیده گرفته شد. اگر این یونیت را می‌خواهید، تعداد را دست‌کم ۱ بگذارید.`);
         continue;
       }
       const n = q0;
-      const L = _n(u.length_cm), H = _n(u.height_cm), D = _n(u.depth_cm);
+      /* ★ ابعاد با کرانِ صفر (آینه‌ی `_pos`/`_input_warnings` در costing.py).
+         `depth_cm = -55` پیش‌تر مساحت منفی می‌داد و با یک خدمتِ مترمربعی،
+         قیمتِ کل پروژه **منفی** می‌شد (−380,820 روی سند مالی). */
+      const _ul = u.label || "یونیت";
+      [[u.length_cm, "طول"], [u.height_cm, "ارتفاع"], [u.depth_cm, "عمق"]].forEach(([v, nm]) => {
+        const raw = _n(v, 0);
+        if (raw < 0) warnings.push(`«${_ul}»: ${nm} یونیت منفی (${fmt(raw)} سانتی‌متر) بود — صفر در نظر گرفته شد. ابعاد منفی معنای فیزیکی ندارد و قیمت را خراب می‌کند.`);
+        else if (raw === 0 && nm !== "طول") warnings.push(`«${_ul}»: ${nm} یونیت صفر است — مساحت قطعاتِ وابسته به آن صفر شد و هزینه‌ی ورق بدنه محاسبه نمی‌شود!`);
+      });
+      [["shelves", u.shelves, "تعداد طبقه"], ["legs_per_unit", u.legs_per_unit, "تعداد پایه"],
+       ["pins_per_shelf", u.pins_per_shelf, "خار در هر طبقه"]].forEach(([k, v, nm]) => {
+        if (v !== undefined && v !== null && _n(v, 0) < 0)
+          warnings.push(`«${_ul}»: ${nm} منفی (${fmt(_n(v, 0))}) بود — صفر در نظر گرفته شد.`);
+      });
+      const L = _pos(u.length_cm), H = _pos(u.height_cm), D = _pos(u.depth_cm);
       const bodyM = matById(u.body_id), backM = matById(u.back_id);
-      const t = bodyM && bodyM.thickness_mm ? bodyM.thickness_mm / 10 : 0; // cm
+      const t = bodyM ? _pos(bodyM.thickness_mm) / 10 : 0;   // cm
+      const INNER = Math.max(0, L - 2 * t);   // عرض مؤثرِ قطعاتِ داخلی (هرگز منفی)
+      const SHELVES = _pos(u.shelves);
 
       /* --- پنل‌های بدنه (مثل panels_of/default_panels پایتون) ---
          ★ اگر کاربر ریز بدنه را دستی عوض کرده باشد (custom_panels)، همان
@@ -122,16 +224,17 @@ function calcProjectLocal(project) {
       const cp = Array.isArray(u.custom_panels) && u.custom_panels.length ? u.custom_panels : null;
       if (cp) {
         for (const pn of cp) {
-          if (pn.enabled === false) continue;
-          const a = _n(pn.qty) * (_n(pn.w_cm) / 100) * (_n(pn.h_cm) / 100);
+          if (!_bool(pn.enabled, true)) continue;
+          /* کرانِ صفر: پنلِ منفی پیش‌تر پنلِ مثبتِ کنارش را خنثی می‌کرد. */
+          const a = Math.max(0, _n(pn.qty) * (_pos(pn.w_cm) / 100) * (_pos(pn.h_cm) / 100));
           if ((pn.material_key || "body") === "back") backArea += a; else bodyArea += a;
         }
       } else {
-        bodyArea += 2 * (D / 100) * (H / 100);                     // دو بغل
-        if (u.has_bottom_panel !== false) bodyArea += ((L - 2 * t) / 100) * (D / 100);
-        if (u.has_top_panel !== false && u.unit_type !== "ground") bodyArea += ((L - 2 * t) / 100) * (D / 100);
-        if (u.unit_type === "tall") bodyArea += ((L - 2 * t) / 100) * (D / 100);
-        if (_n(u.shelves) > 0) bodyArea += _n(u.shelves) * ((L - 2 * t) / 100) * (D / 100);
+        bodyArea += Math.max(0, 2 * (D / 100) * (H / 100));         // دو بغل
+        if (_bool(u.has_bottom_panel, true)) bodyArea += (INNER / 100) * (D / 100);
+        if (_bool(u.has_top_panel, true) && u.unit_type !== "ground") bodyArea += (INNER / 100) * (D / 100);
+        if (u.unit_type === "tall") bodyArea += (INNER / 100) * (D / 100);
+        if (SHELVES > 0) bodyArea += SHELVES * (INNER / 100) * (D / 100);
         if (u.back_id) backArea += (L / 100) * (H / 100);
       }
 
@@ -141,17 +244,24 @@ function calcProjectLocal(project) {
       }
       if (bodyArea > 0 && bodyM) {
         const per = bodyArea * (1 + waste / 100);
-        const sheetArea = (bodyM.sheet_width_cm * bodyM.sheet_height_cm) / 10000;
-        const net = bodyArea * n, pp = pricePerSqm(bodyM);
+        const sheetArea = (_pos(bodyM.sheet_width_cm) * _pos(bodyM.sheet_height_cm)) / 10000;
+        const net = bodyArea * n, pp = sheetPriceCheck(bodyM, "ورق بدنه", bodyArea * n, warnings);
         if (sheetArea > 0) {
           pItems.push(engineItem("body_sheet", "ورق بدنه", bodyM.name,
             `${fmt(net, 1)} م² (با ${fmt(waste)}٪ پرت)`,
             net, "م²", pp, net * pp, true,
             { mat_id: bodyM.id, mat_cat: "body_sheet", area_sqm: per * n, sheet_area_sqm: sheetArea }));
         } else {
+          /* ★ واگراییِ برطرف‌شده: وقتی مساحتِ ورق صفر است (قلمِ بدون ابعاد، یا
+             واحدی غیر از «ورق»)، موتور پایتون مبلغ را روی **مساحت با پرت**
+             می‌بندد و برچسبش هم همان را می‌گوید («با احتساب X٪ پرت»). این‌جا
+             پیش‌تر «مساحت خالص» ضرب می‌شد در حالی که برچسب ادعای پرت داشت —
+             یعنی هم عدد و هم توضیحش با هم نمی‌خواندند و ۱۰٪ ارزان‌تر از
+             سرور تمام می‌شد. */
+          const gross = per * n;
           pItems.push(engineItem("body_sheet", "ورق بدنه", bodyM.name,
-            `${fmt(net, 1)} م² با احتساب ${fmt(waste)}٪ پرت`, net, "م²", pp, net * pp, true,
-            { mat_id: bodyM.id, mat_cat: "body_sheet", area_sqm: per * n }));
+            `${fmt(gross, 1)} م² با احتساب ${fmt(waste)}٪ پرت`, gross, "م²", pp, gross * pp, true,
+            { mat_id: bodyM.id, mat_cat: "body_sheet", area_sqm: gross }));
         }
       }
       pr.total_body_area += bodyArea * n;
@@ -162,12 +272,22 @@ function calcProjectLocal(project) {
       }
       if (backArea > 0 && backM) {
         const per = backArea * (1 + waste / 100);
-        const sheetArea = (backM.sheet_width_cm * backM.sheet_height_cm) / 10000;
-        const net = backArea * n, pp = pricePerSqm(backM);
-        pItems.push(engineItem("back_sheet", "فیبر پشت", backM.name,
-          `${fmt(net, 1)} م² (با ${fmt(waste)}٪ پرت)`, net, "م²", pp, net * pp, true,
-          { mat_id: backM.id, mat_cat: "back_sheet", area_sqm: per * n,
-            sheet_area_sqm: sheetArea > 0 ? sheetArea : 0 }));
+        const sheetArea = (_pos(backM.sheet_width_cm) * _pos(backM.sheet_height_cm)) / 10000;
+        const net = backArea * n, pp = sheetPriceCheck(backM, "فیبر پشت", backArea * n, warnings);
+        if (sheetArea > 0) {
+          pItems.push(engineItem("back_sheet", "فیبر پشت", backM.name,
+            `${fmt(net, 1)} م² (با ${fmt(waste)}٪ پرت)`, net, "م²", pp, net * pp, true,
+            { mat_id: backM.id, mat_cat: "back_sheet", area_sqm: per * n,
+              sheet_area_sqm: sheetArea }));
+        } else {
+          /* هم‌سان با شاخه‌ی ورق بدنه: بدونِ مساحتِ ورق، مبلغ روی مساحتِ با پرت
+             بسته می‌شود تا دو موتور یکی بمانند (پیش‌تر این شاخه در JS اصلاً
+             وجود نداشت و همیشه «خالص» ضرب می‌شد). */
+          const gross = per * n;
+          pItems.push(engineItem("back_sheet", "فیبر پشت", backM.name,
+            `${fmt(gross, 1)} م²`, gross, "م²", pp, gross * pp, true,
+            { mat_id: backM.id, mat_cat: "back_sheet", area_sqm: gross }));
+        }
       }
       pr.total_back_area += backArea * n;
 
@@ -185,9 +305,12 @@ function calcProjectLocal(project) {
 
       /* --- درها --- */
       for (const dr of u.doors || []) {
-        const leaves = Math.trunc(_n(dr.qty)) * n;
+        /* هم‌راستا با `_coerce` پایتون: پیش‌فرضِ فیلدِ qty در DoorRow برابر ۲
+           است (نه صفر) — پیش‌تر یک درِ بدونِ تعداد در مرورگر حذف و در سرور
+           «۲ لنگه» قیمت می‌خورد. */
+        const leaves = Math.max(0, _ci(dr.qty, 2, 0)) * n;
         if (leaves <= 0) continue;
-        const area = leaves * (_n(dr.w_cm) / 100) * (_n(dr.h_cm) / 100);
+        const area = leaves * (_pos(dr.w_cm) / 100) * (_pos(dr.h_cm) / 100);
         pr.total_door_area += area;
         /* ★ «در از ورق بدنه»: مساحت لنگه‌ها به دسته‌ی ورق بدنه می‌رود تا با
            بقیه‌ی قطعات یک‌جا گرد شود (ورق کم‌تر = قیمت کم‌تر). اگر لنگه روی ورق
@@ -197,11 +320,20 @@ function calcProjectLocal(project) {
         if (dr.from_body) {
           const fit = doorLeafFitsSheet(dr, bodyM);
           if (fit.ok) { useBody = true; dmat = bodyM; }
-          else warnings.push(`«${dr.label || "در"}»: تیکِ «در از ورق بدنه» نادیده گرفته شد — ${fit.why}`);
+          else {
+            warnings.push(`«${dr.label || "در"}»: تیکِ «در از ورق بدنه» نادیده گرفته شد — ${fit.why}`);
+            /* ★ باگِ «لنگه‌ی درِ کاملاً رایگان»: در حالتِ پیش‌فرضِ رابط
+               material_id = 0 است (و چون تیک خورده، انتخابگرِ متریالِ در هم
+               پنهان می‌شود). پس نه ورقِ بدنه مصرف شد نه ورقِ در، و شاخه‌ی
+               `else if (dr.material_id)` هم چون شناسه صفر بود هشدار نمی‌داد. */
+            if (!dmat && !_n(dr.material_id)) {
+              warnings.push(`«${dr.label || "در"}»: متریالی برای ${fmt(leaves)} لنگه در (${fmt(area, 1)} م²) انتخاب نشده — ورق در **رایگان** محاسبه شد! یا متریالِ در را انتخاب کنید یا ابعاد لنگه را کوچک‌تر از ورق بدنه بگیرید.`);
+            }
+          }
         }
         if (useBody && dmat) {
-          const sa = (_n(dmat.sheet_width_cm) * _n(dmat.sheet_height_cm)) / 10000;
-          const pp = pricePerSqm(dmat);
+          const sa = (_pos(dmat.sheet_width_cm) * _pos(dmat.sheet_height_cm)) / 10000;
+          const pp = sheetPriceCheck(dmat, "ورق بدنه (در)", area, warnings);
           if (sa > 0) {
             pItems.push(engineItem("body_sheet", "ورق بدنه", dmat.name,
               `در از ورق بدنه — ${fmt(leaves)} لنگه، ${fmt(area, 1)} م² (با ${fmt(waste)}٪ پرت)`,
@@ -214,8 +346,8 @@ function calcProjectLocal(project) {
               { mat_id: dmat.id, mat_cat: "body_sheet", area_sqm: area }));
           }
         } else if (dmat) {
-          const sa = (dmat.sheet_width_cm * dmat.sheet_height_cm) / 10000;
-          const pp = pricePerSqm(dmat);
+          const sa = (_pos(dmat.sheet_width_cm) * _pos(dmat.sheet_height_cm)) / 10000;
+          const pp = sheetPriceCheck(dmat, "ورق در", area, warnings);
           if (dmat.unit === "sheet" && sa > 0) {
             pItems.push(engineItem("door_sheet", "ورق در", dmat.name,
               `${fmt(leaves)} لنگه — ${fmt(area, 1)} م² (با ${fmt(waste)}٪ پرت)`,
@@ -241,7 +373,7 @@ function calcProjectLocal(project) {
         }
         if (dr.banding_id) {
           const bm = matById(dr.banding_id);
-          const per = 2 * ((_n(dr.w_cm) + _n(dr.h_cm)) / 100);
+          const per = 2 * ((_pos(dr.w_cm) + _pos(dr.h_cm)) / 100);
           const meters = per * leaves * BAND_DOOR_F * (1 + BAND_WASTE / 100);
           if (bm) {
             pItems.push(engineItem("banding_door", "نوار PVC در", bm.name,
@@ -252,21 +384,21 @@ function calcProjectLocal(project) {
         }
         if (dr.hinge_id || _n(dr.hinge_price)) {
           const hinge = matById(dr.hinge_id);
-          const q = _n(dr.hinges_per_leaf, 2) * leaves;
+          const q = _pos(dr.hinges_per_leaf, 2) * leaves;
           const price = hinge ? _n(hinge.price) : _n(dr.hinge_price);
           const name = hinge ? hinge.name : (dr.hinge_name || "لولا");
           pItems.push(engineItem("hinge", "لولا", name, `${fmt(_n(dr.hinges_per_leaf, 2))} عدد در هر لنگه × ${fmt(leaves)} لنگه`, q, "عدد", price, q * price));
         }
         if ((dr.gas_spring_id || _n(dr.gas_spring_price)) && _n(dr.gas_springs_per_leaf) > 0) {
           const g = matById(dr.gas_spring_id);
-          const q = _n(dr.gas_springs_per_leaf) * leaves;
+          const q = _pos(dr.gas_springs_per_leaf) * leaves;
           const price = g ? _n(g.price) : _n(dr.gas_spring_price);
           const name = g ? g.name : (dr.gas_spring_name || "گازور");
           pItems.push(engineItem("gas_spring", "گازور / جک", name, `${fmt(_n(dr.gas_springs_per_leaf))} عدد در هر لنگه`, q, "عدد", price, q * price));
         }
         if (dr.handle_id || _n(dr.handle_price)) {
           const handle = matById(dr.handle_id);
-          const q = _n(dr.handles_per_leaf, 1) * leaves;
+          const q = _pos(dr.handles_per_leaf, 1) * leaves;
           const price = handle ? _n(handle.price) : _n(dr.handle_price);
           const name = handle ? handle.name : (dr.handle_name || "دستگیره");
           pItems.push(engineItem("handle", "دستگیره", name, `${fmt(leaves)} لنگه`, q, "عدد", price, q * price));
@@ -288,12 +420,14 @@ function calcProjectLocal(project) {
 
       /* --- کشوها --- */
       for (const dw of u.drawers || []) {
-        const count = Math.trunc(_n(dw.qty)) * n;
+        /* پیش‌فرضِ فیلدِ qty در DrawerRow برابر ۳ است (هم‌راستا با پایتون) */
+        const count = Math.max(0, _ci(dw.qty, 3, 0)) * n;
         if (count <= 0) continue;
-        const w = _n(dw.w_cm) / 100, h = _n(dw.h_cm) / 100, d = _n(dw.d_cm) / 100;
+        const w = _pos(dw.w_cm) / 100, h = _pos(dw.h_cm) / 100, d = _pos(dw.d_cm) / 100;
         const sheetM = matById(dw.sheet_id);
         if (dw.sheet_id || _n(dw.sheet_price_per_sqm)) {
-          const pp = sheetM ? pricePerSqm(sheetM) : _n(dw.sheet_price_per_sqm);
+          const pp = sheetM ? sheetPriceCheck(sheetM, "ورق جعبه‌ی کشو", (2 * d * h + w * d + w * h) * count, warnings)
+                              : Math.max(0, _n(dw.sheet_price_per_sqm));
           const dname = sheetM ? sheetM.name : (dw.sheet_name || "ورق بدنه‌ی کشو");
           if (!sheetM && pp <= 0 && dw.sheet_id) {
             warnings.push(`«${dw.label || "کشو"}»: متریال جعبه‌ی کشو در کتابخانه قیمت پیدا نشد و قیمت ثبت‌شده‌ای هم ندارد — هزینه‌ی ورق جعبه محاسبه نشد!`);
@@ -307,7 +441,8 @@ function calcProjectLocal(project) {
         }
         const frontM = matById(dw.front_id);
         if (dw.front_id || _n(dw.front_price_per_sqm)) {
-          const pp = frontM ? pricePerSqm(frontM) : _n(dw.front_price_per_sqm);
+          const pp = frontM ? sheetPriceCheck(frontM, "تیره‌ی کشو", w * h * count, warnings)
+                              : Math.max(0, _n(dw.front_price_per_sqm));
           const fname = frontM ? frontM.name : (dw.front_name || "تیره‌ی کشو");
           if (!frontM && pp <= 0 && dw.front_id) {
             warnings.push(`«${dw.label || "کشو"}»: متریال تیره‌ی کشو در کتابخانه قیمت پیدا نشد و قیمت ثبت‌شده‌ای هم ندارد — هزینه‌ی تیره محاسبه نشد!`);
@@ -352,7 +487,7 @@ function calcProjectLocal(project) {
       /* --- صفحه / تاج / زیرچراغ / پاخور / پایه / خار / مونتاژ ---
          اگر «متر طول صفحه» در سطح بخش وارد شده باشد، همان ملاک است و برای
          هر یونیت جداگانه صفحه حساب نمی‌شود (جلوگیری از دوباره‌شماری). */
-      if (u.countertop_id && _n(page.countertop_lm) <= 0) {
+      if (u.countertop_id && _pos(page.countertop_lm) <= 0) {
         const cm = matById(u.countertop_id);
         if (cm) {
           const lm = (L / 100) * n;
@@ -376,16 +511,16 @@ function calcProjectLocal(project) {
       if (u.leg_id && (u.unit_type === "ground" || u.unit_type === "tall")) {
         const lm2 = matById(u.leg_id);
         if (lm2 || _n(u.leg_price)) {
-          const q = _n(u.legs_per_unit, 4) * n;
+          const q = _pos(u.legs_per_unit, 4) * n;
           const price = lm2 ? _n(lm2.price) : _n(u.leg_price);
           const name = lm2 ? lm2.name : (u.leg_name || "پایه");
           pItems.push(engineItem("leg", "پایه", name, `${fmt(q)} عدد`, q, "عدد", price, q * price));
         }
       }
-      if (u.shelf_pin_id && _n(u.shelves) > 0) {
+      if (u.shelf_pin_id && SHELVES > 0) {
         const sp = matById(u.shelf_pin_id);
         if (sp || _n(u.shelf_pin_price)) {
-          const q = _n(u.pins_per_shelf, 4) * _n(u.shelves) * n;
+          const q = _pos(u.pins_per_shelf, 4) * SHELVES * n;
           const price = sp ? _n(sp.price) : _n(u.shelf_pin_price);
           const name = sp ? sp.name : (u.shelf_pin_name || "خار طبقه");
           pItems.push(engineItem("shelf_pin", "خار طبقه", name, "", q, "عدد", price, q * price));
@@ -408,11 +543,11 @@ function calcProjectLocal(project) {
     pr.total_sheets = batchSheetsLocal(pItems);
 
     /* صفحه‌ی کابینت کلی بخش */
-    if (_n(page.countertop_lm) > 0) {
+    if (_pos(page.countertop_lm) > 0) {
       const used = (page.units || []).find((u) => u.countertop_id);
       const cm = used ? matById(used.countertop_id) : null;
       if (cm) {
-        const lm = _n(page.countertop_lm);
+        const lm = _pos(page.countertop_lm);
         pItems.push(engineItem("countertop", "صفحه کابینت", cm.name, `${fmt(lm, 1)} متر طول (ورودی کلی)`, lm, "متر", cm.price, lm * cm.price));
       } else {
         warnings.push(`«${page.name || "بخش"}»: متراژ صفحه‌ی کابینت (${fmt(_n(page.countertop_lm), 1)} متر) وارد شده ولی متریال صفحه در هیچ یونیتی انتخاب نشده (یا از کتابخانه حذف شده) — هزینه‌ی صفحه محاسبه نشد.`);
@@ -422,15 +557,15 @@ function calcProjectLocal(project) {
     /* درنما */
     if (page.detail_mode === "detailed") {
       for (const r of page.detail_rows || []) {
-        const area = _n(r.qty) * (_n(r.w_cm) / 100) * (_n(r.h_cm) / 100);
+        const area = _n(r.qty) * (_pos(r.w_cm) / 100) * (_pos(r.h_cm) / 100);
         if (area <= 0) continue;
-        detailCost += area * _n(r.price_per_sqm);
+        detailCost += area * _pos(r.price_per_sqm);
         pItems.push(engineItem("darna", "درنما", r.label || "درنما",
           `${fmt(_n(r.qty))} × ${fmt(_n(r.w_cm))}×${fmt(_n(r.h_cm))} سانتی‌متر = ${fmt(area, 1)} م²`,
-          area, "م²", _n(r.price_per_sqm), area * _n(r.price_per_sqm)));
+          area, "م²", _pos(r.price_per_sqm), area * _pos(r.price_per_sqm)));
       }
     } else if (page.detail_mode === "total") {
-      const sqm = _n(page.detail_total_sqm), pp = _n(page.detail_price_per_sqm);
+      const sqm = _pos(page.detail_total_sqm), pp = _pos(page.detail_price_per_sqm);
       if (sqm > 0) {
         detailCost += sqm * pp;
         pItems.push(engineItem("darna", "درنما", "درنما (متراژ کلی)", `${fmt(sqm, 1)} م² × قیمت واحد`, sqm, "م²", pp, sqm * pp));
@@ -440,9 +575,16 @@ function calcProjectLocal(project) {
     /* اضافات */
     for (const ex of page.extras || []) {
       if (!ex.label && !_n(ex.price)) continue;
-      const amt = _n(ex.qty, 1) * _n(ex.price);
+      /* ★ قلمِ منفی پیش‌تر بی‌صدا از جمع کل کم می‌کرد (تخفیفِ پنهان).
+         «ناموجود» → پیش‌فرضِ ۱ (هم‌راستا با dataclass پایتون)،
+         «خراب»      → همان پیش‌فرضِ ۱ (نه صفر) تا دو موتور یکی بمانند. */
+      const eq = _pos(_co(ex.qty, 1, 1));
+      const eprice = _pos(ex.price);
+      if (_n(ex.qty, 1) < 0 || _n(ex.price) < 0)
+        warnings.push(`«${ex.label || "قلم متفرقه"}»: تعداد یا قیمت منفی بود — صفر در نظر گرفته شد.`);
+      const amt = eq * eprice;
       pItems.push(engineItem("extra", "اضافات و اکسسوری", ex.label || "قلم متفرقه", ex.note || "",
-        _n(ex.qty, 1), UNITS[ex.unit] || ex.unit || "", _n(ex.price), amt, ex.visible !== false));
+        eq, UNITS[ex.unit] || ex.unit || "", eprice, amt, _bool(ex.visible, true)));
     }
 
     /* خدمات (مبنا خودکار)
@@ -453,35 +595,54 @@ function calcProjectLocal(project) {
       sqm: pr.total_body_area + pr.total_door_area + pr.total_back_area,
       lm: pr.total_ground_lm + pr.total_wall_lm, fixed: 1, percent: 0,
     };
-    for (const u of page.units || []) ctx.shelf += Math.max(0, _n(u.shelves)) * Math.max(0, Math.trunc(_n(u.qty, 1)));
+    for (const u of page.units || []) ctx.shelf += _pos(u.shelves) * Math.max(0, _ci(u.qty, 1, 0));
     const pctServices = [];
     for (const s of page.services || []) {
       if (!s.label && !_n(s.price)) continue;
       if (s.basis === "percent") { pctServices.push(s); continue; }
       const basis = ctx[s.basis] !== undefined ? s.basis : "fixed";
-      const q = ctx[basis];
-      const amt = q * _n(s.price);
-      pItems.push(engineItem("service", "خدمات", s.label || "خدمات", `مبنای محاسبه: ${SERVICE_BASIS[basis] || basis}`, q, "", _n(s.price), amt));
+      /* ★ مبنای منفی/NaN پیش‌تر مبلغ خدمت را منفی می‌کرد و بی‌صدا از جمع کل
+         کم می‌شد (مثلاً عمق منفی → مساحت منفی → خدمتِ مترمربعیِ منفی). */
+      const q = Math.max(0, _n(ctx[basis]));
+      const sp = _pos(s.price);
+      if (_n(s.price) < 0)
+        warnings.push(`«${s.label || "خدمات"}»: بهای خدمت منفی بود — صفر در نظر گرفته شد.`);
+      const amt = q * sp;
+      pItems.push(engineItem("service", "خدمات", s.label || "خدمات", `مبنای محاسبه: ${SERVICE_BASIS[basis] || basis}`, q, "", sp, amt));
     }
 
+    /* ★ جمع‌بندیِ این بخش عمداً به **پاسِ ۲** موکول می‌شود: اول باید ورق‌های
+       همه‌ی بخش‌ها یک‌جا گرد شوند (رفع باگ F-01)، بعد جمع/درصد/سربار ساخته
+       شود — وگرنه خدمات درصدی و سربار روی جمعِ بادکرده‌ی بخش‌بخش می‌نشینند. */
+    pr.items = pItems;
+    pageResults.push(pr);
+    deferred.push({ page, pr, pItems, pctServices });
+  }
+
+  /* ── پاسِ ۲ ─ تجمیع ورق در سطح کل پروژه، سپس جمع‌بندی بخش‌ها ─────────── */
+  repoolSheetsProjectLocal(pageResults);
+  for (const d of deferred) {
+    const page = d.page, pr = d.pr, pItems = d.pItems, pctServices = d.pctServices;
     /* ★ باگ قدیمی برطرف شد: مبلغ خدمات غیردرصدی پیش‌تر «دو بار» در جمع بخش
        لحاظ می‌شد (یک‌بار داخل ردیف‌ها و یک‌بار با fixedSvcTotal) — و موتور
        دسکتاپ هم همان دوباره‌شماری را داشت. اکنون هر دو موتور خدمات را
        دقیقاً یک‌بار می‌شمارند. */
-    subtotal = pItems.reduce((a, it) => a + it.amount, 0);
+    let subtotal = pItems.reduce((a, it) => a + _n(it.amount), 0);
     /* خدمات درصدی — همه نسبت به جمعِ قبل از خدمات درصدی (بدون اثر مرکب) */
     if (pctServices.length) {
       const base = subtotal;
       for (const s of pctServices) {
-        const pct = Math.max(0, _n(s.price));
+        const raw = _n(s.price);
+        if (raw < 0) warnings.push(`«${s.label || "خدمات درصدی"}»: درصدِ منفی بود — صفر در نظر گرفته شد.`);
+        const pct = Math.max(0, raw);
         const amt = base * pct / 100;
         pItems.push(engineItem("service", "خدمات", s.label || "خدمات درصدی", `${fmt(pct, 1)}٪ از جمع بخش`, 1, "", pct, amt));
         subtotal += amt;
       }
     }
     /* سربار + ردیف شفافِ آن در اقلام (هم‌راستا با پایتون: جمع اقلام == هزینه‌ی تمام‌شده) */
-    const ohPct = Math.max(0, _n(page.overhead_percent));
-    overhead = subtotal * ohPct / 100;
+    const ohPct = _pos(page.overhead_percent);
+    const overhead = subtotal * ohPct / 100;
     for (let i = pItems.length - 1; i >= 0; i--) if (pItems[i].key === "overhead") pItems.splice(i, 1);
     if (overhead > 0) {
       pItems.push(engineItem("overhead", "سربار", `سربار کارگاه (${fmt(ohPct)}٪)`, `${fmt(ohPct)}٪ از جمع اقلام بخش`, 1, "موردی", overhead, overhead));
@@ -489,11 +650,11 @@ function calcProjectLocal(project) {
     pr.subtotal = subtotal;
     pr.overhead_amount = overhead;
     pr.total_cost = subtotal + overhead;
-    pr.items = pItems;
-    pageResults.push(pr);
+    /* ورق‌ها حالا در سطح پروژه گرد شده‌اند → سهم هر بخش هم تازه می‌شود */
+    pr.total_sheets = pItems.reduce((a, i) => a + _n(i.sheets), 0);
     pagesCost += pr.total_cost;
     items.push(...pItems);
-    for (const k of Object.keys(stats)) stats[k] += pr[k] || 0;
+    for (const k of Object.keys(stats)) stats[k] += _n(pr[k], 0);
   }
 
   /* مبلغ ثابت اضافه */

@@ -2603,6 +2603,175 @@ input.invalid:focus, select.invalid:focus, textarea.invalid:focus {
   .tb-summary { display: none; }
 }
 
+/* ==========================================================================
+   ۹) لایه‌ی UX — بازطراحی بر پایه‌ی چهار اصل
+   --------------------------------------------------------------------------
+   این بخش **فقط افزوده** است: هیچ قاعده‌ی قبلی بازنویسی نشده تا پوسته و
+   چیدمانِ موجود نشکند. ترتیب: (۱) قانون فیتز (۲) کیبورد-محور (۳) افشای
+   تدریجی (۴) کاهش انباشتگی.
+   ========================================================================== */
+
+/* ---------- (۱) قانون فیتز: هدف‌های بزرگ برای کنش‌های پرتکرار ----------
+   مشکلِ پیشین: هر ۷ دکمه‌ی «افزودن» کلاس `.btn.ghost.sm` داشتند = ۲۹٫۶px،
+   یعنی کوچک‌ترین هدفِ رابط به پرتکرارترین کنش اختصاص یافته بود (وارونِ فیتز).
+   اکنون سلسله‌مراتبِ اندازه **برابر با سلسله‌مراتبِ فراوانی** است.            */
+.btn-hero {
+  height: 3rem;                 /* ۴۸px — بالاتر از آستانه‌ی ۴۴px WCAG */
+  min-width: 3rem;
+  padding: 0 1.5rem;
+  font-size: 0.98rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+.btn-hero:active { transform: translateY(1px); }
+.btn-hero .kbd { opacity: .72; font-weight: 600; }
+
+/* نوارِ افزودنِ چسبان — همیشه در «ناحیه‌ی شست» و در دید، بدون اسکرول */
+.add-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.7rem;
+  padding: 0.6rem 0.7rem;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+}
+.add-bar .add-hint {
+  margin-inline-start: auto;
+  font-size: 0.76rem;
+  color: var(--text-3);
+  display: flex; align-items: center; gap: .4rem;
+}
+
+/* ---------- Split-Button: کنش اصلی بزرگ + واریانت‌های کم‌کاربرد کوچک ----
+   «یونیت زمینی» ≈ ۸۰٪ موارد → بدنه‌ی بزرگ؛ «دیواری/ایستاده» → فلشِ کوچک.   */
+.split { display: inline-flex; align-items: stretch; }
+.split > .split-main { border-start-end-radius: 0; border-end-end-radius: 0; }
+.split > .split-more {
+  border-start-start-radius: 0; border-end-start-radius: 0;
+  border-inline-start: 1px solid color-mix(in srgb, var(--surface) 32%, transparent);
+  padding-inline: 0.62rem;
+  min-width: 2.4rem;
+}
+.split > .split-main:focus-visible, .split > .split-more:focus-visible { z-index: 1; }
+
+/* ---------- منوی سرریز (⋯) — خانه‌ی کنش‌های کم‌کاربرد ------------------- */
+.ovf { position: relative; display: inline-flex; }
+.ovf-btn {
+  height: 2.35rem; width: 2.35rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--text-2); cursor: pointer;
+  font-size: 1.05rem; line-height: 1; padding: 0;
+}
+.ovf-btn:hover { background: var(--surface-2); color: var(--text); }
+.ovf-menu {
+  position: absolute; inset-block-start: calc(100% + 4px); inset-inline-end: 0;
+  min-width: 13.5rem; z-index: 60;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); box-shadow: var(--shadow-lg);
+  padding: 0.28rem; display: none;
+}
+.ovf.open > .ovf-menu { display: block; }
+.ovf-item {
+  display: flex; align-items: center; gap: 0.55rem; width: 100%;
+  padding: 0.52rem 0.62rem; min-height: 2.3rem;
+  border: 0; background: none; border-radius: var(--radius-sm);
+  color: var(--text); font: inherit; font-size: 0.86rem; text-align: start;
+  cursor: pointer;
+}
+.ovf-item:hover, .ovf-item:focus-visible { background: var(--surface-3); outline: none; }
+.ovf-item.danger { color: var(--danger); }
+.ovf-item .kbd { margin-inline-start: auto; }
+.ovf-sep { height: 1px; background: var(--border); margin: 0.28rem 0.2rem; }
+.ovf-label {
+  padding: 0.42rem 0.62rem 0.2rem; font-size: 0.7rem; font-weight: 700;
+  color: var(--text-3); letter-spacing: .02em;
+}
+
+/* ---------- (۲) کیبورد-محور: حلقه‌ی فوکوسِ قوی + برچسب کلید ---------- */
+:where(button, input, select, textarea, a[href], [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+kbd.kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.35rem; height: 1.35rem; padding: 0 0.32rem;
+  border: 1px solid var(--border-strong); border-bottom-width: 2px;
+  border-radius: 4px; background: var(--surface-2); color: var(--text-2);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 0.7rem; font-weight: 600; line-height: 1;
+}
+.btn-kbd { opacity: .8; }
+/* راهنمای میانبرها — با «؟» باز می‌شود، خارج از جریان کار */
+.keys-grid { display: grid; grid-template-columns: auto 1fr; gap: .45rem .9rem; align-items: center; }
+.keys-grid dt { display: flex; gap: .25rem; justify-content: flex-end; }
+.keys-grid dd { margin: 0; font-size: .87rem; color: var(--text-2); }
+.keys-sec { grid-column: 1 / -1; margin-top: .7rem; font-weight: 700; font-size: .78rem; color: var(--text-3); }
+
+/* ---------- (۳) افشای تدریجی: کارتِ تاشونده‌ی «مشخصات» ---------------- */
+.card.collapsible > .card-head { cursor: pointer; user-select: none; }
+.card.collapsible > .card-head::after {
+  content: ""; margin-inline-start: .5rem; width: .55rem; height: .55rem;
+  border-inline-end: 2px solid var(--text-3); border-bottom: 2px solid var(--text-3);
+  transform: rotate(45deg) translateY(-2px); transition: transform .18s ease;
+}
+.card.collapsible.collapsed > .card-head::after { transform: rotate(-45deg) translateY(2px); }
+.card.collapsible.collapsed > .card-body { display: none; }
+/* خلاصه‌ی یک‌خطی وقتی بسته است — تا کاربر نبیند که «چیزی پنهان شده» و گیج شود */
+.card.collapsible.collapsed > .card-head .head-peek { display: inline; }
+.head-peek { display: none; font-weight: 400; font-size: .8rem; color: var(--text-3); }
+
+/* لایه‌ی دومِ جدول درها: ۶ ستون متریال پشت expander (الگوی یکسان با یونیت) */
+tr.row-detail-l2 > td { background: var(--surface-2); }
+.doors-l2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .6rem .9rem; padding: .55rem .3rem; }
+
+/* ---------- (۴) کاهش انباشتگی: نوارِ باریکِ مشخصاتِ پروژه -------------- */
+.proj-slim {
+  display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+  padding: .5rem .7rem; margin-bottom: .8rem;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.proj-slim input {
+  height: 2.35rem; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--text); padding: 0 .6rem; font: inherit;
+  font-size: .88rem; min-width: 0;
+}
+.proj-slim .ps-title { flex: 2 1 15rem; font-weight: 700; }
+.proj-slim .ps-cust { flex: 1 1 11rem; }
+.proj-slim .ps-more { margin-inline-start: auto; }
+
+@media (max-width: 720px) {
+  .btn-hero { height: 2.75rem; padding: 0 1.1rem; font-size: .92rem; }
+  .add-bar .add-hint { display: none; }
+  .proj-slim .ps-more { width: 100%; }
+}
+@media print { .add-bar, .ovf, .proj-slim { display: none !important; } }
+@media (prefers-reduced-motion: reduce) {
+  .btn-hero:active { transform: none; }
+  .ovf-menu, .card.collapsible > .card-head::after { transition: none; }
+}
+
+/* منوی split-button — همان رفتارِ `.ovf.open` ولی داخلِ `.split` */
+.split { position: relative; }
+.split.open > .ovf-menu { display: block; inset-inline-start: 0; inset-inline-end: auto; }
+/* btn-hero تمام‌عرض (صفحه‌ی فاکتور) */
+.btn-hero.block { width: 100%; }
+/* فاصله‌ی kbd داخل دکمه‌ی hero */
+.btn-hero .kbd { margin-inline-start: .25rem; }
+/* نوارِ چسبان نباید زیرِ نوارِ جمعِ پایین پنهان شود */
+.add-bar { bottom: 0.4rem; }
+
 </style>
 <script>
 /* ==========================================================================
@@ -3514,6 +3683,36 @@ function loadDemoData() {
 
 function _n(v, d) { const x = parseFloat(v); return isFinite(x) ? x : (d || 0); }
 
+/* ★ سه هلپرِ تازه — آینه‌ی `_f` / `_i` / `_pos` در kabir/core/costing.py.
+   `_n` به‌تنهایی کافی نبود چون «مقدار ناموجود» و «مقدارِ موجود ولی خراب» را
+   یکسان به پیش‌فرض می‌برد؛ موتور پایتون این دو را جدا می‌کند:
+     ناموجود (undefined/null/"")  → پیش‌فرضِ خودِ فیلد
+     خراب     (NaN / Infinity)    → صفر (و در calc_unit هشدار می‌گیرد)
+   بدون این تفکیک، یک فیلد خالی در مرورگر قیمت می‌خورد و روی سرور حذف می‌شد. */
+function _co(v, miss, bad) {
+  if (v === undefined || v === null || (typeof v === "string" && v.trim() === "")) return miss;
+  const x = parseFloat(v);
+  return isFinite(x) ? x : (bad === undefined ? 0 : bad);
+}
+function _ci(v, miss, bad) { return Math.trunc(_co(v, miss, bad === undefined ? 0 : bad)); }
+/* عددِ نامنفی — برای ابعاد/تعدادها/ضرایب فیزیکی. منفی‌ها پیش‌تر مساحت منفی و
+   در نتیجه «قیمت کل منفی» می‌ساختند (−380,820 روی سند مالی). */
+function _pos(v, d) { const x = _n(v, d === undefined ? 0 : d); return x > 0 ? x : 0; }
+/* ★ بولین — آینه‌ی شاخه‌ی `bools` در `_coerce` پایتون.
+   «ناموجود» → پیش‌فرض (معمولاً true)؛ «موجود» → ارزشِ درستیِ خودش.
+   پیش‌تر از `!== false` استفاده می‌شد که `0` و `""` را **درست** می‌گرفت، در
+   حالی که پایتون `if u.has_bottom_panel:` آن‌ها را **نادرست** می‌گرفت. نتیجه:
+   با `has_bottom_panel: 0` موتور JS یک ورقِ اضافه و ۲ برابر قیمت می‌داد. */
+function _bool(v, d) {
+  if (v === undefined || v === null) return d !== false;
+  if (typeof v === "string") { const t = v.trim().toLowerCase(); return !(t === "" || t === "0" || t === "false" || t === "no" || t === "off"); }
+  return !!v;
+}
+
+/* ثبتِ متنِ پایه‌ی «detail» هر ردیفِ ورقی — برای idempotent بودنِ
+   batchSheetsLocal وقتی دو بار (بخش، سپس کل پروژه) صدا زده می‌شود. */
+const SHEET_DETAIL_BASE = new Map();
+
 function engineItem(key, group, title, detail, qty, unit_label, unit_price, amount, visible, extra) {
   return Object.assign({
     key, group, title, detail: detail || "", qty: _n(qty), unit_label: unit_label || "",
@@ -3529,10 +3728,11 @@ function engineItem(key, group, title, detail, qty, unit_label, unit_price, amou
    --------------------------------------------------------------------------- */
 const SHEET_ITEM_KEYS = ["body_sheet", "back_sheet", "door_sheet", "drawer_front", "drawer_box"];
 
-function batchSheetsLocal(pItems) {
+function batchSheetsLocal(pItems, scope) {
+  const SCOPE = scope || "این بخش";
   const groups = new Map();
   for (const it of pItems) {
-    if (SHEET_ITEM_KEYS.includes(it.key) && it.mat_id && it.sheet_area_sqm > 0) {
+    if (SHEET_ITEM_KEYS.includes(it.key) && it.mat_id && _n(it.sheet_area_sqm) > 0) {
       if (!groups.has(it.mat_id)) groups.set(it.mat_id, []);
       groups.get(it.mat_id).push(it);
     }
@@ -3540,26 +3740,70 @@ function batchSheetsLocal(pItems) {
   let total = 0;
   for (const [mid, its] of groups) {
     const m = matById(mid);
-    const gross = its.reduce((a, i) => a + _n(i.area_sqm), 0);
-    const net = its.reduce((a, i) => a + _n(i.qty), 0);
+    const gross = its.reduce((a, i) => a + _pos(i.area_sqm), 0);
+    const net = its.reduce((a, i) => a + _pos(i.qty), 0);
     const sa = _n(its[0].sheet_area_sqm);
     if (gross <= 0 || sa <= 0) continue;
     const sheets = Math.ceil(Math.round((gross / sa) * 1e6) / 1e6);
     const price = m ? _n(m.price) : 0;
     const cost = sheets * price;
     const eff = net > 0 ? cost / net : 0;
-    const size = m ? `${m.sheet_width_cm}×${m.sheet_height_cm}` : "";
+    const size = m ? `${fmt(_n(m.sheet_width_cm))}×${fmt(_n(m.sheet_height_cm))}` : "";
     for (const i of its) {
-      const share = gross ? _n(i.area_sqm) / gross : 0;
+      const share = gross ? _pos(i.area_sqm) / gross : 0;
       i.sheets = sheets * share;
       i.unit_label = "م²";
       i.unit_price = eff;
       i.amount = cost * share;
-      i.detail = (i.detail || "") + ` — از ${fa(sheets)} ورق ${size}ِ این بخش`;
+      let base = SHEET_DETAIL_BASE.get(i);
+      if (base === undefined) { base = i.detail || ""; SHEET_DETAIL_BASE.set(i, base); }
+      i.detail = base + ` — از ${fa(sheets)} ورق ${size}ِ ${SCOPE}`;
     }
     total += sheets;
   }
   return total;
+}
+
+/* ★ پاسِ دومِ تجمیع ورق در سطح **کل پروژه** (آینه‌ی repool_sheets_project در
+   costing.py — رفع باگ F-01). ورقِ یک متریال در کارگاه یک‌جا برش می‌خورد، نه
+   بخش‌بخش؛ بدون این پاس، تقسیمِ یک آشپزخانه به N بخش تعداد ورق را تا N برابر
+   باد می‌کرد. چون ceil(Σ) ≤ Σ ceil است، این پاس هرگز قیمت را بالا نمی‌برد. */
+function repoolSheetsProjectLocal(pageResults) {
+  if (pageResults.length < 2) return false;
+  const all = [];
+  for (const pr of pageResults) for (const i of pr.items) all.push(i);
+  const before = new Map(all.map((i) => [i, [i.amount, i.sheets]]));
+  batchSheetsLocal(all, "کل پروژه");
+  for (const i of all) {
+    const b = before.get(i);
+    if (b && (Math.abs(b[0] - i.amount) > 1e-6 || Math.abs(b[1] - i.sheets) > 1e-9)) return true;
+  }
+  return false;
+}
+
+/* دسته‌هایی که قیمتشان بر مبنای ورق است — هم‌راستا با SHEET_CATEGORIES پایتون */
+const SHEET_CATS = ["body_sheet", "door_sheet", "back_sheet", "drawer_sheet"];
+
+/* ★ آینه‌ی CostingEngine._sheet_price_check در costing.py.
+   قلمی که واحدش «ورق» است ولی ابعاد ورق ندارد، pricePerSqm = 0 می‌دهد و در
+   نتیجه کل بدنه **رایگان و بی‌صدا** محاسبه می‌شد. حالتِ معکوسش هم بود: قلمی
+   با دسته‌ی ورق و واحد «عدد»، قیمتِ هر عدد را به‌جای قیمتِ هر مترمربع ضرب
+   می‌کرد. هر دو حالا هشدارِ صریح می‌گیرند. */
+function sheetPriceCheck(m, what, areaTotal, warns) {
+  const pp = pricePerSqm(m);
+  if (!m) return pp;
+  const warnings = warns || [];
+  const hasDims = _pos(m.sheet_width_cm) > 0 && _pos(m.sheet_height_cm) > 0;
+  if (m.unit === "sheet" && !hasDims) {
+    warnings.push(`«${m.name}» به‌عنوان ${what} انتخاب شده ولی ابعاد ورقِ آن ثبت نشده است — قیمتِ هر مترمربع صفر به دست می‌آید و ${fmt(areaTotal, 1)} م² ${what} رایگان محاسبه شد! ابعاد ورق را در کتابخانه‌ی قیمت‌ها کامل کنید.`);
+  } else if (SHEET_CATS.includes(m.cat || m.category) && m.unit !== "sheet" && m.unit !== "sqm") {
+    /* ⚠ کلیدِ دسته در رابط وب و در JSON سرور ``cat`` است (نه ``category``) —
+       هر دو پذیرفته می‌شوند تا این هشدار در مرورگر هم واقعاً اجرا شود. */
+    warnings.push(`«${m.name}» در دسته‌ی ${what} است ولی واحدش «${m.unit}» ثبت شده — قیمتِ هر عدد به‌جای قیمتِ هر مترمربع در محاسبه می‌رود و مبلغ درست نیست.`);
+  } else if (pp <= 0) {
+    warnings.push(`«${m.name}» (${what}) قیمتِ مؤثرِ صفر دارد — ${fmt(areaTotal, 1)} م² بدون هزینه ثبت شد.`);
+  }
+  return pp;
 }
 
 /* ★ آیا یک لنگه‌ی در روی این ورق جا می‌شود؟ (شرطِ لازم برای «در از ورق بدنه»)
@@ -3591,17 +3835,26 @@ function calcProjectLocal(project) {
   const pageResults = [];
   const warnings = [];
   let pagesCost = 0;
+  /* متنِ پایه‌ی «detail» هر ردیفِ ورقی — چون batchSheetsLocal حالا دو بار
+     صدا زده می‌شود (یک‌بار برای بخش، یک‌بار برای کل پروژه). */
+  SHEET_DETAIL_BASE.clear();
+  /* بخش‌هایی که جمع‌بندیشان به پاسِ ۲ موکول شده است. */
+  const deferred = [];
 
   for (const page of project.pages || []) {
     const pItems = [];
-    let subtotal = 0, overhead = 0, detailCost = 0;
+    let detailCost = 0;   /* جمع/سربار در پاسِ ۲ ساخته می‌شود */
     const pr = { name: page.name, items: pItems, total_units: 0, total_doors: 0, total_drawers: 0,
                  total_ground_lm: 0, total_wall_lm: 0, total_sheets: 0, total_body_area: 0,
                  total_door_area: 0, total_back_area: 0, total_banding_m: 0,
                  subtotal: 0, overhead_amount: 0, total_cost: 0 };
-    const waste = _n(page.waste_percent, 10);
-    const BAND_BODY_F = _n(page.banding_body_factor, 2.2);
-    const BAND_WASTE = _n(page.banding_waste_percent, 8);
+    /* ★ پرت/ضریبِ منفی پیش‌تر مساحت و متراژ منفی می‌ساخت و بی‌صدا از جمع کل
+       کم می‌شد. همه کرانِ صفر دارند و هشدارش به کاربر می‌رسد. */
+    const _wasteRaw = _n(page.waste_percent, 10);
+    const waste = _wasteRaw < 0 ? (warnings.push(`پرتِ ورق منفی (${fmt(_wasteRaw)}٪) بود — صفر در نظر گرفته شد.`), 0) : _wasteRaw;
+    const _bbfRaw = _n(page.banding_body_factor, 2.2);
+    const BAND_BODY_F = _bbfRaw < 0 ? (warnings.push(`ضریب نوار بدنه منفی (${fmt(_bbfRaw)}) بود — صفر در نظر گرفته شد.`), 0) : _bbfRaw;
+    const BAND_WASTE = _pos(page.banding_waste_percent, 8);
     /* ★ ضریب نوار در — هم‌راستا با موتور پایتون (پیش‌تر در هیچ‌کدام اعمال
        نمی‌شد و تنظیمِ بی‌اثر بود). */
     const BAND_DOOR_F = (() => { const f = _n(page.banding_door_factor, 1); return f > 0 ? f : 1; })();
@@ -3609,15 +3862,33 @@ function calcProjectLocal(project) {
     for (const u of page.units || []) {
       /* ★ تعداد یونیت ≤ ۰ یعنی یونیت کنار گذاشته می‌شود (بدون هزینه) + هشدار.
          پیش‌تر qty=0 یا منفی «یک عدد» قیمت می‌خورد! (هم‌راستا با پایتون) */
-      const q0 = Math.trunc(_n(u.qty, 1));
+      /* هم‌راستا با `_coerce` پایتون: «ناموجود» → پیش‌فرضِ فیلد (۱)،
+         «موجود ولی خراب» (NaN/"abc") → ۰ = یونیت کنار گذاشته می‌شود + هشدار. */
+      const q0 = _ci(u.qty, 1, 0);
       if (q0 <= 0) {
         warnings.push(`«${u.label || "یونیت"}»: تعداد یونیت ${q0} وارد شده — بدون هزینه نادیده گرفته شد. اگر این یونیت را می‌خواهید، تعداد را دست‌کم ۱ بگذارید.`);
         continue;
       }
       const n = q0;
-      const L = _n(u.length_cm), H = _n(u.height_cm), D = _n(u.depth_cm);
+      /* ★ ابعاد با کرانِ صفر (آینه‌ی `_pos`/`_input_warnings` در costing.py).
+         `depth_cm = -55` پیش‌تر مساحت منفی می‌داد و با یک خدمتِ مترمربعی،
+         قیمتِ کل پروژه **منفی** می‌شد (−380,820 روی سند مالی). */
+      const _ul = u.label || "یونیت";
+      [[u.length_cm, "طول"], [u.height_cm, "ارتفاع"], [u.depth_cm, "عمق"]].forEach(([v, nm]) => {
+        const raw = _n(v, 0);
+        if (raw < 0) warnings.push(`«${_ul}»: ${nm} یونیت منفی (${fmt(raw)} سانتی‌متر) بود — صفر در نظر گرفته شد. ابعاد منفی معنای فیزیکی ندارد و قیمت را خراب می‌کند.`);
+        else if (raw === 0 && nm !== "طول") warnings.push(`«${_ul}»: ${nm} یونیت صفر است — مساحت قطعاتِ وابسته به آن صفر شد و هزینه‌ی ورق بدنه محاسبه نمی‌شود!`);
+      });
+      [["shelves", u.shelves, "تعداد طبقه"], ["legs_per_unit", u.legs_per_unit, "تعداد پایه"],
+       ["pins_per_shelf", u.pins_per_shelf, "خار در هر طبقه"]].forEach(([k, v, nm]) => {
+        if (v !== undefined && v !== null && _n(v, 0) < 0)
+          warnings.push(`«${_ul}»: ${nm} منفی (${fmt(_n(v, 0))}) بود — صفر در نظر گرفته شد.`);
+      });
+      const L = _pos(u.length_cm), H = _pos(u.height_cm), D = _pos(u.depth_cm);
       const bodyM = matById(u.body_id), backM = matById(u.back_id);
-      const t = bodyM && bodyM.thickness_mm ? bodyM.thickness_mm / 10 : 0; // cm
+      const t = bodyM ? _pos(bodyM.thickness_mm) / 10 : 0;   // cm
+      const INNER = Math.max(0, L - 2 * t);   // عرض مؤثرِ قطعاتِ داخلی (هرگز منفی)
+      const SHELVES = _pos(u.shelves);
 
       /* --- پنل‌های بدنه (مثل panels_of/default_panels پایتون) ---
          ★ اگر کاربر ریز بدنه را دستی عوض کرده باشد (custom_panels)، همان
@@ -3626,16 +3897,17 @@ function calcProjectLocal(project) {
       const cp = Array.isArray(u.custom_panels) && u.custom_panels.length ? u.custom_panels : null;
       if (cp) {
         for (const pn of cp) {
-          if (pn.enabled === false) continue;
-          const a = _n(pn.qty) * (_n(pn.w_cm) / 100) * (_n(pn.h_cm) / 100);
+          if (!_bool(pn.enabled, true)) continue;
+          /* کرانِ صفر: پنلِ منفی پیش‌تر پنلِ مثبتِ کنارش را خنثی می‌کرد. */
+          const a = Math.max(0, _n(pn.qty) * (_pos(pn.w_cm) / 100) * (_pos(pn.h_cm) / 100));
           if ((pn.material_key || "body") === "back") backArea += a; else bodyArea += a;
         }
       } else {
-        bodyArea += 2 * (D / 100) * (H / 100);                     // دو بغل
-        if (u.has_bottom_panel !== false) bodyArea += ((L - 2 * t) / 100) * (D / 100);
-        if (u.has_top_panel !== false && u.unit_type !== "ground") bodyArea += ((L - 2 * t) / 100) * (D / 100);
-        if (u.unit_type === "tall") bodyArea += ((L - 2 * t) / 100) * (D / 100);
-        if (_n(u.shelves) > 0) bodyArea += _n(u.shelves) * ((L - 2 * t) / 100) * (D / 100);
+        bodyArea += Math.max(0, 2 * (D / 100) * (H / 100));         // دو بغل
+        if (_bool(u.has_bottom_panel, true)) bodyArea += (INNER / 100) * (D / 100);
+        if (_bool(u.has_top_panel, true) && u.unit_type !== "ground") bodyArea += (INNER / 100) * (D / 100);
+        if (u.unit_type === "tall") bodyArea += (INNER / 100) * (D / 100);
+        if (SHELVES > 0) bodyArea += SHELVES * (INNER / 100) * (D / 100);
         if (u.back_id) backArea += (L / 100) * (H / 100);
       }
 
@@ -3645,17 +3917,24 @@ function calcProjectLocal(project) {
       }
       if (bodyArea > 0 && bodyM) {
         const per = bodyArea * (1 + waste / 100);
-        const sheetArea = (bodyM.sheet_width_cm * bodyM.sheet_height_cm) / 10000;
-        const net = bodyArea * n, pp = pricePerSqm(bodyM);
+        const sheetArea = (_pos(bodyM.sheet_width_cm) * _pos(bodyM.sheet_height_cm)) / 10000;
+        const net = bodyArea * n, pp = sheetPriceCheck(bodyM, "ورق بدنه", bodyArea * n, warnings);
         if (sheetArea > 0) {
           pItems.push(engineItem("body_sheet", "ورق بدنه", bodyM.name,
             `${fmt(net, 1)} م² (با ${fmt(waste)}٪ پرت)`,
             net, "م²", pp, net * pp, true,
             { mat_id: bodyM.id, mat_cat: "body_sheet", area_sqm: per * n, sheet_area_sqm: sheetArea }));
         } else {
+          /* ★ واگراییِ برطرف‌شده: وقتی مساحتِ ورق صفر است (قلمِ بدون ابعاد، یا
+             واحدی غیر از «ورق»)، موتور پایتون مبلغ را روی **مساحت با پرت**
+             می‌بندد و برچسبش هم همان را می‌گوید («با احتساب X٪ پرت»). این‌جا
+             پیش‌تر «مساحت خالص» ضرب می‌شد در حالی که برچسب ادعای پرت داشت —
+             یعنی هم عدد و هم توضیحش با هم نمی‌خواندند و ۱۰٪ ارزان‌تر از
+             سرور تمام می‌شد. */
+          const gross = per * n;
           pItems.push(engineItem("body_sheet", "ورق بدنه", bodyM.name,
-            `${fmt(net, 1)} م² با احتساب ${fmt(waste)}٪ پرت`, net, "م²", pp, net * pp, true,
-            { mat_id: bodyM.id, mat_cat: "body_sheet", area_sqm: per * n }));
+            `${fmt(gross, 1)} م² با احتساب ${fmt(waste)}٪ پرت`, gross, "م²", pp, gross * pp, true,
+            { mat_id: bodyM.id, mat_cat: "body_sheet", area_sqm: gross }));
         }
       }
       pr.total_body_area += bodyArea * n;
@@ -3666,12 +3945,22 @@ function calcProjectLocal(project) {
       }
       if (backArea > 0 && backM) {
         const per = backArea * (1 + waste / 100);
-        const sheetArea = (backM.sheet_width_cm * backM.sheet_height_cm) / 10000;
-        const net = backArea * n, pp = pricePerSqm(backM);
-        pItems.push(engineItem("back_sheet", "فیبر پشت", backM.name,
-          `${fmt(net, 1)} م² (با ${fmt(waste)}٪ پرت)`, net, "م²", pp, net * pp, true,
-          { mat_id: backM.id, mat_cat: "back_sheet", area_sqm: per * n,
-            sheet_area_sqm: sheetArea > 0 ? sheetArea : 0 }));
+        const sheetArea = (_pos(backM.sheet_width_cm) * _pos(backM.sheet_height_cm)) / 10000;
+        const net = backArea * n, pp = sheetPriceCheck(backM, "فیبر پشت", backArea * n, warnings);
+        if (sheetArea > 0) {
+          pItems.push(engineItem("back_sheet", "فیبر پشت", backM.name,
+            `${fmt(net, 1)} م² (با ${fmt(waste)}٪ پرت)`, net, "م²", pp, net * pp, true,
+            { mat_id: backM.id, mat_cat: "back_sheet", area_sqm: per * n,
+              sheet_area_sqm: sheetArea }));
+        } else {
+          /* هم‌سان با شاخه‌ی ورق بدنه: بدونِ مساحتِ ورق، مبلغ روی مساحتِ با پرت
+             بسته می‌شود تا دو موتور یکی بمانند (پیش‌تر این شاخه در JS اصلاً
+             وجود نداشت و همیشه «خالص» ضرب می‌شد). */
+          const gross = per * n;
+          pItems.push(engineItem("back_sheet", "فیبر پشت", backM.name,
+            `${fmt(gross, 1)} م²`, gross, "م²", pp, gross * pp, true,
+            { mat_id: backM.id, mat_cat: "back_sheet", area_sqm: gross }));
+        }
       }
       pr.total_back_area += backArea * n;
 
@@ -3689,9 +3978,12 @@ function calcProjectLocal(project) {
 
       /* --- درها --- */
       for (const dr of u.doors || []) {
-        const leaves = Math.trunc(_n(dr.qty)) * n;
+        /* هم‌راستا با `_coerce` پایتون: پیش‌فرضِ فیلدِ qty در DoorRow برابر ۲
+           است (نه صفر) — پیش‌تر یک درِ بدونِ تعداد در مرورگر حذف و در سرور
+           «۲ لنگه» قیمت می‌خورد. */
+        const leaves = Math.max(0, _ci(dr.qty, 2, 0)) * n;
         if (leaves <= 0) continue;
-        const area = leaves * (_n(dr.w_cm) / 100) * (_n(dr.h_cm) / 100);
+        const area = leaves * (_pos(dr.w_cm) / 100) * (_pos(dr.h_cm) / 100);
         pr.total_door_area += area;
         /* ★ «در از ورق بدنه»: مساحت لنگه‌ها به دسته‌ی ورق بدنه می‌رود تا با
            بقیه‌ی قطعات یک‌جا گرد شود (ورق کم‌تر = قیمت کم‌تر). اگر لنگه روی ورق
@@ -3701,11 +3993,20 @@ function calcProjectLocal(project) {
         if (dr.from_body) {
           const fit = doorLeafFitsSheet(dr, bodyM);
           if (fit.ok) { useBody = true; dmat = bodyM; }
-          else warnings.push(`«${dr.label || "در"}»: تیکِ «در از ورق بدنه» نادیده گرفته شد — ${fit.why}`);
+          else {
+            warnings.push(`«${dr.label || "در"}»: تیکِ «در از ورق بدنه» نادیده گرفته شد — ${fit.why}`);
+            /* ★ باگِ «لنگه‌ی درِ کاملاً رایگان»: در حالتِ پیش‌فرضِ رابط
+               material_id = 0 است (و چون تیک خورده، انتخابگرِ متریالِ در هم
+               پنهان می‌شود). پس نه ورقِ بدنه مصرف شد نه ورقِ در، و شاخه‌ی
+               `else if (dr.material_id)` هم چون شناسه صفر بود هشدار نمی‌داد. */
+            if (!dmat && !_n(dr.material_id)) {
+              warnings.push(`«${dr.label || "در"}»: متریالی برای ${fmt(leaves)} لنگه در (${fmt(area, 1)} م²) انتخاب نشده — ورق در **رایگان** محاسبه شد! یا متریالِ در را انتخاب کنید یا ابعاد لنگه را کوچک‌تر از ورق بدنه بگیرید.`);
+            }
+          }
         }
         if (useBody && dmat) {
-          const sa = (_n(dmat.sheet_width_cm) * _n(dmat.sheet_height_cm)) / 10000;
-          const pp = pricePerSqm(dmat);
+          const sa = (_pos(dmat.sheet_width_cm) * _pos(dmat.sheet_height_cm)) / 10000;
+          const pp = sheetPriceCheck(dmat, "ورق بدنه (در)", area, warnings);
           if (sa > 0) {
             pItems.push(engineItem("body_sheet", "ورق بدنه", dmat.name,
               `در از ورق بدنه — ${fmt(leaves)} لنگه، ${fmt(area, 1)} م² (با ${fmt(waste)}٪ پرت)`,
@@ -3718,8 +4019,8 @@ function calcProjectLocal(project) {
               { mat_id: dmat.id, mat_cat: "body_sheet", area_sqm: area }));
           }
         } else if (dmat) {
-          const sa = (dmat.sheet_width_cm * dmat.sheet_height_cm) / 10000;
-          const pp = pricePerSqm(dmat);
+          const sa = (_pos(dmat.sheet_width_cm) * _pos(dmat.sheet_height_cm)) / 10000;
+          const pp = sheetPriceCheck(dmat, "ورق در", area, warnings);
           if (dmat.unit === "sheet" && sa > 0) {
             pItems.push(engineItem("door_sheet", "ورق در", dmat.name,
               `${fmt(leaves)} لنگه — ${fmt(area, 1)} م² (با ${fmt(waste)}٪ پرت)`,
@@ -3745,7 +4046,7 @@ function calcProjectLocal(project) {
         }
         if (dr.banding_id) {
           const bm = matById(dr.banding_id);
-          const per = 2 * ((_n(dr.w_cm) + _n(dr.h_cm)) / 100);
+          const per = 2 * ((_pos(dr.w_cm) + _pos(dr.h_cm)) / 100);
           const meters = per * leaves * BAND_DOOR_F * (1 + BAND_WASTE / 100);
           if (bm) {
             pItems.push(engineItem("banding_door", "نوار PVC در", bm.name,
@@ -3756,21 +4057,21 @@ function calcProjectLocal(project) {
         }
         if (dr.hinge_id || _n(dr.hinge_price)) {
           const hinge = matById(dr.hinge_id);
-          const q = _n(dr.hinges_per_leaf, 2) * leaves;
+          const q = _pos(dr.hinges_per_leaf, 2) * leaves;
           const price = hinge ? _n(hinge.price) : _n(dr.hinge_price);
           const name = hinge ? hinge.name : (dr.hinge_name || "لولا");
           pItems.push(engineItem("hinge", "لولا", name, `${fmt(_n(dr.hinges_per_leaf, 2))} عدد در هر لنگه × ${fmt(leaves)} لنگه`, q, "عدد", price, q * price));
         }
         if ((dr.gas_spring_id || _n(dr.gas_spring_price)) && _n(dr.gas_springs_per_leaf) > 0) {
           const g = matById(dr.gas_spring_id);
-          const q = _n(dr.gas_springs_per_leaf) * leaves;
+          const q = _pos(dr.gas_springs_per_leaf) * leaves;
           const price = g ? _n(g.price) : _n(dr.gas_spring_price);
           const name = g ? g.name : (dr.gas_spring_name || "گازور");
           pItems.push(engineItem("gas_spring", "گازور / جک", name, `${fmt(_n(dr.gas_springs_per_leaf))} عدد در هر لنگه`, q, "عدد", price, q * price));
         }
         if (dr.handle_id || _n(dr.handle_price)) {
           const handle = matById(dr.handle_id);
-          const q = _n(dr.handles_per_leaf, 1) * leaves;
+          const q = _pos(dr.handles_per_leaf, 1) * leaves;
           const price = handle ? _n(handle.price) : _n(dr.handle_price);
           const name = handle ? handle.name : (dr.handle_name || "دستگیره");
           pItems.push(engineItem("handle", "دستگیره", name, `${fmt(leaves)} لنگه`, q, "عدد", price, q * price));
@@ -3792,12 +4093,14 @@ function calcProjectLocal(project) {
 
       /* --- کشوها --- */
       for (const dw of u.drawers || []) {
-        const count = Math.trunc(_n(dw.qty)) * n;
+        /* پیش‌فرضِ فیلدِ qty در DrawerRow برابر ۳ است (هم‌راستا با پایتون) */
+        const count = Math.max(0, _ci(dw.qty, 3, 0)) * n;
         if (count <= 0) continue;
-        const w = _n(dw.w_cm) / 100, h = _n(dw.h_cm) / 100, d = _n(dw.d_cm) / 100;
+        const w = _pos(dw.w_cm) / 100, h = _pos(dw.h_cm) / 100, d = _pos(dw.d_cm) / 100;
         const sheetM = matById(dw.sheet_id);
         if (dw.sheet_id || _n(dw.sheet_price_per_sqm)) {
-          const pp = sheetM ? pricePerSqm(sheetM) : _n(dw.sheet_price_per_sqm);
+          const pp = sheetM ? sheetPriceCheck(sheetM, "ورق جعبه‌ی کشو", (2 * d * h + w * d + w * h) * count, warnings)
+                              : Math.max(0, _n(dw.sheet_price_per_sqm));
           const dname = sheetM ? sheetM.name : (dw.sheet_name || "ورق بدنه‌ی کشو");
           if (!sheetM && pp <= 0 && dw.sheet_id) {
             warnings.push(`«${dw.label || "کشو"}»: متریال جعبه‌ی کشو در کتابخانه قیمت پیدا نشد و قیمت ثبت‌شده‌ای هم ندارد — هزینه‌ی ورق جعبه محاسبه نشد!`);
@@ -3811,7 +4114,8 @@ function calcProjectLocal(project) {
         }
         const frontM = matById(dw.front_id);
         if (dw.front_id || _n(dw.front_price_per_sqm)) {
-          const pp = frontM ? pricePerSqm(frontM) : _n(dw.front_price_per_sqm);
+          const pp = frontM ? sheetPriceCheck(frontM, "تیره‌ی کشو", w * h * count, warnings)
+                              : Math.max(0, _n(dw.front_price_per_sqm));
           const fname = frontM ? frontM.name : (dw.front_name || "تیره‌ی کشو");
           if (!frontM && pp <= 0 && dw.front_id) {
             warnings.push(`«${dw.label || "کشو"}»: متریال تیره‌ی کشو در کتابخانه قیمت پیدا نشد و قیمت ثبت‌شده‌ای هم ندارد — هزینه‌ی تیره محاسبه نشد!`);
@@ -3856,7 +4160,7 @@ function calcProjectLocal(project) {
       /* --- صفحه / تاج / زیرچراغ / پاخور / پایه / خار / مونتاژ ---
          اگر «متر طول صفحه» در سطح بخش وارد شده باشد، همان ملاک است و برای
          هر یونیت جداگانه صفحه حساب نمی‌شود (جلوگیری از دوباره‌شماری). */
-      if (u.countertop_id && _n(page.countertop_lm) <= 0) {
+      if (u.countertop_id && _pos(page.countertop_lm) <= 0) {
         const cm = matById(u.countertop_id);
         if (cm) {
           const lm = (L / 100) * n;
@@ -3880,16 +4184,16 @@ function calcProjectLocal(project) {
       if (u.leg_id && (u.unit_type === "ground" || u.unit_type === "tall")) {
         const lm2 = matById(u.leg_id);
         if (lm2 || _n(u.leg_price)) {
-          const q = _n(u.legs_per_unit, 4) * n;
+          const q = _pos(u.legs_per_unit, 4) * n;
           const price = lm2 ? _n(lm2.price) : _n(u.leg_price);
           const name = lm2 ? lm2.name : (u.leg_name || "پایه");
           pItems.push(engineItem("leg", "پایه", name, `${fmt(q)} عدد`, q, "عدد", price, q * price));
         }
       }
-      if (u.shelf_pin_id && _n(u.shelves) > 0) {
+      if (u.shelf_pin_id && SHELVES > 0) {
         const sp = matById(u.shelf_pin_id);
         if (sp || _n(u.shelf_pin_price)) {
-          const q = _n(u.pins_per_shelf, 4) * _n(u.shelves) * n;
+          const q = _pos(u.pins_per_shelf, 4) * SHELVES * n;
           const price = sp ? _n(sp.price) : _n(u.shelf_pin_price);
           const name = sp ? sp.name : (u.shelf_pin_name || "خار طبقه");
           pItems.push(engineItem("shelf_pin", "خار طبقه", name, "", q, "عدد", price, q * price));
@@ -3912,11 +4216,11 @@ function calcProjectLocal(project) {
     pr.total_sheets = batchSheetsLocal(pItems);
 
     /* صفحه‌ی کابینت کلی بخش */
-    if (_n(page.countertop_lm) > 0) {
+    if (_pos(page.countertop_lm) > 0) {
       const used = (page.units || []).find((u) => u.countertop_id);
       const cm = used ? matById(used.countertop_id) : null;
       if (cm) {
-        const lm = _n(page.countertop_lm);
+        const lm = _pos(page.countertop_lm);
         pItems.push(engineItem("countertop", "صفحه کابینت", cm.name, `${fmt(lm, 1)} متر طول (ورودی کلی)`, lm, "متر", cm.price, lm * cm.price));
       } else {
         warnings.push(`«${page.name || "بخش"}»: متراژ صفحه‌ی کابینت (${fmt(_n(page.countertop_lm), 1)} متر) وارد شده ولی متریال صفحه در هیچ یونیتی انتخاب نشده (یا از کتابخانه حذف شده) — هزینه‌ی صفحه محاسبه نشد.`);
@@ -3926,15 +4230,15 @@ function calcProjectLocal(project) {
     /* درنما */
     if (page.detail_mode === "detailed") {
       for (const r of page.detail_rows || []) {
-        const area = _n(r.qty) * (_n(r.w_cm) / 100) * (_n(r.h_cm) / 100);
+        const area = _n(r.qty) * (_pos(r.w_cm) / 100) * (_pos(r.h_cm) / 100);
         if (area <= 0) continue;
-        detailCost += area * _n(r.price_per_sqm);
+        detailCost += area * _pos(r.price_per_sqm);
         pItems.push(engineItem("darna", "درنما", r.label || "درنما",
           `${fmt(_n(r.qty))} × ${fmt(_n(r.w_cm))}×${fmt(_n(r.h_cm))} سانتی‌متر = ${fmt(area, 1)} م²`,
-          area, "م²", _n(r.price_per_sqm), area * _n(r.price_per_sqm)));
+          area, "م²", _pos(r.price_per_sqm), area * _pos(r.price_per_sqm)));
       }
     } else if (page.detail_mode === "total") {
-      const sqm = _n(page.detail_total_sqm), pp = _n(page.detail_price_per_sqm);
+      const sqm = _pos(page.detail_total_sqm), pp = _pos(page.detail_price_per_sqm);
       if (sqm > 0) {
         detailCost += sqm * pp;
         pItems.push(engineItem("darna", "درنما", "درنما (متراژ کلی)", `${fmt(sqm, 1)} م² × قیمت واحد`, sqm, "م²", pp, sqm * pp));
@@ -3944,9 +4248,16 @@ function calcProjectLocal(project) {
     /* اضافات */
     for (const ex of page.extras || []) {
       if (!ex.label && !_n(ex.price)) continue;
-      const amt = _n(ex.qty, 1) * _n(ex.price);
+      /* ★ قلمِ منفی پیش‌تر بی‌صدا از جمع کل کم می‌کرد (تخفیفِ پنهان).
+         «ناموجود» → پیش‌فرضِ ۱ (هم‌راستا با dataclass پایتون)،
+         «خراب»      → همان پیش‌فرضِ ۱ (نه صفر) تا دو موتور یکی بمانند. */
+      const eq = _pos(_co(ex.qty, 1, 1));
+      const eprice = _pos(ex.price);
+      if (_n(ex.qty, 1) < 0 || _n(ex.price) < 0)
+        warnings.push(`«${ex.label || "قلم متفرقه"}»: تعداد یا قیمت منفی بود — صفر در نظر گرفته شد.`);
+      const amt = eq * eprice;
       pItems.push(engineItem("extra", "اضافات و اکسسوری", ex.label || "قلم متفرقه", ex.note || "",
-        _n(ex.qty, 1), UNITS[ex.unit] || ex.unit || "", _n(ex.price), amt, ex.visible !== false));
+        eq, UNITS[ex.unit] || ex.unit || "", eprice, amt, _bool(ex.visible, true)));
     }
 
     /* خدمات (مبنا خودکار)
@@ -3957,35 +4268,54 @@ function calcProjectLocal(project) {
       sqm: pr.total_body_area + pr.total_door_area + pr.total_back_area,
       lm: pr.total_ground_lm + pr.total_wall_lm, fixed: 1, percent: 0,
     };
-    for (const u of page.units || []) ctx.shelf += Math.max(0, _n(u.shelves)) * Math.max(0, Math.trunc(_n(u.qty, 1)));
+    for (const u of page.units || []) ctx.shelf += _pos(u.shelves) * Math.max(0, _ci(u.qty, 1, 0));
     const pctServices = [];
     for (const s of page.services || []) {
       if (!s.label && !_n(s.price)) continue;
       if (s.basis === "percent") { pctServices.push(s); continue; }
       const basis = ctx[s.basis] !== undefined ? s.basis : "fixed";
-      const q = ctx[basis];
-      const amt = q * _n(s.price);
-      pItems.push(engineItem("service", "خدمات", s.label || "خدمات", `مبنای محاسبه: ${SERVICE_BASIS[basis] || basis}`, q, "", _n(s.price), amt));
+      /* ★ مبنای منفی/NaN پیش‌تر مبلغ خدمت را منفی می‌کرد و بی‌صدا از جمع کل
+         کم می‌شد (مثلاً عمق منفی → مساحت منفی → خدمتِ مترمربعیِ منفی). */
+      const q = Math.max(0, _n(ctx[basis]));
+      const sp = _pos(s.price);
+      if (_n(s.price) < 0)
+        warnings.push(`«${s.label || "خدمات"}»: بهای خدمت منفی بود — صفر در نظر گرفته شد.`);
+      const amt = q * sp;
+      pItems.push(engineItem("service", "خدمات", s.label || "خدمات", `مبنای محاسبه: ${SERVICE_BASIS[basis] || basis}`, q, "", sp, amt));
     }
 
+    /* ★ جمع‌بندیِ این بخش عمداً به **پاسِ ۲** موکول می‌شود: اول باید ورق‌های
+       همه‌ی بخش‌ها یک‌جا گرد شوند (رفع باگ F-01)، بعد جمع/درصد/سربار ساخته
+       شود — وگرنه خدمات درصدی و سربار روی جمعِ بادکرده‌ی بخش‌بخش می‌نشینند. */
+    pr.items = pItems;
+    pageResults.push(pr);
+    deferred.push({ page, pr, pItems, pctServices });
+  }
+
+  /* ── پاسِ ۲ ─ تجمیع ورق در سطح کل پروژه، سپس جمع‌بندی بخش‌ها ─────────── */
+  repoolSheetsProjectLocal(pageResults);
+  for (const d of deferred) {
+    const page = d.page, pr = d.pr, pItems = d.pItems, pctServices = d.pctServices;
     /* ★ باگ قدیمی برطرف شد: مبلغ خدمات غیردرصدی پیش‌تر «دو بار» در جمع بخش
        لحاظ می‌شد (یک‌بار داخل ردیف‌ها و یک‌بار با fixedSvcTotal) — و موتور
        دسکتاپ هم همان دوباره‌شماری را داشت. اکنون هر دو موتور خدمات را
        دقیقاً یک‌بار می‌شمارند. */
-    subtotal = pItems.reduce((a, it) => a + it.amount, 0);
+    let subtotal = pItems.reduce((a, it) => a + _n(it.amount), 0);
     /* خدمات درصدی — همه نسبت به جمعِ قبل از خدمات درصدی (بدون اثر مرکب) */
     if (pctServices.length) {
       const base = subtotal;
       for (const s of pctServices) {
-        const pct = Math.max(0, _n(s.price));
+        const raw = _n(s.price);
+        if (raw < 0) warnings.push(`«${s.label || "خدمات درصدی"}»: درصدِ منفی بود — صفر در نظر گرفته شد.`);
+        const pct = Math.max(0, raw);
         const amt = base * pct / 100;
         pItems.push(engineItem("service", "خدمات", s.label || "خدمات درصدی", `${fmt(pct, 1)}٪ از جمع بخش`, 1, "", pct, amt));
         subtotal += amt;
       }
     }
     /* سربار + ردیف شفافِ آن در اقلام (هم‌راستا با پایتون: جمع اقلام == هزینه‌ی تمام‌شده) */
-    const ohPct = Math.max(0, _n(page.overhead_percent));
-    overhead = subtotal * ohPct / 100;
+    const ohPct = _pos(page.overhead_percent);
+    const overhead = subtotal * ohPct / 100;
     for (let i = pItems.length - 1; i >= 0; i--) if (pItems[i].key === "overhead") pItems.splice(i, 1);
     if (overhead > 0) {
       pItems.push(engineItem("overhead", "سربار", `سربار کارگاه (${fmt(ohPct)}٪)`, `${fmt(ohPct)}٪ از جمع اقلام بخش`, 1, "موردی", overhead, overhead));
@@ -3993,11 +4323,11 @@ function calcProjectLocal(project) {
     pr.subtotal = subtotal;
     pr.overhead_amount = overhead;
     pr.total_cost = subtotal + overhead;
-    pr.items = pItems;
-    pageResults.push(pr);
+    /* ورق‌ها حالا در سطح پروژه گرد شده‌اند → سهم هر بخش هم تازه می‌شود */
+    pr.total_sheets = pItems.reduce((a, i) => a + _n(i.sheets), 0);
     pagesCost += pr.total_cost;
     items.push(...pItems);
-    for (const k of Object.keys(stats)) stats[k] += pr[k] || 0;
+    for (const k of Object.keys(stats)) stats[k] += _n(pr[k], 0);
   }
 
   /* مبلغ ثابت اضافه */
@@ -6283,12 +6613,24 @@ function renderEditorTables() {
     <thead><tr><th class="th-row">ردیف</th><th>نوع</th><th>طول (سم)</th><th>ارتفاع (سم)</th><th>عمق (سم)</th><th>تعداد (عدد)</th><th>طبقات (عدد)</th><th>در/کشو</th><th>جزئیات</th></tr></thead>
     <tbody>${uRows || `<tr><td colspan="9"><div class="empty">یونیتی تعریف نشده — «＋ افزودن یونیت» را بزنید.</div></td></tr>`}</tbody>`;
 
-  /* --- درها (سطح بخش، وابسته به یونیت) --- */
+  /* --- درها (سطح بخش، وابسته به یونیت) ---
+     ★ P4: این جدول **۱۱ ستون** داشت — روی نمایشگر ۱۳۶۶px اسکرولِ افقی لازم
+     می‌شد و جریانِ Tab از دیدِ کاربر بیرون می‌رفت. حالا دقیقاً همان الگوی
+     جدولِ یونیت‌ها اعمال شد: ۵ ستون در لایه‌ی ۱ (آنچه همیشه لازم است:
+     소속، برچسب، لنگه، عرض، ارتفاع) و ۶ ستونِ متریال/یراق در لایه‌ی ۲ پشتِ
+     همان expander. چون الگو با یونیت‌ها یکسان است، کاربر **چیز تازه‌ای
+     یاد نمی‌گیرد**. کلیدِ expander با پیشوندِ «d:» نام‌گذاری شده تا با
+     کلیدِ یونیت‌ها (که عددِ ساده است) برخورد نکند — پس handlerِ موجودِ
+     `[data-expand]` بدونِ هیچ تغییری کار می‌کند.                        */
   let dRows = "";
   pg.units.forEach((u, ui) => u.doors.forEach((dr, di) => {
     const a = (extra) => withRow(extra, "door", `${ui}:${di}`);
+    const dKey = `d:${ui}:${di}`;
+    const dOpen = state.expanded.has(`${p.id}:${state.pageIdx}:${dKey}`);
     dRows += `
       <tr${rowAttrs("door", `${ui}:${di}`)}>
+        <td><button class="expander${dOpen ? " open" : ""}" type="button" data-expand="${dKey}"
+                    title="متریال و یراقِ این لنگه در" aria-expanded="${dOpen ? "true" : "false"}">${ICONS.chev}</button></td>
         <td><div class="row-id-cell">
           <select class="cell-select" data-scope="doormove" data-ui="${ui}" data-di="${di}" ${a("")}
                   aria-label="یونیتِ 소속ِ این در" title="در به کدام یونیت تعلق دارد">
@@ -6300,17 +6642,24 @@ function renderEditorTables() {
         <td>${inp("door", "qty", dr.qty, a(`data-ui="${ui}" data-di="${di}"`), U_LEAF, "w-qty")}</td>
         <td>${inp("door", "w_cm", dr.w_cm, a(`data-ui="${ui}" data-di="${di}"`), U_CM, "w-dim")}</td>
         <td>${inp("door", "h_cm", dr.h_cm, a(`data-ui="${ui}" data-di="${di}"`), U_CM, "w-dim")}</td>
-        <td>${doorSheetCell(u, dr, ui, di)}</td>
-        <td>${matSelect("door_model", dr.door_model_id, `data-scope="door" data-k="door_model_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
-        <td>${matSelect("hinge", dr.hinge_id, `data-scope="door" data-k="hinge_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
-        <td>${matSelect("handle", dr.handle_id, `data-scope="door" data-k="handle_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
-        <td>${matSelect("service", dr.assembly_id, `data-scope="door" data-k="assembly_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
-        <td>${matSelect("service", dr.packaging_id, `data-scope="door" data-k="packaging_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
       </tr>`;
+    if (dOpen) {
+      dRows += `
+      <tr class="unit-detail-row row-detail-l2" data-detail-of="door:${ui}:${di}"><td colspan="6">
+        <div class="unit-detail doors-l2">
+          <div class="field"><label>ورق در</label>${doorSheetCell(u, dr, ui, di)}</div>
+          <div class="field"><label>مدل / اجرت در</label>${matSelect("door_model", dr.door_model_id, `data-scope="door" data-k="door_model_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
+          <div class="field"><label>لولا</label>${matSelect("hinge", dr.hinge_id, `data-scope="door" data-k="hinge_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
+          <div class="field"><label>دستگیره</label>${matSelect("handle", dr.handle_id, `data-scope="door" data-k="handle_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
+          <div class="field"><label>مونتاژ</label>${matSelect("service", dr.assembly_id, `data-scope="door" data-k="assembly_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
+          <div class="field"><label>بسته‌بندی</label>${matSelect("service", dr.packaging_id, `data-scope="door" data-k="packaging_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
+        </div>
+      </td></tr>`;
+    }
   }));
   el("tblDoors").innerHTML = `
-    <thead><tr><th class="th-row">یونیت</th><th>برچسب</th><th>لنگه (عدد)</th><th>عرض (سم)</th><th>ارتفاع (سم)</th><th>ورق در</th><th>مدل/اجرت</th><th>لولا</th><th>دستگیره</th><th>مونتاژ</th><th>بسته‌بندی</th></tr></thead>
-    <tbody>${dRows || `<tr><td colspan="11"><div class="empty">دری تعریف نشده است.</div></td></tr>`}</tbody>`;
+    <thead><tr><th class="th-row">جزئیات</th><th>یونیت</th><th>برچسب</th><th>لنگه (عدد)</th><th>عرض (سم)</th><th>ارتفاع (سم)</th></tr></thead>
+    <tbody>${dRows || `<tr><td colspan="6"><div class="empty">دری تعریف نشده است — «افزودن در» را بزنید یا در تبِ یونیت‌ها <b>D</b> را بزنید تا از روی ابعاد ساخته شوند.</div></td></tr>`}</tbody>`;
 
   /* --- کشوها --- */
   let wRows = "";
@@ -7772,7 +8121,16 @@ function wire() {
     const b = e.target.closest("[data-open-project]");
     if (b) { navigate("projects"); openProjectEditor(b.dataset.openProject); }
   });
-  el("btnQuickProject").addEventListener("click", () => { navigate("projects"); openNewProjectModal(); });
+  /* ★ P1/P2/D4: این دکمه دیگر مودال باز نمی‌کند.
+     پیش‌تر: کلیک → navigate → مودالِ ۵ فیلدی → پرکردن → «ایجاد پروژه» →
+     ویرایشگر. یعنی کاربر پیش از دیدنِ هر یونیتی باید دو تصمیمِ بی‌ربط
+     (وضعیت، سبک) می‌گرفت و یک مودال تمرکزش را می‌شکست.
+     اکنون: کلیک → پروژه ساخته می‌شود → ویرایشگر با **یک یونیت پیش‌فرض** باز
+     می‌شود → فوکوس روی «عنوان». عنوان/مشتری/وضعیت در همان کارتِ مشخصاتِ
+     ویرایشگر (که inline است) پر می‌شوند.
+     مودالِ قدیمی فقط برای مسیرِ «ساخت پروژه با این سبک» از صفحه‌ی سبک‌ها
+     باقی مانده، چون آن‌جا انتخابِ سبک *دلیلِ* شروع است نه یک مانع. */
+  el("btnQuickProject").addEventListener("click", () => startNewProjectInstant());
 
   /* ---------------- متریال ---------------- */
   el("matSearch").addEventListener("input", renderMaterials);
@@ -8180,7 +8538,10 @@ function wire() {
   /* ---------------- پروژه‌ها ---------------- */
   el("projSearch").addEventListener("input", renderProjects);
   el("projFilter").addEventListener("change", renderProjects);
-  el("btnNewProject").addEventListener("click", () => openNewProjectModal());
+  /* ★ D4: دکمه‌ی «پروژه‌ی جدید» در این نوار حذف شد — ورودیِ واحد در نوارِ بالای
+     برنامه است (`btnQuickProject` + `Ctrl+N`) و در همه‌ی صفحه‌ها از جمله همین‌جا
+     دیده می‌شود. listenerِ آن هم برداشته شد؛ وگرنه جست‌وجوی آن id که دیگر در
+     DOM وجود ندارد null می‌داد و یک TypeError **کل سیم‌کشی** را خاموش می‌کرد. */
   const btnRecalc = el("btnRecalcAll");
   if (btnRecalc) btnRecalc.addEventListener("click", () => busy(btnRecalc, async () => {
     if (!API.ok) { toast("بازمحاسبه در حالت نمایشی لازم نیست — مبلغ‌ها همیشه با نرخ جاری‌اند", "info"); return; }
@@ -8197,8 +8558,60 @@ function wire() {
       ? STYLES.map((s) => `<option value="${s.id}">✦ ${esc(s.name)}</option>`).join("")
       : `<option value="0">— بدون سبک —</option>`;
     if (preStyleId) el("pfStyle").value = String(preStyleId);
-    el("pfStatus").value = "draft";
+    /* ★ D1: فیلد «وضعیت» از فرم حذف شد؛ پروژه‌ی تازه همیشه «پیش‌نویس» است. */
     openModal("project");
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     ★ P1/P2 — ساختِ فوریِ پروژه: مسیرِ اصلیِ «شروع کار»
+     ----------------------------------------------------------------------
+     پیش‌تر: کلیک → مودالِ ۵ فیلدی → پرکردن → «ایجاد پروژه» → ویرایشگر.
+     اکنون: پروژه بی‌درنگ ساخته می‌شود، ویرایشگر با **یک یونیتِ پیش‌فرضِ
+     زمینی** باز می‌شود و فوکوس روی «عنوان» می‌نشیند. یعنی کاربر به‌جای
+     پاسخ به دو پرسشِ بی‌ربط (وضعیت، سبک)، فوراً روی کارِ واقعی (ابعاد) است.
+     عنوانِ موقت از پیش‌فرضِ تنظیمات یا «پروژه‌ی جدید» می‌آید و در همان کارتِ
+     مشخصات قابل ویرایش است — پس هیچ داده‌ای گم نمی‌شود.
+     ══════════════════════════════════════════════════════════════════════ */
+  async function startNewProjectInstant(preStyleId) {
+    const styleId = Number(preStyleId)
+      || (STYLES.length ? Number(SETTINGS.default_style_id) || STYLES[0].id : 0);
+    const title = "پروژه‌ی جدید";
+    const body = { title, customer: "", mobile: "", status: "draft", style_id: styleId };
+    let np;
+    if (API.ok) {
+      try { np = normalizeProject((await API.req("POST", "/api/projects", body)).project); }
+      catch (err) { toast("ایجاد ناموفق: " + esc(err.message), "error"); return; }
+    } else {
+      const id = Math.max(0, ...PROJECTS.map((p) => p.id)) + 1;
+      np = normalizeProject({
+        id, code: `PR-1405-${fa(String(id).padStart(3, "0"))}`, title,
+        customer: "—", mobile: "", status: "draft", date: TODAY_FA,
+        profit_mode: SETTINGS.default_profit_mode, profit_percent: +SETTINGS.default_profit_percent || 25,
+        install_mode: SETTINGS.default_install_mode, install_value: +SETTINGS.default_install_value || 0,
+        vat_enabled: SETTINGS.vat_enabled === "1", vat_percent: +SETTINGS.vat_percent || 10,
+        pages: [defaultPage(styleId)],
+      });
+    }
+    if (!PROJECTS.includes(np)) PROJECTS.unshift(np);
+    if (!API.ok) demoSave();
+    /* ★ یک یونیتِ پیش‌فرض، تا جدول خالی نباشد و کاربر بلافاصله چیزی برای
+       تایپِ ابعاد داشته باشد. سبکِ بخش هم رویش اعمال می‌شود تا متریال‌ها
+       از همان ابتدا درست باشند. */
+    const pg = np.pages && np.pages[0];
+    if (pg && pg.units && pg.units.length === 0) {
+      const u = defaultUnit("ground");
+      applyStyleToUnit(u, styleDataOf(pg));
+      pg.units.push(u);
+    }
+    navigate("projects");
+    renderProjects(); renderDashboard(); fillInvoiceProjects();
+    openProjectEditor(np.id);
+    /* فوکوس روی عنوان: اولین چیزی که کاربر باید تایپ کند، نه یک کلیکِ اضافه */
+    requestAnimationFrame(() => {
+      const t = el("edTitle");
+      if (t && !el("projectEditor").hidden) { t.focus(); t.select(); }
+    });
+    toast("پروژه ساخته شد — عنوان را بنویسید و ابعاد یونیت را وارد کنید", "success");
   }
 
   async function createProjectForm() {
@@ -8210,7 +8623,7 @@ function wire() {
     const styleId = Number(el("pfStyle").value) || 0;
     const body = {
       title, customer: el("pfCustomer").value.trim(), mobile: el("pfMobile").value.trim(),
-      status: el("pfStatus").value, style_id: styleId,
+      status: "draft", style_id: styleId,   /* ★ D1: «وضعیت» از فرم حذف شد */
     };
     let np;
     if (API.ok) {
@@ -8829,11 +9242,11 @@ function wire() {
     $$("#invLevel button").forEach((x) => x.classList.toggle("active", x === b));
     await refreshInvoice();
   });
-  el("btnRefreshInv").addEventListener("click", () => busy(el("btnRefreshInv"), async () => {
-    renderInvRowChecks();
-    await refreshInvoice();
-    toast("فاکتور به‌روزرسانی شد", "success");
-  }));
+  /* ★ D2/P5: دکمه‌ی «به‌روزرسانی فاکتور» حذف شد — به‌روزرسانی حالا خودکار است
+     (هنگامِ ورود به صفحه و پسِ هر تغییرِ گزینه‌های سند). تابعِ `refreshInvoice`
+     دست‌نخورده مانده و همان‌جاها صدا زده می‌شود؛ فقط «کنشِ دستی» برداشته شد.
+     `renderInvRowChecks` هم که پیش‌تر فقط این‌جا صدا زده می‌شد، به مسیرِ
+     خودکار منتقل شد تا checkboxهای ردیف‌ها همیشه تازه باشند. */
   el("btnPrintInv").addEventListener("click", () => {
     const f = el("invFrame");
     if (!f.classList.contains("hidden") && f.contentWindow) {
@@ -9130,6 +9543,254 @@ function wire() {
      تا رفتار و پیام‌ها دقیقاً یکسان بماند.                                    */
   const btnQkBuild = el("btnQuickBuild");
   if (btnQkBuild) btnQkBuild.addEventListener("click", () => submitModal("quick"));
+
+  /* ══════════════════════════════════════════════════════════════════════
+     ★ لایه‌ی UX — پیاده‌سازی چهار اصل
+     ----------------------------------------------------------------------
+     این بلوک **فقط افزوده** است: هیچ منطقِ موجودی بازنویسی نشده، بلکه
+     کنش‌های تازه به همان handlerهای آزموده‌شده‌ی قبلی «واگذار» می‌شوند
+     (`.click()`). این‌طور دو مسیرِ متفاوت برای یک کار ساخته نمی‌شود و رفتار
+     و پیام‌ها — از جمله «بازگردانی» پس از حذف — دقیقاً یکسان می‌ماند.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  /* ── (۱) منوهای سرریز (⋯) و Split-Button ───────────────────────────────
+     خانه‌ی کنش‌های کم‌کاربرد (M2/M3/M4/M8/M9/M10/M11/M12). یک الگو برای
+     همه: کلیک باز/بسته، Esc یا کلیکِ بیرون می‌بندد، ↑↓ پیمایش می‌کند و
+     `aria-expanded` هم‌زمان به‌روز می‌شود.                              */
+  function closeAllOvf(except) {
+    $$(".ovf.open, .split.open").forEach((m) => {
+      if (m === except) return;
+      m.classList.remove("open");
+      const t = m.querySelector("[aria-expanded]");
+      if (t) t.setAttribute("aria-expanded", "false");
+    });
+  }
+  function toggleOvf(wrap) {
+    const willOpen = !wrap.classList.contains("open");
+    closeAllOvf(wrap);
+    wrap.classList.toggle("open", willOpen);
+    const t = wrap.querySelector("[aria-expanded]");
+    if (t) t.setAttribute("aria-expanded", willOpen ? "true" : "false");
+    if (willOpen) { const f = wrap.querySelector(".ovf-item"); if (f) f.focus(); }
+    return willOpen;
+  }
+  $$(".ovf > .ovf-btn, .split > .split-more").forEach((b) => {
+    b.addEventListener("click", (e) => { e.stopPropagation(); toggleOvf(b.closest(".ovf, .split")); });
+    b.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") { e.preventDefault(); toggleOvf(b.closest(".ovf, .split")); }
+    });
+  });
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".ovf, .split")) closeAllOvf(null);
+  });
+  $$(".ovf-menu").forEach((menu) => {
+    const owner = () => menu.closest(".ovf, .split");
+    const shut = (refocus) => {
+      const w = owner(); if (!w) return;
+      w.classList.remove("open");
+      const t = w.querySelector("[aria-expanded]");
+      if (t) { t.setAttribute("aria-expanded", "false"); if (refocus) t.focus(); }
+    };
+    menu.addEventListener("keydown", (e) => {
+      const items = Array.from(menu.querySelectorAll(".ovf-item"));
+      const i = items.indexOf(document.activeElement);
+      if (e.key === "ArrowDown") { e.preventDefault(); if (items.length) items[(i + 1) % items.length].focus(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); if (items.length) items[(i - 1 + items.length) % items.length].focus(); }
+      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); shut(true); }
+      else if (e.key === "Tab") shut(false);
+    });
+    /* پس از انتخاب، منو بسته و فوکوس به دکمه‌ی سرریز برمی‌گردد تا کاربر
+       با Tab از همان‌جا ادامه دهد — نه از نقطه‌ای نامعلوم.             */
+    menu.addEventListener("click", (e) => { if (e.target.closest(".ovf-item")) shut(true); });
+  });
+  /* ★ Esc در سطح سند — نه فقط داخل منو.
+     handler بالا روی خودِ منو است، پس اگر فوکوس به هر دلیلی بیرونِ منو باشد
+     (کلیکِ موس روی فضای خالیِ منو، یا پرشِ فوکوس توسط یک رندرِ دوباره) کلید
+     Esc به آن نمی‌رسید و منو باز می‌ماند — یعنی کاربرِ کیبوردی بن‌بست
+     می‌خورد. این لایه‌ی پشتیبان تضمین می‌کند Esc **همیشه** منوی باز را
+     می‌بندد و فوکوس را به دکمه‌ی سرریز برمی‌گرداند.
+     ⚠ اولویت با مودال است: اگر مودالی باز باشد Esc متعلقِ همان است
+       (handleModalKeys) و این‌جا کاری نمی‌کنیم. */
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const open = document.querySelector(".ovf.open, .split.open");
+    if (!open || anyModalOpen()) return;
+    e.preventDefault(); e.stopPropagation();
+    open.classList.remove("open");
+    const t = open.querySelector("[aria-expanded]");
+    if (t) { t.setAttribute("aria-expanded", "false"); t.focus(); }
+  }, true);
+
+  /* ── (۲) افشای تدریجی: کارت‌های تاشو و نوارِ «تنظیمات بخش» ──────────── */
+  const guideCard = el("guideCard"), guideHead = el("guideHead");
+  if (guideCard && guideHead) {
+    const flip = () => {
+      const open = guideCard.classList.toggle("collapsed") === false;
+      guideHead.setAttribute("aria-expanded", open ? "true" : "false");
+    };
+    guideHead.addEventListener("click", flip);
+    /* سرِ کارت یک div است، پس برای کیبورد باید role=button + Enter/Space داشته
+       باشد — وگرنه «راهنما» فقط با موس باز می‌شد (نقض Keyboard-First).   */
+    guideHead.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); }
+    });
+  }
+  const btnSecBar = el("btnSecBar"), secBarWrap = el("secBarWrap");
+  if (btnSecBar && secBarWrap) {
+    btnSecBar.addEventListener("click", () => {
+      const open = secBarWrap.hidden;
+      secBarWrap.hidden = !open;
+      btnSecBar.setAttribute("aria-expanded", open ? "true" : "false");
+      btnSecBar.classList.toggle("open", open);
+      if (open) { const f = secBarWrap.querySelector("input,select"); if (f) f.focus(); }
+    });
+  }
+  /* خلاصه‌ی یک‌خطی وقتی نوار بسته است — تا «پنهان‌بودن» به «گم‌شدن» تبدیل
+     نشود: کاربر باید بدون بازکردن بداند سبک و متراژ صفحه چیست.        */
+  function updateSecBarPeek() {
+    const pk = el("secBarPeek");
+    if (!pk || !secBarWrap) return;
+    const nm = el("secName"), st = el("secStyle"), lm = el("secCounterLm");
+    const bits = [];
+    if (nm && nm.value) bits.push(nm.value);
+    if (st && st.selectedOptions && st.selectedOptions[0]) bits.push(st.selectedOptions[0].textContent.trim());
+    if (lm && parseNum(lm.value) > 0) bits.push(`صفحه ${fa(parseNum(lm.value))} م`);
+    pk.textContent = bits.length ? "— " + bits.join(" · ") : "—";
+  }
+  /* `renderSectionBar` در ~۱۰ نقطه صدا زده می‌شود؛ به‌جای دست‌کاری همه‌شان،
+     همان تابع را می‌پوشانیم تا خلاصه همیشه پس از هر بازسازی تازه شود.
+     پوشاندن یک‌بار انجام می‌شود (نگهبان) تا زنجیره دوباره ساخته نشود.   */
+  if (!renderSectionBar.__peekWrapped) {
+    const _origRSB = renderSectionBar;
+    renderSectionBar = function () {
+      const r = _origRSB.apply(this, arguments);
+      updateSecBarPeek();
+      return r;
+    };
+    renderSectionBar.__peekWrapped = true;
+  }
+  ["secName", "secStyle", "secCounterLm"].forEach((id) => {
+    const n = el(id);
+    if (n) { n.addEventListener("input", updateSecBarPeek); n.addEventListener("change", updateSecBarPeek); }
+  });
+
+  /* ── (۳) Keyboard-First: میانبرهای کنش‌های پرتکرار ───────────────────── */
+  /** ردیفِ دارای فوکوس در ویرایشگر — مبنای F2 و Del */
+  function activeEditorRow() {
+    const ae = document.activeElement;
+    if (!ae || !el("projectEditor").contains(ae)) return null;
+    return ae.closest ? ae.closest("tr.erow, tr[data-row]") : null;
+  }
+  /** تبِ فعالِ ویرایشگر (از DOM، چون state جداگانه‌ای برایش نگه داشته نمی‌شود) */
+  function activeEditorTab() {
+    const t = document.querySelector("#secTabs .tab.active");
+    return t ? t.dataset.tab : "units";
+  }
+  /** واگذاری کنش به همان دکمه‌ی موجود — بدونِ کپیِ منطق */
+  function clickAddRow(kind) {
+    const b = document.querySelector(`#projectEditor .add-row[data-add="${kind}"]`);
+    if (b) { b.click(); return true; }
+    return false;
+  }
+  /* نگاشتِ «ستون» به «کنشِ افزودنِ ردیف» — برای Enter در آخرین سلول */
+  const ADD_BY_SCOPE = {
+    unit: "unit:ground", door: "doors", drawer: "drawers",
+    extra: "extras", service: "services", facade: "facade",
+  };
+
+  /* Enter در آخرین سلولِ یک ستون = افزودن ردیفِ تازه و پرش به همان ستون.
+     ★ capture: باید **پیش از** handlerِ موجود (که در این حالت `blur()`
+     می‌کرد) اجرا شود؛ در غیر این صورت فوکوس از دست می‌رود.
+     فقط وقتی دخالت می‌کند که واقعاً آخرین سلول باشد — وگرنه رویداد را
+     دست‌نخورده به مسیر قبلی می‌سپارد.                                    */
+  el("projectEditor").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+    const t = e.target;
+    if (!t || !t.dataset || !t.dataset.scope || !t.dataset.k) return;
+    if (t.tagName !== "INPUT" && t.tagName !== "SELECT") return;
+    const scope = t.dataset.scope, k = t.dataset.k;
+    if (scope === "doormove" || scope === "drawermove") return;
+    const list = Array.from(document.querySelectorAll(
+      `#projectEditor [data-scope="${scope}"][data-k="${k}"]`));
+    const i = list.indexOf(t);
+    if (i < 0 || i + 1 < list.length) return;      /* آخرین سلول نیست → مسیر قبلی */
+    const kind = ADD_BY_SCOPE[scope];
+    if (!kind) return;
+    e.preventDefault(); e.stopPropagation();
+    /* در/کشو به «یونیتِ جاری» اضافه می‌شوند؛ بدون این خط، Enter در ردیفِ
+       دری از یونیتِ ۳ یک در به یونیتِ ۰ اضافه می‌کرد.                  */
+    if ((scope === "door" || scope === "drawer") && t.dataset.ui !== undefined) {
+      state.lastUnitIdx = +t.dataset.ui || 0;
+    }
+    if (!clickAddRow(kind)) return;
+    /* فوکوس به همان ستون در ردیفِ تازه — نه به اولین سلول */
+    requestAnimationFrame(() => {
+      const nl = document.querySelectorAll(
+        `#projectEditor [data-scope="${scope}"][data-k="${k}"]`);
+      const cell = nl[nl.length - 1];
+      if (cell) { cell.focus(); if (cell.select) cell.select(); }
+    });
+  }, true);
+
+  /* میانبرهای سراسری — در listenerِ جداگانه تا هندلرِ موجود دست‌نخورده بماند */
+  document.addEventListener("keydown", (e) => {
+    const modal = anyModalOpen();
+    const typing = isTypingTarget(document.activeElement);
+    const mod = e.ctrlKey || e.metaKey;
+
+    /* «؟» — راهنمای کلیدها. کشف‌پذیری، شرطِ لازمِ Keyboard-First است. */
+    if (!modal && !typing && !mod && (e.key === "?" || (e.key === "/" && e.shiftKey))) {
+      e.preventDefault(); openModal("keys"); return;
+    }
+
+    if (mod && !e.altKey) {
+      const k = String(e.key).toLowerCase();
+      /* Ctrl+N — ساختِ فوریِ پروژه (مرورگر «پنجره‌ی جدید» را می‌بلعد) */
+      if (k === "n" && !e.shiftKey) { e.preventDefault(); if (!modal) startNewProjectInstant(); return; }
+      /* Ctrl+Shift+N — قیمت‌گیری سریع */
+      if (k === "n" && e.shiftKey) { e.preventDefault(); if (!modal) openQuickModal(); return; }
+      /* Ctrl+B — ریز قیمت‌ها (پاسخ به «چرا این قیمت شد؟») */
+      if (k === "b" && !e.shiftKey && !modal && state.editingProject && !el("projectEditor").hidden) {
+        e.preventDefault(); const b = el("btnBreakdown"); if (b) b.click(); return;
+      }
+      /* Ctrl+Enter در ویرایشگر = ذخیره و صدور فاکتور.
+         `gotoInvoiceForCurrent` خودش اگر کثیف باشد ذخیره می‌کند، پس یک کلید
+         جای سه کنش (Ctrl+S → ناوبری → به‌روزرسانی) می‌نشیند.
+         ⚠ وقتی مودال باز است این کلید متعلقِ خودِ مودال است (ثبت فرم). */
+      if (e.key === "Enter" && !modal && state.editingProject && !el("projectEditor").hidden) {
+        e.preventDefault(); gotoInvoiceForCurrent(); return;
+      }
+      return;
+    }
+
+    /* کلیدهای تک‌حرفی: فقط بیرونِ فیلد متنی و بیرونِ مودال — وگرنه تایپِ
+       «ن» در عنوان پروژه یک یونیت اضافه می‌کرد!                        */
+    if (modal || typing || mod || e.altKey) return;
+    if (!state.editingProject || el("projectEditor").hidden) return;
+
+    /* F2 / Del → همان دکمه‌های داخل ردیف کلیک می‌شوند تا «بازگردانی» در
+       توست و حفظِ فوکوس دقیقاً مثل مسیر موشواره کار کند.             */
+    if (e.key === "F2" || e.key === "Delete") {
+      const row = activeEditorRow();
+      if (!row) return;
+      const btn = row.querySelector(e.key === "F2" ? "[data-copy-row]" : "[data-del-row]");
+      if (!btn) return;
+      e.preventDefault(); btn.click(); return;
+    }
+    if (e.key === "n" || e.key === "N") {
+      /* «افزودن» فقط در تبی معنا دارد که دکمه‌ی افزودنِ همان تب دیده شود؛
+         وگرنه کاربر در تبِ «خدمات» با زدن N یک یونیتِ نامرئی می‌ساخت. */
+      if (activeEditorTab() !== "units") return;
+      e.preventDefault();
+      clickAddRow(e.shiftKey ? "unit:wall" : "unit:ground");
+      return;
+    }
+    if (e.key === "d" || e.key === "D") {
+      if (activeEditorTab() !== "units") return;
+      e.preventDefault(); const b = el("btnAutoDoors"); if (b) b.click();
+    }
+  });
+
 }
 
 /* ==========================================================================
@@ -9391,13 +10052,36 @@ if (typeof module !== "undefined" && module.exports) {
         <span class="search-kbd">/</span>
         <div class="search-drop" id="searchDrop" hidden></div>
       </div>
-      <button class="icon-btn" id="btnRefresh" type="button" aria-label="به‌روزرسانی داده‌ها" title="به‌روزرسانی داده‌ها از پایگاه‌داده">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
-      </button>
-      <button class="icon-btn" id="btnTheme" type="button" aria-label="تغییر پوسته" title="پوسته‌ی روشن/تاریک"></button>
-      <button class="btn primary" id="btnQuickProject" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <!-- ★ D4/M7: سه ورودیِ موازی («پروژه‌ی جدید» در نوار بالا + «پروژه‌ی جدید» در
+           صفحه‌ی پروژه‌ها + «قیمت‌گیری سریع» در داشبورد) به **یک** ورودی تقلیل یافت.
+           پیش‌تر کاربر در هر بار شروعِ کار باید تصمیم می‌گرفت کدام را بزند.
+           کنش‌های کم‌کاربرد (پوسته، راهنمای کلیدها، به‌روزرسانی داده) به منوی
+           سرریز رفتند تا نوار بالا فقط «شروع کار» و «جست‌وجو» داشته باشد. -->
+      <div class="ovf" id="ovfTop">
+        <button class="ovf-btn" id="btnTopMenu" type="button" aria-label="ابزارها و تنظیمات نمایش"
+                aria-haspopup="true" aria-expanded="false" title="ابزارها (پوسته، راهنمای کلیدها)">⋯</button>
+        <div class="ovf-menu" role="menu" aria-label="ابزارها">
+          <button class="ovf-item" id="btnRefresh" type="button" role="menuitem"
+                  title="به‌روزرسانی داده‌ها از پایگاه‌داده">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+            به‌روزرسانی داده‌ها
+          </button>
+          <button class="ovf-item" id="btnTheme" type="button" role="menuitem" title="پوسته‌ی روشن/تاریک">
+            پوسته‌ی روشن / تاریک
+          </button>
+          <div class="ovf-sep" role="none"></div>
+          <button class="ovf-item" id="btnKeys" type="button" role="menuitem" title="فهرست همه‌ی میانبرهای کیبورد">
+            راهنمای کلیدها <kbd class="kbd">؟</kbd>
+          </button>
+        </div>
+      </div>
+      <!-- ★ P1/P2: این دکمه دیگر مودال باز نمی‌کند؛ مستقیماً ویرایشگر را با یک
+           یونیتِ پیش‌فرض باز می‌کند و فوکوس را روی «عنوان» می‌گذارد. -->
+      <button class="btn primary btn-hero" id="btnQuickProject" type="button"
+              title="ویرایشگر را فوراً با یک یونیتِ پیش‌فرض باز می‌کند (Ctrl+N)">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         پروژه‌ی جدید
+        <kbd class="kbd">Ctrl+N</kbd>
       </button>
     </div>
   </header>
@@ -9455,18 +10139,26 @@ if (typeof module !== "undefined" && module.exports) {
           </div>
           <div class="card-body"><div class="chart" id="salesChart" role="img" aria-label="نمودار فروش ماه‌های اخیر"></div></div>
         </div>
+      </div>
 
-        <div class="card">
-          <div class="card-head"><h3>راهنمای سریع</h3></div>
-          <div class="card-body" style="padding-top:.4rem;padding-bottom:.6rem">
-            <ol class="guide">
-              <li>قیمت روز ورق، یراق و خدمات را در <a data-goto="materials">متریال و خدمات</a> وارد کنید.</li>
-              <li>ترکیب پرکاربرد خود را یک‌بار در <a data-goto="styles">سبک‌ها</a> ذخیره کنید.</li>
-              <li>در <a data-goto="projects">پروژه‌ها</a> یونیت‌ها، درها و کشوها را با ابعاد دقیق بسازید.</li>
-              <li>سود، نصب، تخفیف و مالیات را در نوار پایین تنظیم و <b>ریز قیمت‌ها</b> را ببینید.</li>
-              <li>از صفحه‌ی <a data-goto="invoice">فاکتور</a> چاپ، PDF یا اکسل بگیرید.</li>
-            </ol>
-          </div>
+      <!-- ★ D3: «راهنمای سریع» پیش‌تر یک کارتِ همیشه‌باز بود که هر بارِ ورود،
+           نیمی از نمای داشبورد را می‌گرفت — ولی محتوایش آموزشیِ ثابت است و بعد
+           از هفته‌ی اول خوانده نمی‌شود. طبق اصلِ افشای تدریجی، حالا پیش‌فرض
+           **بسته** است و فقط یک خط خلاصه نشان می‌دهد؛ با یک کلیک (یا Enter)
+           باز می‌شود. محتوا حذف نشده، فقط از دیدِ روزانه بیرون رفته. -->
+      <div class="card collapsible collapsed" id="guideCard">
+        <div class="card-head" id="guideHead" role="button" tabindex="0"
+             aria-expanded="false" aria-controls="guideBody">
+          <h3>راهنمای سریع <span class="head-peek">— ۵ گام از قیمت متریال تا چاپ فاکتور</span></h3>
+        </div>
+        <div class="card-body" id="guideBody" style="padding-top:.4rem;padding-bottom:.6rem">
+          <ol class="guide">
+            <li>قیمت روز ورق، یراق و خدمات را در <a data-goto="materials">متریال و خدمات</a> وارد کنید.</li>
+            <li>ترکیب پرکاربرد خود را یک‌بار در <a data-goto="styles">سبک‌ها</a> ذخیره کنید.</li>
+            <li>با <kbd class="kbd">Ctrl</kbd>+<kbd class="kbd">N</kbd> پروژه بسازید و یونیت‌ها را با <kbd class="kbd">N</kbd> اضافه کنید.</li>
+            <li>سود، نصب، تخفیف و مالیات را در نوار پایین تنظیم و <b>ریز قیمت‌ها</b> را ببینید.</li>
+            <li>با <kbd class="kbd">Ctrl</kbd>+<kbd class="kbd">Enter</kbd> ذخیره و مستقیم به <a data-goto="invoice">فاکتور</a> بروید.</li>
+          </ol>
         </div>
       </div>
 
@@ -9503,13 +10195,17 @@ if (typeof module !== "undefined" && module.exports) {
           <option value="canceled">لغوشده</option>
         </select>
         <div class="spacer"></div>
-        <button class="btn outline" id="btnQuickQuote" type="button" title="ساخت یک پروژه‌ی کامل فقط با واردکردن متراژ — برای جواب‌دادن به تماس مشتری">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <!-- ★ D4: دکمه‌ی «پروژه‌ی جدید» این‌جا حذف شد. نوارِ بالای برنامه در
+             **همه‌ی صفحه‌ها** از جمله همین صفحه دیده می‌شود و همان یک دکمه‌ی
+             بزرگ (btn-hero + Ctrl+N) را دارد. دو ورودیِ هم‌وزن برای یک کار، کاربر
+             را در هر بار شروع وادار به انتخاب می‌کرد.
+             «قیمت‌گیری سریع» چون کنشی *متفاوت* است (پیش‌فاکتورِ تلفنی بر پایه‌ی
+             متراژ) می‌ماند، ولی یک پله کوچک‌تر از کنشِ اصلی و با میانبرِ خودش. -->
+        <button class="btn outline" id="btnQuickQuote" type="button"
+                title="ساخت یک پروژه‌ی کامل فقط با واردکردن متراژ — برای جواب‌دادن به تماس مشتری (Ctrl+Shift+N)">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           قیمت‌گیری سریع
-        </button>
-        <button class="btn primary" id="btnNewProject" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          پروژه‌ی جدید
+          <kbd class="kbd">Ctrl+⇧+N</kbd>
         </button>
       </div>
 
@@ -9550,14 +10246,37 @@ if (typeof module !== "undefined" && module.exports) {
 
             <span class="eb-sep" aria-hidden="true"></span>
 
-            <button class="btn ghost sm" id="btnDupProject" type="button" title="یک کپیِ کامل از این پروژه بساز (ابتدا تغییرات ذخیره می‌شود)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              کپی پروژه
-            </button>
             <button class="btn outline sm" id="btnWorkshop" type="button" title="برش‌نامه، خلاصه‌ی ورق و فهرست خرید">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.1-.6-.6-2.1z"/></svg>
               برش‌نامه و خرید
             </button>
+
+            <!-- ★ M8/M9/M10/M11: چهار کنشِ کم‌کاربرد که پیش‌تر پراکنده بودند
+                 («کپی پروژه» در نوار ویرایشگر، «مدیریت الگوها» در نوار ابزار
+                 یونیت‌ها، «اعمال سبک» و «حذف بخش» در نوار بخش‌ها) در **یک** منوی
+                 سرریز جمع شدند. دو نکته‌ی مهم:
+                 ۱) «حذف بخش» دیگر کنارِ «افزودن بخش» نیست — دو کنش متضاد با
+                    فاصله‌ی چند پیکسل، منبعِ اصلیِ حذفِ اشتباه بود.
+                 ۲) نوار ویرایشگر فقط کنش‌های جریانِ اصلی را نگه داشته، پس
+                    «ذخیره» و «صدور فاکتور» بدون رقیبِ بصری، بزرگ‌ترین هدف‌اند. -->
+            <div class="ovf" id="ovfEditor">
+              <button class="ovf-btn" id="btnEditorMenu" type="button" aria-label="کنش‌های بیشترِ پروژه و بخش"
+                      aria-haspopup="true" aria-expanded="false" title="کنش‌های بیشتر">⋯</button>
+              <div class="ovf-menu" role="menu" aria-label="کنش‌های بیشتر">
+                <div class="ovf-label" role="presentation">پروژه</div>
+                <button class="ovf-item" id="btnDupProject" type="button" role="menuitem"
+                        title="یک کپیِ کامل از این پروژه بساز (ابتدا تغییرات ذخیره می‌شود)">کپی پروژه</button>
+                <div class="ovf-sep" role="none"></div>
+                <div class="ovf-label" role="presentation">بخشِ جاری</div>
+                <button class="ovf-item" id="btnApplyStyle" type="button" role="menuitem"
+                        title="سبکِ انتخاب‌شده را روی همه‌ی یونیت‌ها و درهای این بخش اعمال می‌کند">اعمال سبک روی بخش</button>
+                <button class="ovf-item" id="btnManageTpl" type="button" role="menuitem"
+                        title="دیدن، ویرایش و حذف الگوهای ذخیره‌شده">مدیریت الگوهای یونیت</button>
+                <div class="ovf-sep" role="none"></div>
+                <button class="ovf-item danger" id="btnDelSection" type="button" role="menuitem"
+                        title="حذف بخشِ جاری (با تأیید)">حذف بخشِ جاری</button>
+              </div>
+            </div>
 
             <span class="eb-sep" aria-hidden="true"></span>
 
@@ -9611,20 +10330,34 @@ if (typeof module !== "undefined" && module.exports) {
           <div class="card-head">
             <h3>بخش‌ها (سبک‌ها) <span class="sub">در یک پروژه چند بخش با سبک‌های متفاوت بسازید</span></h3>
             <div class="card-actions">
-              <button class="btn ghost sm" id="btnDelSection" type="button">حذف بخش</button>
-              <button class="btn ghost sm" id="btnAddSection" type="button">＋ افزودن بخش</button>
+              <!-- ★ M10: «حذف بخش» از این‌جا برداشته شد و به منوی ⋯ نوارِ
+                   ویرایشگر رفت. نشستنِ «حذف» دقیقاً کنارِ «افزودن» — دو کنش
+                   متضاد با فاصله‌ی چند پیکسل — منبعِ اصلیِ حذفِ اشتباه بود. -->
+              <button class="btn ghost sm" id="btnAddSection" type="button" title="یک بخش (سبک) تازه به این پروژه اضافه کنید">＋ افزودن بخش</button>
             </div>
           </div>
           <div class="card-body">
             <div class="sec-pills" id="secPills"></div>
-            <div class="section-bar">
+            <!-- ★ افشای تدریجی: این نوار «یک‌بار برای هر بخش» تنظیم می‌شود
+                 (نام، سبک، پرت ورق، سربار) ولی پیش‌تر همیشه باز بود و فضای
+                 بالای جدولِ یونیت‌ها — سطحِ اصلیِ کار — را می‌گرفت. حالا پشتِ
+                 یک کلیک است و خلاصه‌اش در همان خط دیده می‌شود. -->
+            <button class="tb-drawer-toggle" id="btnSecBar" type="button"
+                    aria-expanded="false" aria-controls="secBarWrap" style="margin-bottom:.5rem">
+              <svg class="tb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              <span class="tb-drawer-title">تنظیمات بخش</span>
+              <span class="tb-summary" id="secBarPeek">—</span>
+            </button>
+            <div class="section-bar" id="secBarWrap" hidden>
               <label>نام بخش:
                 <input type="text" id="secName" style="width:8rem">
               </label>
               <label>سبک:
                 <select id="secStyle" aria-label="سبک بخش"></select>
               </label>
-              <button class="btn outline sm" id="btnApplyStyle" type="button" title="متریالِ سبک روی همه‌ی یونیت‌ها، درها و کشوها اعمال می‌شود">اعمال سبک روی بخش</button>
+              <!-- ★ M9: «اعمال سبک روی بخش» به منوی ⋯ نوار ویرایشگر رفت.
+                   انتخابِ خودِ سبک این‌جا می‌ماند (چون بخشی از تنظیم بخش است)،
+                   ولی «اعمال» یک کنشِ یک‌باره است و نباید همیشه در دید باشد. -->
               <label>پرت ورق ٪:
                 <input type="text" id="secWaste" class="narrow" inputmode="numeric" data-no-sep>
               </label>
@@ -9656,12 +10389,18 @@ if (typeof module !== "undefined" && module.exports) {
 
             <div class="tab-panel active" id="tab-units" role="tabpanel">
               <div class="unit-tools">
-                <button class="btn outline sm" id="btnAutoDoors" type="button" title="برای یونیت‌هایی که در ندارند، از روی طول و ارتفاعشان درِ هم‌اندازه می‌سازد">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M18 17.5 18.8 20l2.2.8-2.2.8-.8 2.4-.8-2.4-2.2-.8 2.2-.8z"/></svg>
+                <!-- ★ P7/K3: «ساخت خودکار درها» پرتکرارترین کنشِ بعد از واردکردن
+                     ابعاد است (بعد از هر تغییرِ طول یونیت لازم می‌شود). پیش‌تر
+                     `btn outline sm` = ۲۹٫۶px بود؛ حالا هدفِ بزرگ‌تر + میانبرِ `D`. -->
+                <button class="btn outline" id="btnAutoDoors" type="button"
+                        title="برای یونیت‌هایی که در ندارند، از روی طول و ارتفاعشان درِ هم‌اندازه می‌سازد (D)">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M18 17.5 18.8 20l2.2.8-2.2.8-.8 2.4-.8-2.4-2.2-.8 2.2-.8z"/></svg>
                   ساخت خودکار درها
+                  <kbd class="kbd">D</kbd>
                 </button>
-                <button class="btn outline sm" id="btnFitDoors" type="button" title="اگر طول یونیت را عوض کرده‌اید، عرض لنگه‌های در را دوباره با یونیت اندازه می‌کند">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+                <button class="btn outline" id="btnFitDoors" type="button"
+                        title="اگر طول یونیت را عوض کرده‌اید، عرض لنگه‌های در را دوباره با یونیت اندازه می‌کند">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
                   هم‌اندازه‌سازی درها
                 </button>
                 <span class="ut-sep"></span>
@@ -9669,24 +10408,67 @@ if (typeof module !== "undefined" && module.exports) {
                   <select id="tplSelect" aria-label="الگوی یونیت"></select>
                 </label>
                 <button class="btn ghost sm" id="btnUseTpl" type="button" title="الگوی انتخاب‌شده را به این بخش اضافه می‌کند">＋ از الگو</button>
-                <button class="btn ghost sm" id="btnManageTpl" type="button" title="دیدن، ویرایش و حذف الگوهای ذخیره‌شده">مدیریت الگوها</button>
+                <!-- ★ M8: «مدیریت الگوها» به منوی ⋯ نوار ویرایشگر رفت. ذخیره‌ی
+                     الگو همچنان از دکمه‌ی «الگو» در همان ردیف انجام می‌شود. -->
                 <span class="tiny muted ut-hint">برای ذخیره‌ی یک یونیت به‌عنوان الگو، از دکمه‌ی «الگو» در همان ردیف استفاده کنید.</span>
               </div>
               <div class="table-wrap grid-head"><table class="data center" id="tblUnits"></table></div>
-              <div class="add-unit-row">
-                <button class="btn ghost sm add-row" data-add="unit:ground" type="button" title="یونیت زمینی با ابعاد پیش‌فرض (قابل تغییر در تنظیمات)">＋ یونیت زمینی</button>
-                <button class="btn ghost sm add-row" data-add="unit:wall" type="button" title="یونیت دیواری با ابعاد پیش‌فرض (قابل تغییر در تنظیمات)">＋ یونیت دیواری</button>
-                <button class="btn ghost sm add-row" data-add="unit:tall" type="button" title="کمد ایستاده با ابعاد پیش‌فرض (قابل تغییر در تنظیمات)">＋ کمد ایستاده</button>
+              <!-- ═══════════ ★ P3: نوارِ افزودنِ چسبان (قانونِ فیتز) ═══════════
+                   پیشین: سه دکمه‌ی `btn ghost sm` = **۲۹٫۶px** در یک ردیفِ
+                   غیرچسبانِ زیرِ جدول. یعنی کوچک‌ترین هدفِ کل رابط، به
+                   پرتکرارترین کنشِ روزانه (افزودن یونیت، ~۵۰ بار در روز)
+                   اختصاص یافته بود و وقتی کاربر وسطِ جدولِ بلند بود، باید
+                   اسکرول می‌کرد تا پیدایشان کند.
+                   اکنون: نوار **چسبان** (همیشه در دید و در ناحیه‌ی طبیعیِ دست)،
+                   هدفِ **۴۸px**، و Split-Button: بدنه‌ی بزرگ = «یونیت زمینی»
+                   (≈۸۰٪ موارد)، فلشِ کوچک = دیواری / ایستاده.
+                   به‌علاوه `N` و `⇧N` تا اصلاً نیازی به هدف‌گیری نباشد. -->
+              <div class="add-bar">
+                <div class="split">
+                  <button class="btn primary btn-hero split-main add-row" data-add="unit:ground" type="button"
+                          title="یونیت زمینی با ابعاد پیش‌فرض (N)">
+                    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    افزودن یونیت زمینی
+                    <kbd class="kbd">N</kbd>
+                  </button>
+                  <button class="btn primary btn-hero split-more" id="btnUnitTypeMore" type="button"
+                          aria-haspopup="true" aria-expanded="false" aria-label="انواع دیگر یونیت"
+                          title="یونیت دیواری یا کمد ایستاده">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
+                  <div class="ovf-menu" id="unitTypeMenu" role="menu" aria-label="انواع یونیت">
+                    <button class="ovf-item add-row" data-add="unit:wall" type="button" role="menuitem"
+                            title="یونیت دیواری با ابعاد پیش‌فرض (⇧N)">یونیت دیواری <kbd class="kbd">⇧N</kbd></button>
+                    <button class="ovf-item add-row" data-add="unit:tall" type="button" role="menuitem"
+                            title="کمد ایستاده با ابعاد پیش‌فرض">کمد ایستاده</button>
+                  </div>
+                </div>
+                <span class="add-hint">
+                  <kbd class="kbd">Enter</kbd> در آخرین سلول = ردیف بعدی
+                </span>
               </div>
               <p class="tiny muted" style="margin-top:.4rem">ابعاد هر نوع به‌صورت پیش‌فرض از «تنظیمات → ابعاد پیش‌فرض یونیت‌ها» می‌آید و با تغییر نوع یونیت هم خودکار اعمال می‌شود. برای انتخاب متریال و یراق هر یونیت، روی «جزئیات» ردیف آن کلیک کنید.</p>
             </div>
             <div class="tab-panel" id="tab-doors" role="tabpanel">
               <div class="table-wrap grid-head"><table class="data center" id="tblDoors"></table></div>
-              <button class="btn ghost sm add-row" data-add="doors" type="button">＋ افزودن در</button>
+              <!-- ★ P3: همان نوارِ چسبانِ ۴۸px برای هر تب — الگوی یکسان، پس
+                   کاربر هیچ چیز تازه‌ای یاد نمی‌گیرد. -->
+              <div class="add-bar">
+                <button class="btn primary btn-hero add-row" data-add="doors" type="button" title="یک لنگه در به یونیتِ جاری اضافه کنید">
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  افزودن در
+                </button>
+                <span class="add-hint">برای ساختِ همه‌ی درها از روی ابعاد یونیت، <kbd class="kbd">D</kbd> را در تب یونیت‌ها بزنید</span>
+              </div>
             </div>
             <div class="tab-panel" id="tab-drawers" role="tabpanel">
               <div class="table-wrap grid-head"><table class="data center" id="tblDrawers"></table></div>
-              <button class="btn ghost sm add-row" data-add="drawers" type="button">＋ افزودن کشو</button>
+              <div class="add-bar">
+                <button class="btn primary btn-hero add-row" data-add="drawers" type="button" title="یک کشو به یونیتِ جاری اضافه کنید">
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  افزودن کشو
+                </button>
+              </div>
             </div>
             <div class="tab-panel" id="tab-facade" role="tabpanel">
               <div class="section-bar" style="margin-bottom:.8rem">
@@ -9704,12 +10486,22 @@ if (typeof module !== "undefined" && module.exports) {
               </div>
               <div id="facadeRowsWrap">
                 <div class="table-wrap grid-head"><table class="data center" id="tblFacade"></table></div>
-                <button class="btn ghost sm add-row" data-add="facade" type="button">＋ افزودن ردیف درنما</button>
+                <div class="add-bar">
+                <button class="btn primary btn-hero add-row" data-add="facade" type="button" title="یک ردیف درنما اضافه کنید">
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  افزودن ردیف درنما
+                </button>
+              </div>
               </div>
             </div>
             <div class="tab-panel" id="tab-extras" role="tabpanel">
               <div class="table-wrap grid-head"><table class="data center" id="tblExtras"></table></div>
-              <button class="btn ghost sm add-row" data-add="extras" type="button">＋ افزودن ردیف</button>
+              <div class="add-bar">
+                <button class="btn primary btn-hero add-row" data-add="extras" type="button" title="یک قلم اضافه/اکسسوری اضافه کنید">
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  افزودن قلم
+                </button>
+              </div>
             </div>
             <div class="tab-panel" id="tab-services" role="tabpanel">
               <div class="section-bar" style="margin-bottom:.8rem">
@@ -9719,7 +10511,12 @@ if (typeof module !== "undefined" && module.exports) {
                 <span class="tiny muted">مبنا: مقدار ردیف خودکار از روی آمار بخش محاسبه می‌شود (تعداد یونیت، لنگه در، متر طول…)</span>
               </div>
               <div class="table-wrap grid-head"><table class="data center" id="tblServices"></table></div>
-              <button class="btn ghost sm add-row" data-add="services" type="button">＋ افزودن خدمت</button>
+              <div class="add-bar">
+                <button class="btn primary btn-hero add-row" data-add="services" type="button" title="یک خدمت (اجرت) به این بخش اضافه کنید">
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  افزودن خدمت
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -9838,20 +10635,26 @@ if (typeof module !== "undefined" && module.exports) {
         </div>
         <span class="badge b-final" id="matCurBadge"></span>
         <div class="spacer"></div>
-        <button class="btn ghost" id="btnMatHistory" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><polyline points="3 3 3 8 8 8"/><polyline points="12 7.5 12 12 15.5 14"/></svg>
-          تاریخچه‌ی قیمت
-        </button>
-        <button class="btn ghost" id="btnMatExcel" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          خروجی اکسل
-        </button>
-        <button class="btn outline" id="btnBulkPrice" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
-          تغییر دسته‌جمعی قیمت
-        </button>
-        <button class="btn primary" id="btnNewMaterial" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <!-- ★ M2/M3/M4: سه کنشِ کم‌کاربرد («تاریخچه‌ی قیمت»، «خروجی اکسل»،
+             «تغییر دسته‌جمعی») پیش‌تر هر سه در نوار ابزار بودند و با «افزودن
+             قلم» — پرتکرارترین کنشِ این صفحه — هم‌وزن دیده می‌شدند. حالا در
+             منوی ⋯ هستند و نوار فقط «جست‌وجو» و «افزودن قلم» دارد.
+             ★ قانون فیتز: «افزودن قلم» به btn-hero (۴۸px) ارتقا یافت و در
+             دورترین نقطه‌ی دسترس (گوشه‌ی چپِ نوار، جایی که چشمِ راست‌به‌چپ
+             پایانِ سطر را می‌بیند) قرار گرفت. -->
+        <div class="ovf" id="ovfMat">
+          <button class="ovf-btn" id="btnMatMenu" type="button" aria-label="ابزارهای متریال"
+                  aria-haspopup="true" aria-expanded="false" title="ابزارهای متریال">⋯</button>
+          <div class="ovf-menu" role="menu" aria-label="ابزارهای متریال">
+            <button class="ovf-item" id="btnBulkPrice" type="button" role="menuitem"
+                    title="اعمال یک درصد افزایش/کاهش روی دسته‌ای از قیمت‌ها">تغییر دسته‌جمعی قیمت</button>
+            <button class="ovf-item" id="btnMatHistory" type="button" role="menuitem"
+                    title="سابقه‌ی تغییرات قیمت هر قلم">تاریخچه‌ی قیمت</button>
+            <button class="ovf-item" id="btnMatExcel" type="button" role="menuitem">خروجی اکسل</button>
+          </div>
+        </div>
+        <button class="btn primary btn-hero" id="btnNewMaterial" type="button" title="افزودن یک قلم متریال یا خدمت">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           افزودن قلم
         </button>
       </div>
@@ -9926,17 +10729,30 @@ if (typeof module !== "undefined" && module.exports) {
             <label class="switch"><input type="checkbox" id="invShowCost"><span class="track"></span><span class="sw-label">نمایش هزینه‌ی تمام‌شده <span class="tiny muted">(نسخه‌ی داخلی)</span></span></label>
             <label class="switch"><input type="checkbox" id="invShowStats" checked><span class="track"></span><span class="sw-label">نمایش آمار (یونیت، متراژ، ورق)</span></label>
 
-            <button class="btn primary block" id="btnRefreshInv" type="button">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
-              به‌روزرسانی فاکتور
+            <!-- ★ D2/P5: دکمه‌ی «به‌روزرسانی فاکتور» حذف شد.
+                 دلیل: محاسبه در ویرایشگر پروژه **خودکار** است (scheduleRecalc)،
+                 پس در صفحه‌ی فاکتور هم خودکار شد (هنگامِ ورود و پسِ هر تغییرِ
+                 گزینه). یک دکمه‌ی `btn primary block` — بزرگ‌ترین و مرکزی‌ترین
+                 هدفِ کل پنل — به کاری اختصاص یافته بود که کاربر هرگز نباید
+                 دستی انجام دهد. آن فضا به **چاپ** داده شد، چون همان کاری است
+                 که کاربر در ۸۰٪ مواقع می‌خواهد (قانون فیتز). -->
+            <button class="btn primary btn-hero block" id="btnPrintInv" type="button"
+                    title="چاپ فاکتور (Ctrl+P)">
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              چاپ فاکتور
+              <kbd class="kbd">Ctrl+P</kbd>
             </button>
-            <div style="display:flex;gap:.5rem">
-              <button class="btn outline" id="btnPrintInv" type="button" style="flex:1">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                چاپ
-              </button>
-              <button class="btn ghost" id="btnPdfInv" type="button" style="flex:1">PDF</button>
-              <button class="btn ghost" id="btnXlsInv" type="button" style="flex:1">اکسل</button>
+            <!-- ★ M12: «PDF» در دسترس می‌ماند (کم‌کاربرد ولی ارزشمند)؛ «اکسل»
+                 به منوی ⋯ رفت چون در جریانِ اصلیِ صدور فاکتور اختلال می‌کرد. -->
+            <div style="display:flex;gap:.5rem;align-items:center">
+              <button class="btn outline" id="btnPdfInv" type="button" style="flex:1">PDF</button>
+              <div class="ovf" id="ovfInv" style="flex:0 0 auto">
+                <button class="ovf-btn" id="btnInvMenu" type="button" aria-label="خروجی‌های دیگر"
+                        aria-haspopup="true" aria-expanded="false" title="خروجی‌های دیگر">⋯</button>
+                <div class="ovf-menu" role="menu" aria-label="خروجی‌های دیگر">
+                  <button class="ovf-item" id="btnXlsInv" type="button" role="menuitem">خروجی اکسل</button>
+                </div>
+              </div>
             </div>
             <button class="btn success block" id="btnSaveInv" type="button">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -10226,8 +11042,13 @@ if (typeof module !== "undefined" && module.exports) {
         <div class="field"><label for="pfCustomer">نام مشتری</label><input type="text" id="pfCustomer"></div>
         <div class="field"><label for="pfMobile">همراه</label><input type="tel" id="pfMobile" placeholder="۰۹۱۲…"></div>
         <div class="field"><label for="pfStyle">سبک بخش اول</label><select id="pfStyle"></select></div>
-        <div class="field"><label for="pfStatus">وضعیت</label>
-          <select id="pfStatus"><option value="draft">پیش‌نویس</option><option value="open">در جریان</option></select>
+        <!-- ★ D1: فیلد «وضعیت» از فرمِ ساخت حذف شد. در لحظه‌ی ساخت، یک پروژه
+             *همیشه* «پیش‌نویس» است — پرسیدنِ وضعیت در قدمِ اول، یک تصمیمِ
+             چرخه‌ی عمر را وسطِ کارِ قیمت‌گذاری می‌آورد و بارِ شناختیِ بیهوده
+             می‌سازد. وضعیت در کارتِ «مشخصات پروژه» داخلِ ویرایشگر (edStatus)
+             در دسترس می‌ماند، یعنی دقیقاً همان‌جا که معنا دارد. -->
+        <div class="field"><span class="lbl">وضعیت</span>
+          <p class="tiny muted" style="margin:.2rem 0 0">پیش‌نویس — بعداً از «مشخصات پروژه» در ویرایشگر تغییر دهید.</p>
         </div>
       </div>
     </div>
@@ -10402,6 +11223,52 @@ if (typeof module !== "undefined" && module.exports) {
       <div class="spacer"></div>
       <button class="btn ghost" id="btnConfirmCancel" data-close type="button">انصراف</button>
     </div>
+  </div>
+</div>
+
+<!-- ═══════════ راهنمای کلیدها ═══════════
+     ★ اصلِ Keyboard-First فقط وقتی به کاربر حرفه‌ای کمک می‌کند که میانبرها
+     **کشف‌شدنی** باشند. این مودال با «؟» یا از منوی ⋯ باز می‌شود و بیرونِ
+     جریانِ کار است (فضای دائمی اشغال نمی‌کند). میانبرهایی که از قبل بودند
+     بدون تغییر فهرست شده‌اند تا کاربر بداند چه چیزی تازه است. -->
+<div class="modal" id="modal-keys" role="dialog" aria-modal="true" aria-labelledby="keysTitle" style="width:min(34rem,100%)">
+  <div class="modal-head">
+    <h3 id="keysTitle">راهنمای کلیدها</h3>
+    <button class="icon-btn" data-close type="button" aria-label="بستن">✕</button>
+  </div>
+  <div class="modal-body">
+    <dl class="keys-grid">
+      <dt class="keys-sec" role="presentation">سراسری — همه‌جا</dt>
+      <dd class="keys-sec" role="presentation"></dd>
+      <dt><kbd class="kbd">Ctrl</kbd><kbd class="kbd">N</kbd></dt><dd>پروژه‌ی جدید — ویرایشگر فوراً باز می‌شود</dd>
+      <dt><kbd class="kbd">Ctrl</kbd><kbd class="kbd">⇧</kbd><kbd class="kbd">N</kbd></dt><dd>قیمت‌گیری سریع (با متراژ)</dd>
+      <dt><kbd class="kbd">/</kbd></dt><dd>جست‌وجوی سراسری</dd>
+      <dt><kbd class="kbd">Alt</kbd><kbd class="kbd">۱…۶</kbd></dt><dd>پرش به صفحه‌ها</dd>
+      <dt><kbd class="kbd">؟</kbd></dt><dd>همین راهنما</dd>
+      <dt><kbd class="kbd">Esc</kbd></dt><dd>بستن بالاترین لایه</dd>
+
+      <dt class="keys-sec" role="presentation">ویرایشگر پروژه</dt>
+      <dd class="keys-sec" role="presentation"></dd>
+      <dt><kbd class="kbd">N</kbd></dt><dd>افزودن یونیت زمینی</dd>
+      <dt><kbd class="kbd">⇧</kbd><kbd class="kbd">N</kbd></dt><dd>افزودن یونیت دیواری</dd>
+      <dt><kbd class="kbd">D</kbd></dt><dd>ساخت خودکار درها از روی ابعاد یونیت</dd>
+      <dt><kbd class="kbd">F2</kbd></dt><dd>کپی ردیفِ فعال</dd>
+      <dt><kbd class="kbd">Del</kbd></dt><dd>حذف ردیفِ فعال — با «بازگردانی» در پیام</dd>
+      <dt><kbd class="kbd">Enter</kbd></dt><dd>سلول بعدیِ همان ستون؛ در آخرین ردیف = ردیف جدید</dd>
+      <dt><kbd class="kbd">↑</kbd><kbd class="kbd">↓</kbd></dt><dd>یکی یکی؛ با <kbd class="kbd">⇧</kbd> ده‌تا ده‌تا</dd>
+      <dt><kbd class="kbd">Ctrl</kbd><kbd class="kbd">S</kbd></dt><dd>ذخیره</dd>
+      <dt><kbd class="kbd">Ctrl</kbd><kbd class="kbd">Enter</kbd></dt><dd>ذخیره و صدور فاکتور</dd>
+      <dt><kbd class="kbd">Ctrl</kbd><kbd class="kbd">B</kbd></dt><dd>ریز قیمت‌ها</dd>
+      <dt><kbd class="kbd">Ctrl</kbd><kbd class="kbd">Z</kbd> / <kbd class="kbd">Y</kbd></dt><dd>واگرد / بازانجام</dd>
+
+      <dt class="keys-sec" role="presentation">فاکتور</dt>
+      <dd class="keys-sec" role="presentation"></dd>
+      <dt><kbd class="kbd">Ctrl</kbd><kbd class="kbd">P</kbd></dt><dd>چاپ (به‌روزرسانی خودکار است — دکمه‌ی جدا ندارد)</dd>
+    </dl>
+  </div>
+  <div class="modal-foot">
+    <div class="spacer"></div>
+    <button class="btn primary" data-close type="button">بستن</button>
   </div>
 </div>
 

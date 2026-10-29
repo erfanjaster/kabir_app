@@ -118,13 +118,36 @@
         <span class="search-kbd">/</span>
         <div class="search-drop" id="searchDrop" hidden></div>
       </div>
-      <button class="icon-btn" id="btnRefresh" type="button" aria-label="به‌روزرسانی داده‌ها" title="به‌روزرسانی داده‌ها از پایگاه‌داده">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
-      </button>
-      <button class="icon-btn" id="btnTheme" type="button" aria-label="تغییر پوسته" title="پوسته‌ی روشن/تاریک"></button>
-      <button class="btn primary" id="btnQuickProject" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <!-- ★ D4/M7: سه ورودیِ موازی («پروژه‌ی جدید» در نوار بالا + «پروژه‌ی جدید» در
+           صفحه‌ی پروژه‌ها + «قیمت‌گیری سریع» در داشبورد) به **یک** ورودی تقلیل یافت.
+           پیش‌تر کاربر در هر بار شروعِ کار باید تصمیم می‌گرفت کدام را بزند.
+           کنش‌های کم‌کاربرد (پوسته، راهنمای کلیدها، به‌روزرسانی داده) به منوی
+           سرریز رفتند تا نوار بالا فقط «شروع کار» و «جست‌وجو» داشته باشد. -->
+      <div class="ovf" id="ovfTop">
+        <button class="ovf-btn" id="btnTopMenu" type="button" aria-label="ابزارها و تنظیمات نمایش"
+                aria-haspopup="true" aria-expanded="false" title="ابزارها (پوسته، راهنمای کلیدها)">⋯</button>
+        <div class="ovf-menu" role="menu" aria-label="ابزارها">
+          <button class="ovf-item" id="btnRefresh" type="button" role="menuitem"
+                  title="به‌روزرسانی داده‌ها از پایگاه‌داده">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+            به‌روزرسانی داده‌ها
+          </button>
+          <button class="ovf-item" id="btnTheme" type="button" role="menuitem" title="پوسته‌ی روشن/تاریک">
+            پوسته‌ی روشن / تاریک
+          </button>
+          <div class="ovf-sep" role="none"></div>
+          <button class="ovf-item" id="btnKeys" type="button" role="menuitem" title="فهرست همه‌ی میانبرهای کیبورد">
+            راهنمای کلیدها <kbd class="kbd">؟</kbd>
+          </button>
+        </div>
+      </div>
+      <!-- ★ P1/P2: این دکمه دیگر مودال باز نمی‌کند؛ مستقیماً ویرایشگر را با یک
+           یونیتِ پیش‌فرض باز می‌کند و فوکوس را روی «عنوان» می‌گذارد. -->
+      <button class="btn primary btn-hero" id="btnQuickProject" type="button"
+              title="ویرایشگر را فوراً با یک یونیتِ پیش‌فرض باز می‌کند (Ctrl+N)">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         پروژه‌ی جدید
+        <kbd class="kbd">Ctrl+N</kbd>
       </button>
     </div>
   </header>
@@ -182,18 +205,26 @@
           </div>
           <div class="card-body"><div class="chart" id="salesChart" role="img" aria-label="نمودار فروش ماه‌های اخیر"></div></div>
         </div>
+      </div>
 
-        <div class="card">
-          <div class="card-head"><h3>راهنمای سریع</h3></div>
-          <div class="card-body" style="padding-top:.4rem;padding-bottom:.6rem">
-            <ol class="guide">
-              <li>قیمت روز ورق، یراق و خدمات را در <a data-goto="materials">متریال و خدمات</a> وارد کنید.</li>
-              <li>ترکیب پرکاربرد خود را یک‌بار در <a data-goto="styles">سبک‌ها</a> ذخیره کنید.</li>
-              <li>در <a data-goto="projects">پروژه‌ها</a> یونیت‌ها، درها و کشوها را با ابعاد دقیق بسازید.</li>
-              <li>سود، نصب، تخفیف و مالیات را در نوار پایین تنظیم و <b>ریز قیمت‌ها</b> را ببینید.</li>
-              <li>از صفحه‌ی <a data-goto="invoice">فاکتور</a> چاپ، PDF یا اکسل بگیرید.</li>
-            </ol>
-          </div>
+      <!-- ★ D3: «راهنمای سریع» پیش‌تر یک کارتِ همیشه‌باز بود که هر بارِ ورود،
+           نیمی از نمای داشبورد را می‌گرفت — ولی محتوایش آموزشیِ ثابت است و بعد
+           از هفته‌ی اول خوانده نمی‌شود. طبق اصلِ افشای تدریجی، حالا پیش‌فرض
+           **بسته** است و فقط یک خط خلاصه نشان می‌دهد؛ با یک کلیک (یا Enter)
+           باز می‌شود. محتوا حذف نشده، فقط از دیدِ روزانه بیرون رفته. -->
+      <div class="card collapsible collapsed" id="guideCard">
+        <div class="card-head" id="guideHead" role="button" tabindex="0"
+             aria-expanded="false" aria-controls="guideBody">
+          <h3>راهنمای سریع <span class="head-peek">— ۵ گام از قیمت متریال تا چاپ فاکتور</span></h3>
+        </div>
+        <div class="card-body" id="guideBody" style="padding-top:.4rem;padding-bottom:.6rem">
+          <ol class="guide">
+            <li>قیمت روز ورق، یراق و خدمات را در <a data-goto="materials">متریال و خدمات</a> وارد کنید.</li>
+            <li>ترکیب پرکاربرد خود را یک‌بار در <a data-goto="styles">سبک‌ها</a> ذخیره کنید.</li>
+            <li>با <kbd class="kbd">Ctrl</kbd>+<kbd class="kbd">N</kbd> پروژه بسازید و یونیت‌ها را با <kbd class="kbd">N</kbd> اضافه کنید.</li>
+            <li>سود، نصب، تخفیف و مالیات را در نوار پایین تنظیم و <b>ریز قیمت‌ها</b> را ببینید.</li>
+            <li>با <kbd class="kbd">Ctrl</kbd>+<kbd class="kbd">Enter</kbd> ذخیره و مستقیم به <a data-goto="invoice">فاکتور</a> بروید.</li>
+          </ol>
         </div>
       </div>
 
@@ -230,13 +261,17 @@
           <option value="canceled">لغوشده</option>
         </select>
         <div class="spacer"></div>
-        <button class="btn outline" id="btnQuickQuote" type="button" title="ساخت یک پروژه‌ی کامل فقط با واردکردن متراژ — برای جواب‌دادن به تماس مشتری">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <!-- ★ D4: دکمه‌ی «پروژه‌ی جدید» این‌جا حذف شد. نوارِ بالای برنامه در
+             **همه‌ی صفحه‌ها** از جمله همین صفحه دیده می‌شود و همان یک دکمه‌ی
+             بزرگ (btn-hero + Ctrl+N) را دارد. دو ورودیِ هم‌وزن برای یک کار، کاربر
+             را در هر بار شروع وادار به انتخاب می‌کرد.
+             «قیمت‌گیری سریع» چون کنشی *متفاوت* است (پیش‌فاکتورِ تلفنی بر پایه‌ی
+             متراژ) می‌ماند، ولی یک پله کوچک‌تر از کنشِ اصلی و با میانبرِ خودش. -->
+        <button class="btn outline" id="btnQuickQuote" type="button"
+                title="ساخت یک پروژه‌ی کامل فقط با واردکردن متراژ — برای جواب‌دادن به تماس مشتری (Ctrl+Shift+N)">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           قیمت‌گیری سریع
-        </button>
-        <button class="btn primary" id="btnNewProject" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          پروژه‌ی جدید
+          <kbd class="kbd">Ctrl+⇧+N</kbd>
         </button>
       </div>
 
@@ -277,14 +312,37 @@
 
             <span class="eb-sep" aria-hidden="true"></span>
 
-            <button class="btn ghost sm" id="btnDupProject" type="button" title="یک کپیِ کامل از این پروژه بساز (ابتدا تغییرات ذخیره می‌شود)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              کپی پروژه
-            </button>
             <button class="btn outline sm" id="btnWorkshop" type="button" title="برش‌نامه، خلاصه‌ی ورق و فهرست خرید">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.1-.6-.6-2.1z"/></svg>
               برش‌نامه و خرید
             </button>
+
+            <!-- ★ M8/M9/M10/M11: چهار کنشِ کم‌کاربرد که پیش‌تر پراکنده بودند
+                 («کپی پروژه» در نوار ویرایشگر، «مدیریت الگوها» در نوار ابزار
+                 یونیت‌ها، «اعمال سبک» و «حذف بخش» در نوار بخش‌ها) در **یک** منوی
+                 سرریز جمع شدند. دو نکته‌ی مهم:
+                 ۱) «حذف بخش» دیگر کنارِ «افزودن بخش» نیست — دو کنش متضاد با
+                    فاصله‌ی چند پیکسل، منبعِ اصلیِ حذفِ اشتباه بود.
+                 ۲) نوار ویرایشگر فقط کنش‌های جریانِ اصلی را نگه داشته، پس
+                    «ذخیره» و «صدور فاکتور» بدون رقیبِ بصری، بزرگ‌ترین هدف‌اند. -->
+            <div class="ovf" id="ovfEditor">
+              <button class="ovf-btn" id="btnEditorMenu" type="button" aria-label="کنش‌های بیشترِ پروژه و بخش"
+                      aria-haspopup="true" aria-expanded="false" title="کنش‌های بیشتر">⋯</button>
+              <div class="ovf-menu" role="menu" aria-label="کنش‌های بیشتر">
+                <div class="ovf-label" role="presentation">پروژه</div>
+                <button class="ovf-item" id="btnDupProject" type="button" role="menuitem"
+                        title="یک کپیِ کامل از این پروژه بساز (ابتدا تغییرات ذخیره می‌شود)">کپی پروژه</button>
+                <div class="ovf-sep" role="none"></div>
+                <div class="ovf-label" role="presentation">بخشِ جاری</div>
+                <button class="ovf-item" id="btnApplyStyle" type="button" role="menuitem"
+                        title="سبکِ انتخاب‌شده را روی همه‌ی یونیت‌ها و درهای این بخش اعمال می‌کند">اعمال سبک روی بخش</button>
+                <button class="ovf-item" id="btnManageTpl" type="button" role="menuitem"
+                        title="دیدن، ویرایش و حذف الگوهای ذخیره‌شده">مدیریت الگوهای یونیت</button>
+                <div class="ovf-sep" role="none"></div>
+                <button class="ovf-item danger" id="btnDelSection" type="button" role="menuitem"
+                        title="حذف بخشِ جاری (با تأیید)">حذف بخشِ جاری</button>
+              </div>
+            </div>
 
             <span class="eb-sep" aria-hidden="true"></span>
 
@@ -338,20 +396,34 @@
           <div class="card-head">
             <h3>بخش‌ها (سبک‌ها) <span class="sub">در یک پروژه چند بخش با سبک‌های متفاوت بسازید</span></h3>
             <div class="card-actions">
-              <button class="btn ghost sm" id="btnDelSection" type="button">حذف بخش</button>
-              <button class="btn ghost sm" id="btnAddSection" type="button">＋ افزودن بخش</button>
+              <!-- ★ M10: «حذف بخش» از این‌جا برداشته شد و به منوی ⋯ نوارِ
+                   ویرایشگر رفت. نشستنِ «حذف» دقیقاً کنارِ «افزودن» — دو کنش
+                   متضاد با فاصله‌ی چند پیکسل — منبعِ اصلیِ حذفِ اشتباه بود. -->
+              <button class="btn ghost sm" id="btnAddSection" type="button" title="یک بخش (سبک) تازه به این پروژه اضافه کنید">＋ افزودن بخش</button>
             </div>
           </div>
           <div class="card-body">
             <div class="sec-pills" id="secPills"></div>
-            <div class="section-bar">
+            <!-- ★ افشای تدریجی: این نوار «یک‌بار برای هر بخش» تنظیم می‌شود
+                 (نام، سبک، پرت ورق، سربار) ولی پیش‌تر همیشه باز بود و فضای
+                 بالای جدولِ یونیت‌ها — سطحِ اصلیِ کار — را می‌گرفت. حالا پشتِ
+                 یک کلیک است و خلاصه‌اش در همان خط دیده می‌شود. -->
+            <button class="tb-drawer-toggle" id="btnSecBar" type="button"
+                    aria-expanded="false" aria-controls="secBarWrap" style="margin-bottom:.5rem">
+              <svg class="tb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              <span class="tb-drawer-title">تنظیمات بخش</span>
+              <span class="tb-summary" id="secBarPeek">—</span>
+            </button>
+            <div class="section-bar" id="secBarWrap" hidden>
               <label>نام بخش:
                 <input type="text" id="secName" style="width:8rem">
               </label>
               <label>سبک:
                 <select id="secStyle" aria-label="سبک بخش"></select>
               </label>
-              <button class="btn outline sm" id="btnApplyStyle" type="button" title="متریالِ سبک روی همه‌ی یونیت‌ها، درها و کشوها اعمال می‌شود">اعمال سبک روی بخش</button>
+              <!-- ★ M9: «اعمال سبک روی بخش» به منوی ⋯ نوار ویرایشگر رفت.
+                   انتخابِ خودِ سبک این‌جا می‌ماند (چون بخشی از تنظیم بخش است)،
+                   ولی «اعمال» یک کنشِ یک‌باره است و نباید همیشه در دید باشد. -->
               <label>پرت ورق ٪:
                 <input type="text" id="secWaste" class="narrow" inputmode="numeric" data-no-sep>
               </label>
@@ -383,12 +455,18 @@
 
             <div class="tab-panel active" id="tab-units" role="tabpanel">
               <div class="unit-tools">
-                <button class="btn outline sm" id="btnAutoDoors" type="button" title="برای یونیت‌هایی که در ندارند، از روی طول و ارتفاعشان درِ هم‌اندازه می‌سازد">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M18 17.5 18.8 20l2.2.8-2.2.8-.8 2.4-.8-2.4-2.2-.8 2.2-.8z"/></svg>
+                <!-- ★ P7/K3: «ساخت خودکار درها» پرتکرارترین کنشِ بعد از واردکردن
+                     ابعاد است (بعد از هر تغییرِ طول یونیت لازم می‌شود). پیش‌تر
+                     `btn outline sm` = ۲۹٫۶px بود؛ حالا هدفِ بزرگ‌تر + میانبرِ `D`. -->
+                <button class="btn outline" id="btnAutoDoors" type="button"
+                        title="برای یونیت‌هایی که در ندارند، از روی طول و ارتفاعشان درِ هم‌اندازه می‌سازد (D)">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M18 17.5 18.8 20l2.2.8-2.2.8-.8 2.4-.8-2.4-2.2-.8 2.2-.8z"/></svg>
                   ساخت خودکار درها
+                  <kbd class="kbd">D</kbd>
                 </button>
-                <button class="btn outline sm" id="btnFitDoors" type="button" title="اگر طول یونیت را عوض کرده‌اید، عرض لنگه‌های در را دوباره با یونیت اندازه می‌کند">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+                <button class="btn outline" id="btnFitDoors" type="button"
+                        title="اگر طول یونیت را عوض کرده‌اید، عرض لنگه‌های در را دوباره با یونیت اندازه می‌کند">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
                   هم‌اندازه‌سازی درها
                 </button>
                 <span class="ut-sep"></span>
@@ -396,24 +474,67 @@
                   <select id="tplSelect" aria-label="الگوی یونیت"></select>
                 </label>
                 <button class="btn ghost sm" id="btnUseTpl" type="button" title="الگوی انتخاب‌شده را به این بخش اضافه می‌کند">＋ از الگو</button>
-                <button class="btn ghost sm" id="btnManageTpl" type="button" title="دیدن، ویرایش و حذف الگوهای ذخیره‌شده">مدیریت الگوها</button>
+                <!-- ★ M8: «مدیریت الگوها» به منوی ⋯ نوار ویرایشگر رفت. ذخیره‌ی
+                     الگو همچنان از دکمه‌ی «الگو» در همان ردیف انجام می‌شود. -->
                 <span class="tiny muted ut-hint">برای ذخیره‌ی یک یونیت به‌عنوان الگو، از دکمه‌ی «الگو» در همان ردیف استفاده کنید.</span>
               </div>
               <div class="table-wrap grid-head"><table class="data center" id="tblUnits"></table></div>
-              <div class="add-unit-row">
-                <button class="btn ghost sm add-row" data-add="unit:ground" type="button" title="یونیت زمینی با ابعاد پیش‌فرض (قابل تغییر در تنظیمات)">＋ یونیت زمینی</button>
-                <button class="btn ghost sm add-row" data-add="unit:wall" type="button" title="یونیت دیواری با ابعاد پیش‌فرض (قابل تغییر در تنظیمات)">＋ یونیت دیواری</button>
-                <button class="btn ghost sm add-row" data-add="unit:tall" type="button" title="کمد ایستاده با ابعاد پیش‌فرض (قابل تغییر در تنظیمات)">＋ کمد ایستاده</button>
+              <!-- ═══════════ ★ P3: نوارِ افزودنِ چسبان (قانونِ فیتز) ═══════════
+                   پیشین: سه دکمه‌ی `btn ghost sm` = **۲۹٫۶px** در یک ردیفِ
+                   غیرچسبانِ زیرِ جدول. یعنی کوچک‌ترین هدفِ کل رابط، به
+                   پرتکرارترین کنشِ روزانه (افزودن یونیت، ~۵۰ بار در روز)
+                   اختصاص یافته بود و وقتی کاربر وسطِ جدولِ بلند بود، باید
+                   اسکرول می‌کرد تا پیدایشان کند.
+                   اکنون: نوار **چسبان** (همیشه در دید و در ناحیه‌ی طبیعیِ دست)،
+                   هدفِ **۴۸px**، و Split-Button: بدنه‌ی بزرگ = «یونیت زمینی»
+                   (≈۸۰٪ موارد)، فلشِ کوچک = دیواری / ایستاده.
+                   به‌علاوه `N` و `⇧N` تا اصلاً نیازی به هدف‌گیری نباشد. -->
+              <div class="add-bar">
+                <div class="split">
+                  <button class="btn primary btn-hero split-main add-row" data-add="unit:ground" type="button"
+                          title="یونیت زمینی با ابعاد پیش‌فرض (N)">
+                    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    افزودن یونیت زمینی
+                    <kbd class="kbd">N</kbd>
+                  </button>
+                  <button class="btn primary btn-hero split-more" id="btnUnitTypeMore" type="button"
+                          aria-haspopup="true" aria-expanded="false" aria-label="انواع دیگر یونیت"
+                          title="یونیت دیواری یا کمد ایستاده">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
+                  <div class="ovf-menu" id="unitTypeMenu" role="menu" aria-label="انواع یونیت">
+                    <button class="ovf-item add-row" data-add="unit:wall" type="button" role="menuitem"
+                            title="یونیت دیواری با ابعاد پیش‌فرض (⇧N)">یونیت دیواری <kbd class="kbd">⇧N</kbd></button>
+                    <button class="ovf-item add-row" data-add="unit:tall" type="button" role="menuitem"
+                            title="کمد ایستاده با ابعاد پیش‌فرض">کمد ایستاده</button>
+                  </div>
+                </div>
+                <span class="add-hint">
+                  <kbd class="kbd">Enter</kbd> در آخرین سلول = ردیف بعدی
+                </span>
               </div>
               <p class="tiny muted" style="margin-top:.4rem">ابعاد هر نوع به‌صورت پیش‌فرض از «تنظیمات → ابعاد پیش‌فرض یونیت‌ها» می‌آید و با تغییر نوع یونیت هم خودکار اعمال می‌شود. برای انتخاب متریال و یراق هر یونیت، روی «جزئیات» ردیف آن کلیک کنید.</p>
             </div>
             <div class="tab-panel" id="tab-doors" role="tabpanel">
               <div class="table-wrap grid-head"><table class="data center" id="tblDoors"></table></div>
-              <button class="btn ghost sm add-row" data-add="doors" type="button">＋ افزودن در</button>
+              <!-- ★ P3: همان نوارِ چسبانِ ۴۸px برای هر تب — الگوی یکسان، پس
+                   کاربر هیچ چیز تازه‌ای یاد نمی‌گیرد. -->
+              <div class="add-bar">
+                <button class="btn primary btn-hero add-row" data-add="doors" type="button" title="یک لنگه در به یونیتِ جاری اضافه کنید">
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  افزودن در
+                </button>
+                <span class="add-hint">برای ساختِ همه‌ی درها از روی ابعاد یونیت، <kbd class="kbd">D</kbd> را در تب یونیت‌ها بزنید</span>
+              </div>
             </div>
             <div class="tab-panel" id="tab-drawers" role="tabpanel">
               <div class="table-wrap grid-head"><table class="data center" id="tblDrawers"></table></div>
-              <button class="btn ghost sm add-row" data-add="drawers" type="button">＋ افزودن کشو</button>
+              <div class="add-bar">
+                <button class="btn primary btn-hero add-row" data-add="drawers" type="button" title="یک کشو به یونیتِ جاری اضافه کنید">
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  افزودن کشو
+                </button>
+              </div>
             </div>
             <div class="tab-panel" id="tab-facade" role="tabpanel">
               <div class="section-bar" style="margin-bottom:.8rem">
@@ -431,12 +552,22 @@
               </div>
               <div id="facadeRowsWrap">
                 <div class="table-wrap grid-head"><table class="data center" id="tblFacade"></table></div>
-                <button class="btn ghost sm add-row" data-add="facade" type="button">＋ افزودن ردیف درنما</button>
+                <div class="add-bar">
+                <button class="btn primary btn-hero add-row" data-add="facade" type="button" title="یک ردیف درنما اضافه کنید">
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  افزودن ردیف درنما
+                </button>
+              </div>
               </div>
             </div>
             <div class="tab-panel" id="tab-extras" role="tabpanel">
               <div class="table-wrap grid-head"><table class="data center" id="tblExtras"></table></div>
-              <button class="btn ghost sm add-row" data-add="extras" type="button">＋ افزودن ردیف</button>
+              <div class="add-bar">
+                <button class="btn primary btn-hero add-row" data-add="extras" type="button" title="یک قلم اضافه/اکسسوری اضافه کنید">
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  افزودن قلم
+                </button>
+              </div>
             </div>
             <div class="tab-panel" id="tab-services" role="tabpanel">
               <div class="section-bar" style="margin-bottom:.8rem">
@@ -446,7 +577,12 @@
                 <span class="tiny muted">مبنا: مقدار ردیف خودکار از روی آمار بخش محاسبه می‌شود (تعداد یونیت، لنگه در، متر طول…)</span>
               </div>
               <div class="table-wrap grid-head"><table class="data center" id="tblServices"></table></div>
-              <button class="btn ghost sm add-row" data-add="services" type="button">＋ افزودن خدمت</button>
+              <div class="add-bar">
+                <button class="btn primary btn-hero add-row" data-add="services" type="button" title="یک خدمت (اجرت) به این بخش اضافه کنید">
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  افزودن خدمت
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -565,20 +701,26 @@
         </div>
         <span class="badge b-final" id="matCurBadge"></span>
         <div class="spacer"></div>
-        <button class="btn ghost" id="btnMatHistory" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><polyline points="3 3 3 8 8 8"/><polyline points="12 7.5 12 12 15.5 14"/></svg>
-          تاریخچه‌ی قیمت
-        </button>
-        <button class="btn ghost" id="btnMatExcel" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          خروجی اکسل
-        </button>
-        <button class="btn outline" id="btnBulkPrice" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
-          تغییر دسته‌جمعی قیمت
-        </button>
-        <button class="btn primary" id="btnNewMaterial" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <!-- ★ M2/M3/M4: سه کنشِ کم‌کاربرد («تاریخچه‌ی قیمت»، «خروجی اکسل»،
+             «تغییر دسته‌جمعی») پیش‌تر هر سه در نوار ابزار بودند و با «افزودن
+             قلم» — پرتکرارترین کنشِ این صفحه — هم‌وزن دیده می‌شدند. حالا در
+             منوی ⋯ هستند و نوار فقط «جست‌وجو» و «افزودن قلم» دارد.
+             ★ قانون فیتز: «افزودن قلم» به btn-hero (۴۸px) ارتقا یافت و در
+             دورترین نقطه‌ی دسترس (گوشه‌ی چپِ نوار، جایی که چشمِ راست‌به‌چپ
+             پایانِ سطر را می‌بیند) قرار گرفت. -->
+        <div class="ovf" id="ovfMat">
+          <button class="ovf-btn" id="btnMatMenu" type="button" aria-label="ابزارهای متریال"
+                  aria-haspopup="true" aria-expanded="false" title="ابزارهای متریال">⋯</button>
+          <div class="ovf-menu" role="menu" aria-label="ابزارهای متریال">
+            <button class="ovf-item" id="btnBulkPrice" type="button" role="menuitem"
+                    title="اعمال یک درصد افزایش/کاهش روی دسته‌ای از قیمت‌ها">تغییر دسته‌جمعی قیمت</button>
+            <button class="ovf-item" id="btnMatHistory" type="button" role="menuitem"
+                    title="سابقه‌ی تغییرات قیمت هر قلم">تاریخچه‌ی قیمت</button>
+            <button class="ovf-item" id="btnMatExcel" type="button" role="menuitem">خروجی اکسل</button>
+          </div>
+        </div>
+        <button class="btn primary btn-hero" id="btnNewMaterial" type="button" title="افزودن یک قلم متریال یا خدمت">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           افزودن قلم
         </button>
       </div>
@@ -653,17 +795,30 @@
             <label class="switch"><input type="checkbox" id="invShowCost"><span class="track"></span><span class="sw-label">نمایش هزینه‌ی تمام‌شده <span class="tiny muted">(نسخه‌ی داخلی)</span></span></label>
             <label class="switch"><input type="checkbox" id="invShowStats" checked><span class="track"></span><span class="sw-label">نمایش آمار (یونیت، متراژ، ورق)</span></label>
 
-            <button class="btn primary block" id="btnRefreshInv" type="button">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
-              به‌روزرسانی فاکتور
+            <!-- ★ D2/P5: دکمه‌ی «به‌روزرسانی فاکتور» حذف شد.
+                 دلیل: محاسبه در ویرایشگر پروژه **خودکار** است (scheduleRecalc)،
+                 پس در صفحه‌ی فاکتور هم خودکار شد (هنگامِ ورود و پسِ هر تغییرِ
+                 گزینه). یک دکمه‌ی `btn primary block` — بزرگ‌ترین و مرکزی‌ترین
+                 هدفِ کل پنل — به کاری اختصاص یافته بود که کاربر هرگز نباید
+                 دستی انجام دهد. آن فضا به **چاپ** داده شد، چون همان کاری است
+                 که کاربر در ۸۰٪ مواقع می‌خواهد (قانون فیتز). -->
+            <button class="btn primary btn-hero block" id="btnPrintInv" type="button"
+                    title="چاپ فاکتور (Ctrl+P)">
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              چاپ فاکتور
+              <kbd class="kbd">Ctrl+P</kbd>
             </button>
-            <div style="display:flex;gap:.5rem">
-              <button class="btn outline" id="btnPrintInv" type="button" style="flex:1">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                چاپ
-              </button>
-              <button class="btn ghost" id="btnPdfInv" type="button" style="flex:1">PDF</button>
-              <button class="btn ghost" id="btnXlsInv" type="button" style="flex:1">اکسل</button>
+            <!-- ★ M12: «PDF» در دسترس می‌ماند (کم‌کاربرد ولی ارزشمند)؛ «اکسل»
+                 به منوی ⋯ رفت چون در جریانِ اصلیِ صدور فاکتور اختلال می‌کرد. -->
+            <div style="display:flex;gap:.5rem;align-items:center">
+              <button class="btn outline" id="btnPdfInv" type="button" style="flex:1">PDF</button>
+              <div class="ovf" id="ovfInv" style="flex:0 0 auto">
+                <button class="ovf-btn" id="btnInvMenu" type="button" aria-label="خروجی‌های دیگر"
+                        aria-haspopup="true" aria-expanded="false" title="خروجی‌های دیگر">⋯</button>
+                <div class="ovf-menu" role="menu" aria-label="خروجی‌های دیگر">
+                  <button class="ovf-item" id="btnXlsInv" type="button" role="menuitem">خروجی اکسل</button>
+                </div>
+              </div>
             </div>
             <button class="btn success block" id="btnSaveInv" type="button">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -953,8 +1108,13 @@
         <div class="field"><label for="pfCustomer">نام مشتری</label><input type="text" id="pfCustomer"></div>
         <div class="field"><label for="pfMobile">همراه</label><input type="tel" id="pfMobile" placeholder="۰۹۱۲…"></div>
         <div class="field"><label for="pfStyle">سبک بخش اول</label><select id="pfStyle"></select></div>
-        <div class="field"><label for="pfStatus">وضعیت</label>
-          <select id="pfStatus"><option value="draft">پیش‌نویس</option><option value="open">در جریان</option></select>
+        <!-- ★ D1: فیلد «وضعیت» از فرمِ ساخت حذف شد. در لحظه‌ی ساخت، یک پروژه
+             *همیشه* «پیش‌نویس» است — پرسیدنِ وضعیت در قدمِ اول، یک تصمیمِ
+             چرخه‌ی عمر را وسطِ کارِ قیمت‌گذاری می‌آورد و بارِ شناختیِ بیهوده
+             می‌سازد. وضعیت در کارتِ «مشخصات پروژه» داخلِ ویرایشگر (edStatus)
+             در دسترس می‌ماند، یعنی دقیقاً همان‌جا که معنا دارد. -->
+        <div class="field"><span class="lbl">وضعیت</span>
+          <p class="tiny muted" style="margin:.2rem 0 0">پیش‌نویس — بعداً از «مشخصات پروژه» در ویرایشگر تغییر دهید.</p>
         </div>
       </div>
     </div>
@@ -1129,6 +1289,52 @@
       <div class="spacer"></div>
       <button class="btn ghost" id="btnConfirmCancel" data-close type="button">انصراف</button>
     </div>
+  </div>
+</div>
+
+<!-- ═══════════ راهنمای کلیدها ═══════════
+     ★ اصلِ Keyboard-First فقط وقتی به کاربر حرفه‌ای کمک می‌کند که میانبرها
+     **کشف‌شدنی** باشند. این مودال با «؟» یا از منوی ⋯ باز می‌شود و بیرونِ
+     جریانِ کار است (فضای دائمی اشغال نمی‌کند). میانبرهایی که از قبل بودند
+     بدون تغییر فهرست شده‌اند تا کاربر بداند چه چیزی تازه است. -->
+<div class="modal" id="modal-keys" role="dialog" aria-modal="true" aria-labelledby="keysTitle" style="width:min(34rem,100%)">
+  <div class="modal-head">
+    <h3 id="keysTitle">راهنمای کلیدها</h3>
+    <button class="icon-btn" data-close type="button" aria-label="بستن">✕</button>
+  </div>
+  <div class="modal-body">
+    <dl class="keys-grid">
+      <dt class="keys-sec" role="presentation">سراسری — همه‌جا</dt>
+      <dd class="keys-sec" role="presentation"></dd>
+      <dt><kbd class="kbd">Ctrl</kbd><kbd class="kbd">N</kbd></dt><dd>پروژه‌ی جدید — ویرایشگر فوراً باز می‌شود</dd>
+      <dt><kbd class="kbd">Ctrl</kbd><kbd class="kbd">⇧</kbd><kbd class="kbd">N</kbd></dt><dd>قیمت‌گیری سریع (با متراژ)</dd>
+      <dt><kbd class="kbd">/</kbd></dt><dd>جست‌وجوی سراسری</dd>
+      <dt><kbd class="kbd">Alt</kbd><kbd class="kbd">۱…۶</kbd></dt><dd>پرش به صفحه‌ها</dd>
+      <dt><kbd class="kbd">؟</kbd></dt><dd>همین راهنما</dd>
+      <dt><kbd class="kbd">Esc</kbd></dt><dd>بستن بالاترین لایه</dd>
+
+      <dt class="keys-sec" role="presentation">ویرایشگر پروژه</dt>
+      <dd class="keys-sec" role="presentation"></dd>
+      <dt><kbd class="kbd">N</kbd></dt><dd>افزودن یونیت زمینی</dd>
+      <dt><kbd class="kbd">⇧</kbd><kbd class="kbd">N</kbd></dt><dd>افزودن یونیت دیواری</dd>
+      <dt><kbd class="kbd">D</kbd></dt><dd>ساخت خودکار درها از روی ابعاد یونیت</dd>
+      <dt><kbd class="kbd">F2</kbd></dt><dd>کپی ردیفِ فعال</dd>
+      <dt><kbd class="kbd">Del</kbd></dt><dd>حذف ردیفِ فعال — با «بازگردانی» در پیام</dd>
+      <dt><kbd class="kbd">Enter</kbd></dt><dd>سلول بعدیِ همان ستون؛ در آخرین ردیف = ردیف جدید</dd>
+      <dt><kbd class="kbd">↑</kbd><kbd class="kbd">↓</kbd></dt><dd>یکی یکی؛ با <kbd class="kbd">⇧</kbd> ده‌تا ده‌تا</dd>
+      <dt><kbd class="kbd">Ctrl</kbd><kbd class="kbd">S</kbd></dt><dd>ذخیره</dd>
+      <dt><kbd class="kbd">Ctrl</kbd><kbd class="kbd">Enter</kbd></dt><dd>ذخیره و صدور فاکتور</dd>
+      <dt><kbd class="kbd">Ctrl</kbd><kbd class="kbd">B</kbd></dt><dd>ریز قیمت‌ها</dd>
+      <dt><kbd class="kbd">Ctrl</kbd><kbd class="kbd">Z</kbd> / <kbd class="kbd">Y</kbd></dt><dd>واگرد / بازانجام</dd>
+
+      <dt class="keys-sec" role="presentation">فاکتور</dt>
+      <dd class="keys-sec" role="presentation"></dd>
+      <dt><kbd class="kbd">Ctrl</kbd><kbd class="kbd">P</kbd></dt><dd>چاپ (به‌روزرسانی خودکار است — دکمه‌ی جدا ندارد)</dd>
+    </dl>
+  </div>
+  <div class="modal-foot">
+    <div class="spacer"></div>
+    <button class="btn primary" data-close type="button">بستن</button>
   </div>
 </div>
 

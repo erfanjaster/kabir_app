@@ -956,12 +956,24 @@ function renderEditorTables() {
     <thead><tr><th class="th-row">ردیف</th><th>نوع</th><th>طول (سم)</th><th>ارتفاع (سم)</th><th>عمق (سم)</th><th>تعداد (عدد)</th><th>طبقات (عدد)</th><th>در/کشو</th><th>جزئیات</th></tr></thead>
     <tbody>${uRows || `<tr><td colspan="9"><div class="empty">یونیتی تعریف نشده — «＋ افزودن یونیت» را بزنید.</div></td></tr>`}</tbody>`;
 
-  /* --- درها (سطح بخش، وابسته به یونیت) --- */
+  /* --- درها (سطح بخش، وابسته به یونیت) ---
+     ★ P4: این جدول **۱۱ ستون** داشت — روی نمایشگر ۱۳۶۶px اسکرولِ افقی لازم
+     می‌شد و جریانِ Tab از دیدِ کاربر بیرون می‌رفت. حالا دقیقاً همان الگوی
+     جدولِ یونیت‌ها اعمال شد: ۵ ستون در لایه‌ی ۱ (آنچه همیشه لازم است:
+     소속، برچسب، لنگه، عرض، ارتفاع) و ۶ ستونِ متریال/یراق در لایه‌ی ۲ پشتِ
+     همان expander. چون الگو با یونیت‌ها یکسان است، کاربر **چیز تازه‌ای
+     یاد نمی‌گیرد**. کلیدِ expander با پیشوندِ «d:» نام‌گذاری شده تا با
+     کلیدِ یونیت‌ها (که عددِ ساده است) برخورد نکند — پس handlerِ موجودِ
+     `[data-expand]` بدونِ هیچ تغییری کار می‌کند.                        */
   let dRows = "";
   pg.units.forEach((u, ui) => u.doors.forEach((dr, di) => {
     const a = (extra) => withRow(extra, "door", `${ui}:${di}`);
+    const dKey = `d:${ui}:${di}`;
+    const dOpen = state.expanded.has(`${p.id}:${state.pageIdx}:${dKey}`);
     dRows += `
       <tr${rowAttrs("door", `${ui}:${di}`)}>
+        <td><button class="expander${dOpen ? " open" : ""}" type="button" data-expand="${dKey}"
+                    title="متریال و یراقِ این لنگه در" aria-expanded="${dOpen ? "true" : "false"}">${ICONS.chev}</button></td>
         <td><div class="row-id-cell">
           <select class="cell-select" data-scope="doormove" data-ui="${ui}" data-di="${di}" ${a("")}
                   aria-label="یونیتِ 소속ِ این در" title="در به کدام یونیت تعلق دارد">
@@ -973,17 +985,24 @@ function renderEditorTables() {
         <td>${inp("door", "qty", dr.qty, a(`data-ui="${ui}" data-di="${di}"`), U_LEAF, "w-qty")}</td>
         <td>${inp("door", "w_cm", dr.w_cm, a(`data-ui="${ui}" data-di="${di}"`), U_CM, "w-dim")}</td>
         <td>${inp("door", "h_cm", dr.h_cm, a(`data-ui="${ui}" data-di="${di}"`), U_CM, "w-dim")}</td>
-        <td>${doorSheetCell(u, dr, ui, di)}</td>
-        <td>${matSelect("door_model", dr.door_model_id, `data-scope="door" data-k="door_model_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
-        <td>${matSelect("hinge", dr.hinge_id, `data-scope="door" data-k="hinge_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
-        <td>${matSelect("handle", dr.handle_id, `data-scope="door" data-k="handle_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
-        <td>${matSelect("service", dr.assembly_id, `data-scope="door" data-k="assembly_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
-        <td>${matSelect("service", dr.packaging_id, `data-scope="door" data-k="packaging_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</td>
       </tr>`;
+    if (dOpen) {
+      dRows += `
+      <tr class="unit-detail-row row-detail-l2" data-detail-of="door:${ui}:${di}"><td colspan="6">
+        <div class="unit-detail doors-l2">
+          <div class="field"><label>ورق در</label>${doorSheetCell(u, dr, ui, di)}</div>
+          <div class="field"><label>مدل / اجرت در</label>${matSelect("door_model", dr.door_model_id, `data-scope="door" data-k="door_model_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
+          <div class="field"><label>لولا</label>${matSelect("hinge", dr.hinge_id, `data-scope="door" data-k="hinge_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
+          <div class="field"><label>دستگیره</label>${matSelect("handle", dr.handle_id, `data-scope="door" data-k="handle_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
+          <div class="field"><label>مونتاژ</label>${matSelect("service", dr.assembly_id, `data-scope="door" data-k="assembly_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
+          <div class="field"><label>بسته‌بندی</label>${matSelect("service", dr.packaging_id, `data-scope="door" data-k="packaging_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
+        </div>
+      </td></tr>`;
+    }
   }));
   el("tblDoors").innerHTML = `
-    <thead><tr><th class="th-row">یونیت</th><th>برچسب</th><th>لنگه (عدد)</th><th>عرض (سم)</th><th>ارتفاع (سم)</th><th>ورق در</th><th>مدل/اجرت</th><th>لولا</th><th>دستگیره</th><th>مونتاژ</th><th>بسته‌بندی</th></tr></thead>
-    <tbody>${dRows || `<tr><td colspan="11"><div class="empty">دری تعریف نشده است.</div></td></tr>`}</tbody>`;
+    <thead><tr><th class="th-row">جزئیات</th><th>یونیت</th><th>برچسب</th><th>لنگه (عدد)</th><th>عرض (سم)</th><th>ارتفاع (سم)</th></tr></thead>
+    <tbody>${dRows || `<tr><td colspan="6"><div class="empty">دری تعریف نشده است — «افزودن در» را بزنید یا در تبِ یونیت‌ها <b>D</b> را بزنید تا از روی ابعاد ساخته شوند.</div></td></tr>`}</tbody>`;
 
   /* --- کشوها --- */
   let wRows = "";
@@ -2445,7 +2464,16 @@ function wire() {
     const b = e.target.closest("[data-open-project]");
     if (b) { navigate("projects"); openProjectEditor(b.dataset.openProject); }
   });
-  el("btnQuickProject").addEventListener("click", () => { navigate("projects"); openNewProjectModal(); });
+  /* ★ P1/P2/D4: این دکمه دیگر مودال باز نمی‌کند.
+     پیش‌تر: کلیک → navigate → مودالِ ۵ فیلدی → پرکردن → «ایجاد پروژه» →
+     ویرایشگر. یعنی کاربر پیش از دیدنِ هر یونیتی باید دو تصمیمِ بی‌ربط
+     (وضعیت، سبک) می‌گرفت و یک مودال تمرکزش را می‌شکست.
+     اکنون: کلیک → پروژه ساخته می‌شود → ویرایشگر با **یک یونیت پیش‌فرض** باز
+     می‌شود → فوکوس روی «عنوان». عنوان/مشتری/وضعیت در همان کارتِ مشخصاتِ
+     ویرایشگر (که inline است) پر می‌شوند.
+     مودالِ قدیمی فقط برای مسیرِ «ساخت پروژه با این سبک» از صفحه‌ی سبک‌ها
+     باقی مانده، چون آن‌جا انتخابِ سبک *دلیلِ* شروع است نه یک مانع. */
+  el("btnQuickProject").addEventListener("click", () => startNewProjectInstant());
 
   /* ---------------- متریال ---------------- */
   el("matSearch").addEventListener("input", renderMaterials);
@@ -2853,7 +2881,10 @@ function wire() {
   /* ---------------- پروژه‌ها ---------------- */
   el("projSearch").addEventListener("input", renderProjects);
   el("projFilter").addEventListener("change", renderProjects);
-  el("btnNewProject").addEventListener("click", () => openNewProjectModal());
+  /* ★ D4: دکمه‌ی «پروژه‌ی جدید» در این نوار حذف شد — ورودیِ واحد در نوارِ بالای
+     برنامه است (`btnQuickProject` + `Ctrl+N`) و در همه‌ی صفحه‌ها از جمله همین‌جا
+     دیده می‌شود. listenerِ آن هم برداشته شد؛ وگرنه جست‌وجوی آن id که دیگر در
+     DOM وجود ندارد null می‌داد و یک TypeError **کل سیم‌کشی** را خاموش می‌کرد. */
   const btnRecalc = el("btnRecalcAll");
   if (btnRecalc) btnRecalc.addEventListener("click", () => busy(btnRecalc, async () => {
     if (!API.ok) { toast("بازمحاسبه در حالت نمایشی لازم نیست — مبلغ‌ها همیشه با نرخ جاری‌اند", "info"); return; }
@@ -2870,8 +2901,60 @@ function wire() {
       ? STYLES.map((s) => `<option value="${s.id}">✦ ${esc(s.name)}</option>`).join("")
       : `<option value="0">— بدون سبک —</option>`;
     if (preStyleId) el("pfStyle").value = String(preStyleId);
-    el("pfStatus").value = "draft";
+    /* ★ D1: فیلد «وضعیت» از فرم حذف شد؛ پروژه‌ی تازه همیشه «پیش‌نویس» است. */
     openModal("project");
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     ★ P1/P2 — ساختِ فوریِ پروژه: مسیرِ اصلیِ «شروع کار»
+     ----------------------------------------------------------------------
+     پیش‌تر: کلیک → مودالِ ۵ فیلدی → پرکردن → «ایجاد پروژه» → ویرایشگر.
+     اکنون: پروژه بی‌درنگ ساخته می‌شود، ویرایشگر با **یک یونیتِ پیش‌فرضِ
+     زمینی** باز می‌شود و فوکوس روی «عنوان» می‌نشیند. یعنی کاربر به‌جای
+     پاسخ به دو پرسشِ بی‌ربط (وضعیت، سبک)، فوراً روی کارِ واقعی (ابعاد) است.
+     عنوانِ موقت از پیش‌فرضِ تنظیمات یا «پروژه‌ی جدید» می‌آید و در همان کارتِ
+     مشخصات قابل ویرایش است — پس هیچ داده‌ای گم نمی‌شود.
+     ══════════════════════════════════════════════════════════════════════ */
+  async function startNewProjectInstant(preStyleId) {
+    const styleId = Number(preStyleId)
+      || (STYLES.length ? Number(SETTINGS.default_style_id) || STYLES[0].id : 0);
+    const title = "پروژه‌ی جدید";
+    const body = { title, customer: "", mobile: "", status: "draft", style_id: styleId };
+    let np;
+    if (API.ok) {
+      try { np = normalizeProject((await API.req("POST", "/api/projects", body)).project); }
+      catch (err) { toast("ایجاد ناموفق: " + esc(err.message), "error"); return; }
+    } else {
+      const id = Math.max(0, ...PROJECTS.map((p) => p.id)) + 1;
+      np = normalizeProject({
+        id, code: `PR-1405-${fa(String(id).padStart(3, "0"))}`, title,
+        customer: "—", mobile: "", status: "draft", date: TODAY_FA,
+        profit_mode: SETTINGS.default_profit_mode, profit_percent: +SETTINGS.default_profit_percent || 25,
+        install_mode: SETTINGS.default_install_mode, install_value: +SETTINGS.default_install_value || 0,
+        vat_enabled: SETTINGS.vat_enabled === "1", vat_percent: +SETTINGS.vat_percent || 10,
+        pages: [defaultPage(styleId)],
+      });
+    }
+    if (!PROJECTS.includes(np)) PROJECTS.unshift(np);
+    if (!API.ok) demoSave();
+    /* ★ یک یونیتِ پیش‌فرض، تا جدول خالی نباشد و کاربر بلافاصله چیزی برای
+       تایپِ ابعاد داشته باشد. سبکِ بخش هم رویش اعمال می‌شود تا متریال‌ها
+       از همان ابتدا درست باشند. */
+    const pg = np.pages && np.pages[0];
+    if (pg && pg.units && pg.units.length === 0) {
+      const u = defaultUnit("ground");
+      applyStyleToUnit(u, styleDataOf(pg));
+      pg.units.push(u);
+    }
+    navigate("projects");
+    renderProjects(); renderDashboard(); fillInvoiceProjects();
+    openProjectEditor(np.id);
+    /* فوکوس روی عنوان: اولین چیزی که کاربر باید تایپ کند، نه یک کلیکِ اضافه */
+    requestAnimationFrame(() => {
+      const t = el("edTitle");
+      if (t && !el("projectEditor").hidden) { t.focus(); t.select(); }
+    });
+    toast("پروژه ساخته شد — عنوان را بنویسید و ابعاد یونیت را وارد کنید", "success");
   }
 
   async function createProjectForm() {
@@ -2883,7 +2966,7 @@ function wire() {
     const styleId = Number(el("pfStyle").value) || 0;
     const body = {
       title, customer: el("pfCustomer").value.trim(), mobile: el("pfMobile").value.trim(),
-      status: el("pfStatus").value, style_id: styleId,
+      status: "draft", style_id: styleId,   /* ★ D1: «وضعیت» از فرم حذف شد */
     };
     let np;
     if (API.ok) {
@@ -3502,11 +3585,11 @@ function wire() {
     $$("#invLevel button").forEach((x) => x.classList.toggle("active", x === b));
     await refreshInvoice();
   });
-  el("btnRefreshInv").addEventListener("click", () => busy(el("btnRefreshInv"), async () => {
-    renderInvRowChecks();
-    await refreshInvoice();
-    toast("فاکتور به‌روزرسانی شد", "success");
-  }));
+  /* ★ D2/P5: دکمه‌ی «به‌روزرسانی فاکتور» حذف شد — به‌روزرسانی حالا خودکار است
+     (هنگامِ ورود به صفحه و پسِ هر تغییرِ گزینه‌های سند). تابعِ `refreshInvoice`
+     دست‌نخورده مانده و همان‌جاها صدا زده می‌شود؛ فقط «کنشِ دستی» برداشته شد.
+     `renderInvRowChecks` هم که پیش‌تر فقط این‌جا صدا زده می‌شد، به مسیرِ
+     خودکار منتقل شد تا checkboxهای ردیف‌ها همیشه تازه باشند. */
   el("btnPrintInv").addEventListener("click", () => {
     const f = el("invFrame");
     if (!f.classList.contains("hidden") && f.contentWindow) {
@@ -3803,6 +3886,254 @@ function wire() {
      تا رفتار و پیام‌ها دقیقاً یکسان بماند.                                    */
   const btnQkBuild = el("btnQuickBuild");
   if (btnQkBuild) btnQkBuild.addEventListener("click", () => submitModal("quick"));
+
+  /* ══════════════════════════════════════════════════════════════════════
+     ★ لایه‌ی UX — پیاده‌سازی چهار اصل
+     ----------------------------------------------------------------------
+     این بلوک **فقط افزوده** است: هیچ منطقِ موجودی بازنویسی نشده، بلکه
+     کنش‌های تازه به همان handlerهای آزموده‌شده‌ی قبلی «واگذار» می‌شوند
+     (`.click()`). این‌طور دو مسیرِ متفاوت برای یک کار ساخته نمی‌شود و رفتار
+     و پیام‌ها — از جمله «بازگردانی» پس از حذف — دقیقاً یکسان می‌ماند.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  /* ── (۱) منوهای سرریز (⋯) و Split-Button ───────────────────────────────
+     خانه‌ی کنش‌های کم‌کاربرد (M2/M3/M4/M8/M9/M10/M11/M12). یک الگو برای
+     همه: کلیک باز/بسته، Esc یا کلیکِ بیرون می‌بندد، ↑↓ پیمایش می‌کند و
+     `aria-expanded` هم‌زمان به‌روز می‌شود.                              */
+  function closeAllOvf(except) {
+    $$(".ovf.open, .split.open").forEach((m) => {
+      if (m === except) return;
+      m.classList.remove("open");
+      const t = m.querySelector("[aria-expanded]");
+      if (t) t.setAttribute("aria-expanded", "false");
+    });
+  }
+  function toggleOvf(wrap) {
+    const willOpen = !wrap.classList.contains("open");
+    closeAllOvf(wrap);
+    wrap.classList.toggle("open", willOpen);
+    const t = wrap.querySelector("[aria-expanded]");
+    if (t) t.setAttribute("aria-expanded", willOpen ? "true" : "false");
+    if (willOpen) { const f = wrap.querySelector(".ovf-item"); if (f) f.focus(); }
+    return willOpen;
+  }
+  $$(".ovf > .ovf-btn, .split > .split-more").forEach((b) => {
+    b.addEventListener("click", (e) => { e.stopPropagation(); toggleOvf(b.closest(".ovf, .split")); });
+    b.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") { e.preventDefault(); toggleOvf(b.closest(".ovf, .split")); }
+    });
+  });
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".ovf, .split")) closeAllOvf(null);
+  });
+  $$(".ovf-menu").forEach((menu) => {
+    const owner = () => menu.closest(".ovf, .split");
+    const shut = (refocus) => {
+      const w = owner(); if (!w) return;
+      w.classList.remove("open");
+      const t = w.querySelector("[aria-expanded]");
+      if (t) { t.setAttribute("aria-expanded", "false"); if (refocus) t.focus(); }
+    };
+    menu.addEventListener("keydown", (e) => {
+      const items = Array.from(menu.querySelectorAll(".ovf-item"));
+      const i = items.indexOf(document.activeElement);
+      if (e.key === "ArrowDown") { e.preventDefault(); if (items.length) items[(i + 1) % items.length].focus(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); if (items.length) items[(i - 1 + items.length) % items.length].focus(); }
+      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); shut(true); }
+      else if (e.key === "Tab") shut(false);
+    });
+    /* پس از انتخاب، منو بسته و فوکوس به دکمه‌ی سرریز برمی‌گردد تا کاربر
+       با Tab از همان‌جا ادامه دهد — نه از نقطه‌ای نامعلوم.             */
+    menu.addEventListener("click", (e) => { if (e.target.closest(".ovf-item")) shut(true); });
+  });
+  /* ★ Esc در سطح سند — نه فقط داخل منو.
+     handler بالا روی خودِ منو است، پس اگر فوکوس به هر دلیلی بیرونِ منو باشد
+     (کلیکِ موس روی فضای خالیِ منو، یا پرشِ فوکوس توسط یک رندرِ دوباره) کلید
+     Esc به آن نمی‌رسید و منو باز می‌ماند — یعنی کاربرِ کیبوردی بن‌بست
+     می‌خورد. این لایه‌ی پشتیبان تضمین می‌کند Esc **همیشه** منوی باز را
+     می‌بندد و فوکوس را به دکمه‌ی سرریز برمی‌گرداند.
+     ⚠ اولویت با مودال است: اگر مودالی باز باشد Esc متعلقِ همان است
+       (handleModalKeys) و این‌جا کاری نمی‌کنیم. */
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const open = document.querySelector(".ovf.open, .split.open");
+    if (!open || anyModalOpen()) return;
+    e.preventDefault(); e.stopPropagation();
+    open.classList.remove("open");
+    const t = open.querySelector("[aria-expanded]");
+    if (t) { t.setAttribute("aria-expanded", "false"); t.focus(); }
+  }, true);
+
+  /* ── (۲) افشای تدریجی: کارت‌های تاشو و نوارِ «تنظیمات بخش» ──────────── */
+  const guideCard = el("guideCard"), guideHead = el("guideHead");
+  if (guideCard && guideHead) {
+    const flip = () => {
+      const open = guideCard.classList.toggle("collapsed") === false;
+      guideHead.setAttribute("aria-expanded", open ? "true" : "false");
+    };
+    guideHead.addEventListener("click", flip);
+    /* سرِ کارت یک div است، پس برای کیبورد باید role=button + Enter/Space داشته
+       باشد — وگرنه «راهنما» فقط با موس باز می‌شد (نقض Keyboard-First).   */
+    guideHead.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); }
+    });
+  }
+  const btnSecBar = el("btnSecBar"), secBarWrap = el("secBarWrap");
+  if (btnSecBar && secBarWrap) {
+    btnSecBar.addEventListener("click", () => {
+      const open = secBarWrap.hidden;
+      secBarWrap.hidden = !open;
+      btnSecBar.setAttribute("aria-expanded", open ? "true" : "false");
+      btnSecBar.classList.toggle("open", open);
+      if (open) { const f = secBarWrap.querySelector("input,select"); if (f) f.focus(); }
+    });
+  }
+  /* خلاصه‌ی یک‌خطی وقتی نوار بسته است — تا «پنهان‌بودن» به «گم‌شدن» تبدیل
+     نشود: کاربر باید بدون بازکردن بداند سبک و متراژ صفحه چیست.        */
+  function updateSecBarPeek() {
+    const pk = el("secBarPeek");
+    if (!pk || !secBarWrap) return;
+    const nm = el("secName"), st = el("secStyle"), lm = el("secCounterLm");
+    const bits = [];
+    if (nm && nm.value) bits.push(nm.value);
+    if (st && st.selectedOptions && st.selectedOptions[0]) bits.push(st.selectedOptions[0].textContent.trim());
+    if (lm && parseNum(lm.value) > 0) bits.push(`صفحه ${fa(parseNum(lm.value))} م`);
+    pk.textContent = bits.length ? "— " + bits.join(" · ") : "—";
+  }
+  /* `renderSectionBar` در ~۱۰ نقطه صدا زده می‌شود؛ به‌جای دست‌کاری همه‌شان،
+     همان تابع را می‌پوشانیم تا خلاصه همیشه پس از هر بازسازی تازه شود.
+     پوشاندن یک‌بار انجام می‌شود (نگهبان) تا زنجیره دوباره ساخته نشود.   */
+  if (!renderSectionBar.__peekWrapped) {
+    const _origRSB = renderSectionBar;
+    renderSectionBar = function () {
+      const r = _origRSB.apply(this, arguments);
+      updateSecBarPeek();
+      return r;
+    };
+    renderSectionBar.__peekWrapped = true;
+  }
+  ["secName", "secStyle", "secCounterLm"].forEach((id) => {
+    const n = el(id);
+    if (n) { n.addEventListener("input", updateSecBarPeek); n.addEventListener("change", updateSecBarPeek); }
+  });
+
+  /* ── (۳) Keyboard-First: میانبرهای کنش‌های پرتکرار ───────────────────── */
+  /** ردیفِ دارای فوکوس در ویرایشگر — مبنای F2 و Del */
+  function activeEditorRow() {
+    const ae = document.activeElement;
+    if (!ae || !el("projectEditor").contains(ae)) return null;
+    return ae.closest ? ae.closest("tr.erow, tr[data-row]") : null;
+  }
+  /** تبِ فعالِ ویرایشگر (از DOM، چون state جداگانه‌ای برایش نگه داشته نمی‌شود) */
+  function activeEditorTab() {
+    const t = document.querySelector("#secTabs .tab.active");
+    return t ? t.dataset.tab : "units";
+  }
+  /** واگذاری کنش به همان دکمه‌ی موجود — بدونِ کپیِ منطق */
+  function clickAddRow(kind) {
+    const b = document.querySelector(`#projectEditor .add-row[data-add="${kind}"]`);
+    if (b) { b.click(); return true; }
+    return false;
+  }
+  /* نگاشتِ «ستون» به «کنشِ افزودنِ ردیف» — برای Enter در آخرین سلول */
+  const ADD_BY_SCOPE = {
+    unit: "unit:ground", door: "doors", drawer: "drawers",
+    extra: "extras", service: "services", facade: "facade",
+  };
+
+  /* Enter در آخرین سلولِ یک ستون = افزودن ردیفِ تازه و پرش به همان ستون.
+     ★ capture: باید **پیش از** handlerِ موجود (که در این حالت `blur()`
+     می‌کرد) اجرا شود؛ در غیر این صورت فوکوس از دست می‌رود.
+     فقط وقتی دخالت می‌کند که واقعاً آخرین سلول باشد — وگرنه رویداد را
+     دست‌نخورده به مسیر قبلی می‌سپارد.                                    */
+  el("projectEditor").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+    const t = e.target;
+    if (!t || !t.dataset || !t.dataset.scope || !t.dataset.k) return;
+    if (t.tagName !== "INPUT" && t.tagName !== "SELECT") return;
+    const scope = t.dataset.scope, k = t.dataset.k;
+    if (scope === "doormove" || scope === "drawermove") return;
+    const list = Array.from(document.querySelectorAll(
+      `#projectEditor [data-scope="${scope}"][data-k="${k}"]`));
+    const i = list.indexOf(t);
+    if (i < 0 || i + 1 < list.length) return;      /* آخرین سلول نیست → مسیر قبلی */
+    const kind = ADD_BY_SCOPE[scope];
+    if (!kind) return;
+    e.preventDefault(); e.stopPropagation();
+    /* در/کشو به «یونیتِ جاری» اضافه می‌شوند؛ بدون این خط، Enter در ردیفِ
+       دری از یونیتِ ۳ یک در به یونیتِ ۰ اضافه می‌کرد.                  */
+    if ((scope === "door" || scope === "drawer") && t.dataset.ui !== undefined) {
+      state.lastUnitIdx = +t.dataset.ui || 0;
+    }
+    if (!clickAddRow(kind)) return;
+    /* فوکوس به همان ستون در ردیفِ تازه — نه به اولین سلول */
+    requestAnimationFrame(() => {
+      const nl = document.querySelectorAll(
+        `#projectEditor [data-scope="${scope}"][data-k="${k}"]`);
+      const cell = nl[nl.length - 1];
+      if (cell) { cell.focus(); if (cell.select) cell.select(); }
+    });
+  }, true);
+
+  /* میانبرهای سراسری — در listenerِ جداگانه تا هندلرِ موجود دست‌نخورده بماند */
+  document.addEventListener("keydown", (e) => {
+    const modal = anyModalOpen();
+    const typing = isTypingTarget(document.activeElement);
+    const mod = e.ctrlKey || e.metaKey;
+
+    /* «؟» — راهنمای کلیدها. کشف‌پذیری، شرطِ لازمِ Keyboard-First است. */
+    if (!modal && !typing && !mod && (e.key === "?" || (e.key === "/" && e.shiftKey))) {
+      e.preventDefault(); openModal("keys"); return;
+    }
+
+    if (mod && !e.altKey) {
+      const k = String(e.key).toLowerCase();
+      /* Ctrl+N — ساختِ فوریِ پروژه (مرورگر «پنجره‌ی جدید» را می‌بلعد) */
+      if (k === "n" && !e.shiftKey) { e.preventDefault(); if (!modal) startNewProjectInstant(); return; }
+      /* Ctrl+Shift+N — قیمت‌گیری سریع */
+      if (k === "n" && e.shiftKey) { e.preventDefault(); if (!modal) openQuickModal(); return; }
+      /* Ctrl+B — ریز قیمت‌ها (پاسخ به «چرا این قیمت شد؟») */
+      if (k === "b" && !e.shiftKey && !modal && state.editingProject && !el("projectEditor").hidden) {
+        e.preventDefault(); const b = el("btnBreakdown"); if (b) b.click(); return;
+      }
+      /* Ctrl+Enter در ویرایشگر = ذخیره و صدور فاکتور.
+         `gotoInvoiceForCurrent` خودش اگر کثیف باشد ذخیره می‌کند، پس یک کلید
+         جای سه کنش (Ctrl+S → ناوبری → به‌روزرسانی) می‌نشیند.
+         ⚠ وقتی مودال باز است این کلید متعلقِ خودِ مودال است (ثبت فرم). */
+      if (e.key === "Enter" && !modal && state.editingProject && !el("projectEditor").hidden) {
+        e.preventDefault(); gotoInvoiceForCurrent(); return;
+      }
+      return;
+    }
+
+    /* کلیدهای تک‌حرفی: فقط بیرونِ فیلد متنی و بیرونِ مودال — وگرنه تایپِ
+       «ن» در عنوان پروژه یک یونیت اضافه می‌کرد!                        */
+    if (modal || typing || mod || e.altKey) return;
+    if (!state.editingProject || el("projectEditor").hidden) return;
+
+    /* F2 / Del → همان دکمه‌های داخل ردیف کلیک می‌شوند تا «بازگردانی» در
+       توست و حفظِ فوکوس دقیقاً مثل مسیر موشواره کار کند.             */
+    if (e.key === "F2" || e.key === "Delete") {
+      const row = activeEditorRow();
+      if (!row) return;
+      const btn = row.querySelector(e.key === "F2" ? "[data-copy-row]" : "[data-del-row]");
+      if (!btn) return;
+      e.preventDefault(); btn.click(); return;
+    }
+    if (e.key === "n" || e.key === "N") {
+      /* «افزودن» فقط در تبی معنا دارد که دکمه‌ی افزودنِ همان تب دیده شود؛
+         وگرنه کاربر در تبِ «خدمات» با زدن N یک یونیتِ نامرئی می‌ساخت. */
+      if (activeEditorTab() !== "units") return;
+      e.preventDefault();
+      clickAddRow(e.shiftKey ? "unit:wall" : "unit:ground");
+      return;
+    }
+    if (e.key === "d" || e.key === "D") {
+      if (activeEditorTab() !== "units") return;
+      e.preventDefault(); const b = el("btnAutoDoors"); if (b) b.click();
+    }
+  });
+
 }
 
 /* ==========================================================================

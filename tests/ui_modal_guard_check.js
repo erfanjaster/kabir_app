@@ -183,11 +183,43 @@ const backdrop = () => document.getElementById("modalBackdrop");
   check("راهنمای Enter در پاورقیِ مودالِ پروژه هست",
     !!document.querySelector("#modal-project .modal-foot .kbd-hint"));
 
-  /* ═══════════ ۶) Enter = ثبتِ فرم ═══════════ */
+  /* ═══════════ ۶) مسیرِ ساختِ پروژه ═══════════
+     ★ این بخش با بازطراحیِ UX به دو قسمت تقسیم شد:
+       ۶-الف) مسیرِ **اصلیِ** تازه: Ctrl+N → ویرایشگر بی‌درنگ، بدونِ مودال.
+              پیش‌تر یک مودالِ ۵ فیلدی (شاملِ «وضعیت» که در لحظه‌ی ساخت همیشه
+              «پیش‌نویس» است) جریان را می‌شکست.
+       ۶-ب) قصدِ **اصلیِ** این تست — «Enter فرمِ مودال را ثبت می‌کند» — دست‌نخورده
+              حفظ شد، چون مودالِ پروژه هنوز از مسیرِ «ساخت پروژه با این سبک»
+              در صفحه‌ی سبک‌ها زنده است و باید همان‌قدر درست کار کند.
+     دکمه‌ی `btnNewProject` طبق اصلِ «کاهش انباشتگی» حذف شد (سه ورودیِ موازی برای
+     یک کار به یک ورودی در نوار بالا تقلیل یافت)، پس تست از `Ctrl+N` و
+     `openModal` استفاده می‌کند نه از آن id.                                */
   await K.navigate("projects");
   await sleep(60);
-  const projCount = K.PROJECTS.length;
-  click(document.getElementById("btnNewProject"));
+
+  /* ── ۶-الف) Ctrl+N = مسیرِ اصلیِ تازه ── */
+  let projCount = K.PROJECTS.length;
+  key("n", { ctrlKey: true });
+  await sleep(300);
+  check("Ctrl+N → پروژه بی‌درنگ ساخته شد", K.PROJECTS.length === projCount + 1,
+    `${K.PROJECTS.length} در برابر ${projCount}`);
+  check("Ctrl+N → هیچ مودالی باز نشد (جریان نمی‌شکند)", !isOpen("project"));
+  check("Ctrl+N → ویرایشگر باز شد", K.state.editingProject && !document.getElementById("projectEditor").hidden);
+  check("Ctrl+N → یک یونیتِ پیش‌فرض ساخته شد تا جدول خالی نباشد",
+    K.state.editingProject && K.state.editingProject.pages[0].units.length === 1,
+    String(K.state.editingProject && K.state.editingProject.pages[0].units.length));
+  check("Ctrl+N → فوکوس روی «عنوان» نشست (نه یک کلیکِ اضافه)",
+    document.activeElement && document.activeElement.id === "edTitle",
+    String(document.activeElement && (document.activeElement.id || document.activeElement.tagName)));
+
+  /* بستنِ ویرایشگر برای بخشِ بعد */
+  K.closeProjectEditor();
+  await sleep(80);
+  if (isOpen("unsaved")) { click(document.getElementById("btnUnsavedDiscard")); await sleep(120); }
+
+  /* ── ۶-ب) Enter = ثبتِ فرمِ مودال (قصدِ اصلیِ تست، حفظ شده) ── */
+  projCount = K.PROJECTS.length;
+  K.openModal("project");
   await sleep(120);
   check("مودالِ «پروژه‌ی جدید» باز شد", isOpen("project"));
   type(document.getElementById("pfTitle"), "پروژه‌ی تستِ Enter");
@@ -199,6 +231,9 @@ const backdrop = () => document.getElementById("modalBackdrop");
   check("Enter → ویرایشگرِ همان پروژه باز شد",
     K.state.editingProject && K.state.editingProject.title === "پروژه‌ی تستِ Enter",
     String(K.state.editingProject && K.state.editingProject.title));
+  /* ★ D1: «وضعیت» از فرمِ ساخت حذف شد — باید واقعاً gone باشد، وگرنه
+     بارِ شناختیِ بیهوده به جریان برگشته. */
+  check("D1: فیلد «وضعیت» از فرمِ ساخت حذف شده", !document.getElementById("pfStatus"));
 
   /* ═══════════ ۷) پشته‌ی مودال‌ها: بالایی بسته می‌شود، نه کلِ لایه ═══════════ */
   /* یک الگوی یونیت می‌سازیم تا «مدیریت الگوها» فهرست داشته باشد */

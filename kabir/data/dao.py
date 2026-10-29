@@ -17,6 +17,34 @@ def _now() -> str:
 
 
 # ===========================================================================
+# «مُهرِ مالی» پروژه‌های قطعی
+# ===========================================================================
+#: وضعیت‌هایی که پروژه را از نظر مالی **قطعی** می‌کنند.
+#: ``draft`` (پیش‌نویس) و ``open`` (در جریان) عمداً این‌جا نیستند: پروژه‌ی باز
+#: باید با تغییر نرخ متریال به‌روز بماند — این دقیقاً همان تفکیکی است که
+#: کاربر انتظار دارد.
+SEALED_STATUSES = ("done",)
+
+#: نوع فاکتوری که سندِ قطعی/بایگانی‌شده محسوب می‌شود.
+#: ``quote`` (پیش‌فاکتور) و ``proforma`` عمداً مُهر نمی‌زنند: پیش‌فاکتور سندِ
+#: قیمتِ روز است و باید با نرخ‌های تازه به‌روز شود.
+SEALED_INVOICE_KINDS = ("invoice",)
+
+#: ستون‌هایی که «مبلغِ محاسبه‌شده‌ی» پروژه‌اند و روی پروژه‌ی مُهرشده بازنویسی
+#: نمی‌شوند. ``rates_rev`` عمداً این‌جا نیست (پایین توضیح داده شده).
+SEALED_FINANCIAL_FIELDS = ("final_price", "total_cost")
+
+
+def _num(v: Any, default: float = 0.0) -> float:
+    """تبدیل امن به float (فقط برای مقایسه‌های داخلی این ماژول)."""
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        return float(default)
+    return x if x == x else float(default)          # NaN → default
+
+
+# ===========================================================================
 # راه‌اندازی اولیه
 # ===========================================================================
 
@@ -294,22 +322,97 @@ class ProjectRepo:
         pid = self.db.execute(sql, vals + [_now(), _now()])
         return int(pid)
 
-    def update(self, pid: int, data: Dict[str, Any]) -> None:
+    #: فیلدهای مالیِ «محاسبه‌شده» — همان‌هایی که بازمحاسبه‌ی نرخ می‌نویسد.
+    FINANCIAL_FIELDS = SEALED_FINANCIAL_FIELDS
+
+    def seal_reason(self, pid: int) -> Optional[str]:
+        """
+        چرا این پروژه از نظر مالی **مُهرشده** است؟ (``None`` یعنی باز است)
+
+        یک پروژه وقتی مُهر می‌خورد که یا
+          ۱) فاکتور فروشِ قطعی (``kind='invoice'``) برایش صادر شده باشد، یا
+          ۲) وضعیتش «انجام‌شده» (``done``) باشد.
+
+        ★ چرا این تفکیک لازم بود (باگ F-02):
+        ``recalc_all_projects`` با ``repo.all()`` کار می‌کرد و **هیچ** فیلترِ
+        وضعیتی نداشت؛ جدول ``projects`` هم هیچ ستونِ قفل/بایگانی ندارد. در
+        نتیجه با یک «+۵۰٪» روی قیمت ورق، پروژه‌ی قطعیِ
+        ``14,025,000`` به ``21,037,500`` بازنویسی می‌شد، در حالی که ردیفِ
+        ``invoices`` (که snapshot کامل JSON دارد) روی ``14,025,000`` می‌ماند.
+        یعنی **دو عددِ متناقضِ همیشگی** برای یک کار: سندِ چاپ‌شده‌ی دستِ مشتری
+        یک مبلغ می‌گفت و گزارشِ درآمد/سودِ داشبورد مبلغی دیگر. چون داشبورد
+        ``Σ final_price`` همه‌ی پروژه‌ها را جمع می‌زد، سودِ گزارش‌شده هم
+        عملاً جعلی می‌شد.
+
+        مُهر در **تک‌نقطه‌ی نوشتن** (همین ``update``) اعمال می‌شود تا هیچ
+        مسیری — بازمحاسبه‌ی خودکار، تغییر دسته‌جمعی قیمت، یا حتی
+        ``final_price`` ارسالیِ کلاینت — نتواند بی‌صدا سندِ قطعی را بشکند.
+        """
+        row = self.get(pid)
+        if row is None:
+            return None
+        status = str(row.get("status") or "").strip().lower()
+        if status in SEALED_STATUSES:
+            return f"وضعیت پروژه «{status}» (قطعی) است"
+        inv = InvoiceRepo(self.db).final_invoice_for(pid)
+        if inv is not None:
+            return f"فاکتور قطعیِ {inv.get('number') or 'ثبت‌شده'} برایش صادر شده"
+        return None
+
+    def is_sealed(self, pid: int) -> bool:
+        """آیا مبلغِ ذخیره‌شده‌ی این پروژه قفل است؟ (نگاه به :meth:`seal_reason`)"""
+        return self.seal_reason(pid) is not None
+
+    def update(self, pid: int, data: Dict[str, Any], force: bool = False) -> bool:
+        """
+        به‌روزرسانی فیلدهای مجازِ پروژه.
+
+        خروجی: ``True`` اگر **همه‌ی** فیلدهای درخواستی نوشته شد؛ ``False`` اگر
+        دست‌کم یکی از فیلدهای مالی به‌خاطر مُهرِ پروژه نادیده گرفته شد.
+
+        ★ ``force=True`` تنها راهِ عبور از مُهر است و باید صریح و آگاهانه
+          استفاده شود (مثلاً ابزارِ مهاجرت/ترمیم). مسیرِ عادیِ بازمحاسبه آن
+          را نمی‌فرستد.
+
+        ★ چرا ``rates_rev`` مسدود نمی‌شود؟ چون اگر مسدود شود، پروژه‌ی مُهرشده
+          برای همیشه ``stale=True`` می‌ماند و رابط، بی‌پایان هشدارِ «نرخ
+          قدیمی» می‌دهد و هر بار هم تلاشِ بازنویسیِ بی‌نتیجه می‌کند. مبلغ
+          (که همان چیزی است که با سندِ قطعی مقایسه می‌شود) دست‌نخورده می‌ماند
+          و دلیلش در ``activity_log`` ثبت می‌شود تا قابلِ حسابرسی باشد.
+        """
         allowed = ["code", "customer_name", "customer_phone", "customer_mobile", "customer_address",
                    "title", "status", "install_mode", "install_value", "profit_mode", "profit_percent",
                    "discount_percent", "discount_amount", "vat_enabled", "vat_percent",
                    "extra_fixed_amount", "deposit_percent", "deposit_amount",
                    "valid_until", "note", "final_price", "total_cost", "rates_rev"]
+        # ── مُهرِ مالی ────────────────────────────────────────────────────
+        blocked: List[str] = []
+        if not force and any(k in data for k in self.FINANCIAL_FIELDS):
+            reason = self.seal_reason(pid)
+            if reason:
+                cur = self.get(pid) or {}
+                for k in self.FINANCIAL_FIELDS:
+                    if k in data and abs(_num(data.get(k)) - _num(cur.get(k))) > 0.005:
+                        blocked.append(k)
+                if blocked:
+                    data = {k: v for k, v in data.items() if k not in blocked}
+                    self.db.log(
+                        "seal",
+                        f"بازنویسیِ {' و '.join(blocked)} پروژه #{pid} انجام نشد — {reason}. "
+                        f"مبلغِ مُهرشده حفظ شد؛ برای تغییر، اول فاکتور قطعی را باطل کنید "
+                        f"یا وضعیت پروژه را از «انجام‌شده» خارج کنید.")
+
         sets, vals = [], []
         for k in allowed:
             if k in data:
                 sets.append(f"{k}=?")
                 vals.append(data[k])
         if not sets:
-            return
+            return not blocked
         sets.append("updated_at=?")
         vals += [_now(), pid]
         self.db.execute(f"UPDATE projects SET {','.join(sets)} WHERE id=?", vals)
+        return not blocked
 
     def delete(self, pid: int) -> None:
         # در یک تراکنشِ واحد — پیش‌تر سه حذفِ جدا بود و قطعیِ میانه می‌توانست
@@ -491,6 +594,37 @@ class InvoiceRepo:
 
     def delete(self, iid: int) -> None:
         self.db.execute("DELETE FROM invoices WHERE id=?", (iid,))
+
+    def final_invoice_for(self, project_id: int) -> Optional[Dict[str, Any]]:
+        """
+        آخرین **فاکتور قطعی** (``kind='invoice'``) یک پروژه، یا ``None``.
+
+        ★ این متد مبنای «مُهرِ مالی» در :meth:`ProjectRepo.seal_reason` است.
+        سندِ بایگانی‌شده خودش مصون بود (ردیف ``invoices`` یک snapshot کامل
+        JSON دارد و هیچ بازمحاسبه‌ای لمسش نمی‌کند)؛ آنچه می‌لنگید سمتِ
+        ``projects`` بود که بی‌قید بازنویسی می‌شد. با این نگاه، «سند قطعی»
+        منبعِ حقیقتِ قفل‌بودن است و نیازی به ستون/مهاجرتِ تازه‌ی schema نیست.
+
+        پیش‌فاکتور (``quote``/``proforma``) عمداً مُهر نمی‌زند: پیش‌فاکتور
+        قیمتِ روز است و باید با نرخ‌های تازه به‌روز بماند.
+        """
+        if not project_id:
+            return None
+        marks = ",".join("?" * len(SEALED_INVOICE_KINDS))
+        r = self.db.one(
+            f"SELECT id, number, kind, total, created_at FROM invoices "
+            f"WHERE project_id=? AND kind IN ({marks}) "
+            f"ORDER BY id DESC LIMIT 1",
+            (project_id, *SEALED_INVOICE_KINDS))
+        return dict(r) if r else None
+
+    def sealed_project_ids(self) -> set:
+        """شناسه‌ی همه‌ی پروژه‌هایی که فاکتور قطعی دارند (برای پالایش دسته‌جمعی)."""
+        marks = ",".join("?" * len(SEALED_INVOICE_KINDS))
+        rows = self.db.q(
+            f"SELECT DISTINCT project_id FROM invoices WHERE kind IN ({marks})",
+            tuple(SEALED_INVOICE_KINDS))
+        return {int(r[0]) for r in rows if r[0] is not None}
 
     def next_number(self, kind: str = "quote") -> str:
         # ⚠ پیش‌تر COUNT(*)+1 بود؛ بعد از حذف یک فاکتور، شماره‌ی تکراری صادر

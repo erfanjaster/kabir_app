@@ -122,9 +122,20 @@ class Material:
     # --- محاسبات کمکی ---
     @property
     def sheet_area_sqm(self) -> float:
-        if self.sheet_width_cm and self.sheet_height_cm:
-            return (self.sheet_width_cm / 100.0) * (self.sheet_height_cm / 100.0)
+        w, h = _pos(self.sheet_width_cm), _pos(self.sheet_height_cm)
+        if w > 0 and h > 0:
+            return (w / 100.0) * (h / 100.0)
         return 0.0
+
+    @property
+    def has_sheet_dims(self) -> bool:
+        """آیا ابعادِ ورق ثبت شده است؟
+
+        ★ این پرچم برای تشخیص حالت «ورقِ بی‌ابعاد» اضافه شد: چنین قلمی
+          ``price_per_sqm = 0`` می‌داد و در نتیجه **کل بدنه رایگان** و بی‌صدا
+          محاسبه می‌شد. اکنون موتور می‌تواند این حالت را تشخیص دهد و هشدار
+          صریح بدهد (به‌جای عدد صفرِ بی‌صدا)."""
+        return self.sheet_area_sqm > 0.0
 
     @property
     def price_per_sqm(self) -> float:
@@ -155,9 +166,19 @@ class PanelRow:
 
     @property
     def area_sqm(self) -> float:
+        """
+        مساحت یک پنل (م²).
+
+        ★ کرانِ صفر: یک پنلِ منفی (``qty=-3`` یا ``w_cm=-40``) پیش‌تر مساحت
+          منفی می‌ساخت و مساحتِ پنلِ مثبتِ کنارش را **خنثی** می‌کرد؛ نتیجه
+          ورقِ کم‌تر و قیمتِ کم‌تر از واقعیت بود، بدون هیچ هشداری. ابعاد منفی
+          معنای فیزیکی ندارد، پس کفِ صفر دارد (هشدارش در ``calc_unit`` صادر
+          می‌شود تا بی‌صدا نماند).
+        """
         if not self.enabled:
             return 0.0
-        return self.qty * (self.w_cm / 100.0) * (self.h_cm / 100.0)
+        a = _f(self.qty) * (_pos(self.w_cm) / 100.0) * (_pos(self.h_cm) / 100.0)
+        return a if a > 0.0 else 0.0
 
 
 @dataclass
@@ -203,23 +224,29 @@ class DoorRow:
 
     @property
     def leaves(self) -> int:
-        return int(self.qty)
+        """
+        تعداد لنگه‌ها.
+
+        ★ ``int(self.qty)`` روی ``None`` → ``TypeError`` و روی ``"2"`` →
+          ``ValueError`` می‌داد: یعنی یک در با «تعداد» خالی یا متنی، کل موتور
+          را می‌خواباند. اکنون تبدیلِ امن + کرانِ صفر (لنگه‌ی منفی نداریم).
+        """
+        return max(0, _i(self.qty))
 
     @property
     def area_sqm(self) -> float:
-        return self.leaves * (self.w_cm / 100.0) * (self.h_cm / 100.0)
+        return self.leaves * (_pos(self.w_cm) / 100.0) * (_pos(self.h_cm) / 100.0)
 
     @property
     def perimeter_m(self) -> float:
-        return 2 * ((self.w_cm + self.h_cm) / 100.0)
+        return 2 * ((_pos(self.w_cm) + _pos(self.h_cm)) / 100.0)
 
     def to_dict(self) -> Dict[str, Any]:
         return dict(self.__dict__)
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]) -> "DoorRow":
-        known = {f for f in cls.__dataclass_fields__}
-        return cls(**{k: v for k, v in (d or {}).items() if k in known})
+        return cls(**_coerce(cls, d))
 
 
 @dataclass
@@ -252,18 +279,19 @@ class DrawerRow:
 
     @property
     def box_area_sqm(self) -> float:
-        """مساحت بدنه‌ی جعبه‌ی کشو: ۲ بغل + کف + پشت"""
-        w, h, d = self.w_cm / 100.0, self.h_cm / 100.0, self.d_cm / 100.0
+        """مساحت بدنه‌ی جعبه‌ی کشو: ۲ بغل + کف + پشت (کرانِ صفر — ابعاد منفی
+        پیش‌تر مساحت منفی و در نتیجه «کشوی منفی/رایگان» می‌ساخت)."""
+        w, h, d = _pos(self.w_cm) / 100.0, _pos(self.h_cm) / 100.0, _pos(self.d_cm) / 100.0
         return (2 * d * h) + (w * d) + (w * h)
 
     @property
     def front_area_sqm(self) -> float:
-        return (self.w_cm / 100.0) * (self.h_cm / 100.0)
+        return (_pos(self.w_cm) / 100.0) * (_pos(self.h_cm) / 100.0)
 
     @property
     def banding_m(self) -> float:
         """متراژ نوار لبه‌ی جعبه‌ی کشو (دور تا دور قطعات)."""
-        w, h, d = self.w_cm / 100.0, self.h_cm / 100.0, self.d_cm / 100.0
+        w, h, d = _pos(self.w_cm) / 100.0, _pos(self.h_cm) / 100.0, _pos(self.d_cm) / 100.0
         return 2 * (2 * (d + h)) + 2 * (w + d) + 2 * (w + h)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -271,8 +299,7 @@ class DrawerRow:
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]) -> "DrawerRow":
-        known = {f for f in cls.__dataclass_fields__}
-        return cls(**{k: v for k, v in (d or {}).items() if k in known})
+        return cls(**_coerce(cls, d))
 
 
 @dataclass
@@ -286,19 +313,18 @@ class DetailRow:
 
     @property
     def area_sqm(self) -> float:
-        return self.qty * (self.w_cm / 100.0) * (self.h_cm / 100.0)
+        return _f(self.qty) * (_pos(self.w_cm) / 100.0) * (_pos(self.h_cm) / 100.0)
 
     @property
     def cost(self) -> float:
-        return self.area_sqm * self.price_per_sqm
+        return self.area_sqm * _pos(self.price_per_sqm)
 
     def to_dict(self) -> Dict[str, Any]:
         return dict(self.__dict__)
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]) -> "DetailRow":
-        known = {f for f in cls.__dataclass_fields__}
-        return cls(**{k: v for k, v in (d or {}).items() if k in known})
+        return cls(**_coerce(cls, d))
 
 
 @dataclass
@@ -313,7 +339,12 @@ class ExtraRow:
 
     @property
     def cost(self) -> float:
-        return self.qty * self.price
+        """
+        ★ کرانِ صفر: قلمِ اضافه با تعداد/قیمت منفی پیش‌تر بی‌صدا از جمع کل
+          **کم** می‌کرد (تخفیفِ پنهان و غیرمجاز روی سند مالی). اکسسوری با
+          تعداد یا بهای منفی وجود خارجی ندارد.
+        """
+        return _pos(self.qty) * _pos(self.price)
 
     def unit_label(self) -> str:
         return PRICE_UNITS.get(self.unit, self.unit)
@@ -323,8 +354,7 @@ class ExtraRow:
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]) -> "ExtraRow":
-        known = {f for f in cls.__dataclass_fields__}
-        return cls(**{k: v for k, v in (d or {}).items() if k in known})
+        return cls(**_coerce(cls, d))
 
 
 @dataclass
@@ -341,8 +371,7 @@ class ServiceRow:
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]) -> "ServiceRow":
-        known = {f for f in cls.__dataclass_fields__}
-        return cls(**{k: v for k, v in (d or {}).items() if k in known})
+        return cls(**_coerce(cls, d))
 
 
 @dataclass
@@ -404,8 +433,7 @@ class UnitRow:
         d = dict(d or {})
         doors = [DoorRow.from_dict(x) for x in d.pop("doors", []) or []]
         drawers = [DrawerRow.from_dict(x) for x in d.pop("drawers", []) or []]
-        known = {f for f in cls.__dataclass_fields__}
-        obj = cls(**{k: v for k, v in d.items() if k in known})
+        obj = cls(**_coerce(cls, d))
         obj.doors = doors
         obj.drawers = drawers
         return obj
@@ -455,8 +483,7 @@ class Page:
         extras = [ExtraRow.from_dict(x) for x in d.pop("extras", []) or []]
         services = [ServiceRow.from_dict(x) for x in d.pop("services", []) or []]
         details = [DetailRow.from_dict(x) for x in d.pop("detail_rows", []) or []]
-        known = {f for f in cls.__dataclass_fields__}
-        obj = cls(**{k: v for k, v in d.items() if k in known})
+        obj = cls(**_coerce(cls, d))
         obj.units, obj.extras, obj.services, obj.detail_rows = units, extras, services, details
         return obj
 
@@ -485,8 +512,7 @@ class LineItem:
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]) -> "LineItem":
-        known = {f for f in cls.__dataclass_fields__}
-        return cls(**{k: v for k, v in (d or {}).items() if k in known})
+        return cls(**_coerce(cls, d))
 
 
 @dataclass
@@ -585,18 +611,166 @@ class ProjectResult:
 # ---------------------------------------------------------------------------
 
 def _f(v, default=0.0) -> float:
+    """
+    تبدیل امن به ``float``.
+
+    ★ چرا سخت‌گیرانه‌تر شد:
+    نسخه‌ی پیشین فقط ``TypeError``/``ValueError`` را می‌گرفت. در نتیجه:
+      • ``float("nan")``  → سالم رد می‌شد و تا انتهای زنجیره می‌رفت؛ خروجی API
+        به ``{"final_price": NaN}`` تبدیل می‌شد که **JSON نامعتبر** است و
+        ``JSON.parse`` در مرورگر می‌ترکد. در SQLite هم ستون REAL آن را NULL
+        ذخیره می‌کرد و قیمت بی‌صدا «صفر» می‌شد.
+      • ``float("1e999")`` → ``inf`` می‌داد و در ضرب‌های بعدی ``OverflowError``.
+      • ``float(10**400)`` → مستقیماً ``OverflowError`` می‌داد (کرش موتور).
+    اکنون هر مقدار «غیرمتناهی» معادل «ناموجود» است و مقدار پیش‌فرض برمی‌گردد.
+    """
     try:
-        return float(v)
-    except (TypeError, ValueError):
-        return default
+        x = float(v)
+    except (TypeError, ValueError, OverflowError):
+        return float(default)
+    if x != x or x == math.inf or x == -math.inf:      # NaN / ±inf
+        return float(default)
+    return x
+
+
+def _i(v, default: int = 0) -> int:
+    """
+    تبدیل امن به ``int`` با **برش** (truncate) — هم‌تراز با ``Math.trunc`` در
+    موتور JS.
+
+    ★ چرا لازم بود: در چند جا ``int(...)`` مستقیم روی ورودیِ کاربر صدا زده
+      می‌شد. ``int("2.7")`` → ``ValueError`` و ``int(None)`` → ``TypeError``؛
+      یعنی یک رشته‌ی ساده در فیلد «تعداد کشو» کل موتور را می‌خواباند و چون
+      ``recalc`` استثنا را می‌بلعد، پروژه برای همیشه روی ۵۰۰ می‌ماند.
+    """
+    return int(math.trunc(_f(v, default)))
+
+
+def _pos(v, default: float = 0.0) -> float:
+    """
+    ``float`` **نامنفی** — برای ابعاد، تعدادها و ضرایب فیزیکی.
+
+    ★ چرا: مقدار منفی برای «عمق»، «تعداد طبقه» یا «ضریب نوار» هیچ معنای
+      فیزیکی ندارد، ولی پیش‌تر بی‌صدا در فرمول ضرب می‌شد و:
+        depth_cm = -55   → مساحت منفی → **قیمت کل منفی** (−380,820 ریال)
+        shelves  = -3    → قیمت 1,000,000 می‌شد 400,000 (تخفیف پنهان)
+        banding_body_factor = -2.2 → ردیف نوار با مبلغ منفی
+      منفی‌ها یکدیگر را خنثی می‌کردند و سند مالیِ غلط تولید می‌شد.
+    """
+    x = _f(v, default)
+    return x if x > 0.0 else 0.0
+
+
+# ---------------------------------------------------------------------------
+# لایه‌ی «نرمال‌سازی نوع» ورودی‌ها
+# ---------------------------------------------------------------------------
+#: نوعِ اعلام‌شده‌ی فیلدهای عددی هر dataclass.
+#: ★ چرا لازم است: همه‌ی ``from_dict``ها پیش‌تر مقادیر خامِ JSON را بدون هیچ
+#:   تبدیلی داخل dataclass می‌ریختند (``cls(**{k: v ...})``). یعنی رشته‌ی
+#:   ``"2.7"``، ``null``، ``"1"`` و ``"nan"`` دست‌نخورده به عملگرهای حسابی
+#:   می‌رسیدند و موتور با ``TypeError``/``ValueError`` می‌ترکید. چون
+#:   ``recalc_all_projects`` استثنا را می‌بلعد، یک پروژه‌ی آلوده برای همیشه
+#:   قیمت کهنه/خطای ۵۰۰ تولید می‌کرد. اکنون همه‌ی ورودی‌ها در همان مرزِ
+#:   ورود به موتور به نوعِ درست تبدیل می‌شوند.
+_FIELD_KINDS: Dict[str, Dict[str, Tuple[str, ...]]] = {
+    "PanelRow": {
+        "float": ("qty", "w_cm", "h_cm"),
+        "bool": ("banding", "enabled"),
+    },
+    "DoorRow": {
+        "int": ("qty", "material_id", "door_model_id", "hinge_id", "hinges_per_leaf",
+                "gas_spring_id", "gas_springs_per_leaf", "handle_id", "handles_per_leaf",
+                "banding_id", "assembly_id", "packaging_id"),
+        "float": ("w_cm", "h_cm", "door_model_price", "hinge_price", "gas_spring_price",
+                  "handle_price", "banding_price", "assembly_price", "packaging_price"),
+        "bool": ("glass", "from_body"),
+    },
+    "DrawerRow": {
+        "int": ("qty", "slide_id", "handle_id", "sheet_id", "front_id", "banding_id",
+                "assembly_id"),
+        "float": ("w_cm", "h_cm", "d_cm", "slide_price", "handle_price",
+                  "sheet_price_per_sqm", "front_price_per_sqm", "banding_price",
+                  "assembly_price"),
+    },
+    "DetailRow": {
+        "float": ("qty", "w_cm", "h_cm", "price_per_sqm"),
+    },
+    "ExtraRow": {
+        "float": ("qty", "price"),
+        "bool": ("visible",),
+    },
+    "ServiceRow": {
+        "float": ("qty", "price"),
+    },
+    "UnitRow": {
+        "int": ("qty", "shelves", "body_id", "back_id", "countertop_id", "crown_id",
+                "underlight_id", "kickboard_id", "leg_id", "banding_id", "shelf_pin_id",
+                "pins_per_shelf", "assembly_id"),
+        "float": ("length_cm", "height_cm", "depth_cm", "leg_price", "legs_per_unit",
+                  "banding_price", "shelf_pin_price", "assembly_price"),
+        "bool": ("has_top_panel", "has_bottom_panel"),
+    },
+    "Page": {
+        "int": ("id", "project_id", "style_id"),
+        "float": ("waste_percent", "overhead_percent", "banding_body_factor",
+                  "banding_door_factor", "banding_waste_percent", "countertop_lm",
+                  "wall_length_cm", "detail_total_sqm", "detail_price_per_sqm"),
+    },
+    "LineItem": {
+        "int": ("mat_id",),
+        "float": ("qty", "unit_price", "amount", "area_sqm", "sheet_area_sqm", "sheets"),
+        "bool": ("visible",),
+    },
+}
+
+
+def _coerce(cls, d: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    پاک‌سازی یک dict پیش از ساخت dataclass: کلیدهای ناشناخته دور ریخته و
+    فیلدهای عددی/منطقی به نوعِ اعلام‌شده تبدیل می‌شوند.
+
+    ★ قاعده‌ی مهم: اگر مقدار «ناموجود/خراب» باشد (``None``، ``""``، ``"abc"``،
+      ``NaN``) کلید **حذف** می‌شود تا پیش‌فرضِ خودِ dataclass اعمال شود — نه
+      صفرِ دلخواه. این‌طور یک فیلد خالی، «تعداد ۰» معنی نمی‌شود و هم‌زمان با
+      موتور JS (که از ``defaultUnit()``/``normalizePage()`` همان پیش‌فرض‌ها را
+      تزریق می‌کند) هم‌راستا می‌ماند.
+    """
+    kinds = _FIELD_KINDS.get(cls.__name__, {})
+    ints = set(kinds.get("int", ()))
+    floats = set(kinds.get("float", ()))
+    bools = set(kinds.get("bool", ()))
+    known = set(cls.__dataclass_fields__)
+    out: Dict[str, Any] = {}
+    for k, v in (d or {}).items():
+        if k not in known or v is None:
+            continue
+        if k in bools:
+            if isinstance(v, str):
+                if v.strip().lower() in ("", "0", "false", "no", "off"):
+                    v = False
+                else:
+                    v = True
+            out[k] = bool(v)
+        elif k in ints:
+            if isinstance(v, str) and not v.strip():
+                continue
+            out[k] = _i(v)
+        elif k in floats:
+            if isinstance(v, str) and not v.strip():
+                continue
+            out[k] = _f(v)
+        else:
+            out[k] = v
+    return out
 
 
 def round_up_sheets(area_sqm: float, sheet_area: float, waste_percent: float = 0.0) -> float:
     """تعداد ورق لازم (با گرد کردن به بالا)."""
+    sheet_area = _f(sheet_area)
     if sheet_area <= 0:
         return 0.0
-    a = area_sqm * (1 + _f(waste_percent) / 100.0)
-    return math.ceil(round(a / sheet_area, 6))
+    a = _pos(area_sqm) * (1 + _pos(waste_percent) / 100.0)
+    return float(math.ceil(round(a / sheet_area, 6)))
 
 
 #: کلیدواژه‌هایی که نشان می‌دهند ورق «راستای طرح» دارد (چرخاندنِ قطعه روی آن
@@ -661,6 +835,10 @@ class CostingEngine:
         for m in materials or []:
             self.materials[int(m.id)] = m
         self.s = settings or {}
+        #: متنِ پایه‌ی «detail» هر ردیفِ ورقی — برای idempotent بودنِ
+        #: ``batch_sheets`` وقتی دو بار (بخش، سپس پروژه) صدا زده می‌شود.
+        #: کلید ``id(item)`` است و در هر ``calc_project`` خالی می‌شود.
+        self._detail_base: Dict[int, str] = {}
 
     # --- دسترسی به متریال ---
     def mat(self, mid: int) -> Optional[Material]:
@@ -682,25 +860,37 @@ class CostingEngine:
     # بدنه‌ی یونیت
     # ------------------------------------------------------------------
     def default_panels(self, u: UnitRow) -> List[PanelRow]:
-        """ساخت ریز استاندارد بدنه‌ی یونیت بر اساس ابعاد."""
+        """
+        ساخت ریز استاندارد بدنه‌ی یونیت بر اساس ابعاد.
+
+        ★ همه‌ی ابعاد با کرانِ صفر خوانده می‌شوند:
+          • ``depth_cm = -55`` پیش‌تر مساحتِ **منفی** می‌ساخت و اگر یونیت
+            خدمتِ مترمربعی هم داشت، قیمتِ کل پروژه منفی می‌شد (−380,820).
+          • ``L - 2*t`` اگر عرض یونیت از دو برابرِ ضخامت ورق کم‌تر بود منفی
+            می‌شد و مساحت کف/سقف را منفی می‌کرد.
+          • ``u.shelves > 0`` روی مقدارِ رشته‌ای (``"1"``) با ``TypeError``
+            موتور را می‌خواباند.
+        """
         t = 0.0
         bm = self.mat(u.body_id)
-        if bm and bm.thickness_mm:
-            t = bm.thickness_mm / 10.0          # تبدیل به سانتی‌متر
-        L, H, D = _f(u.length_cm), _f(u.height_cm), _f(u.depth_cm)
+        if bm and _pos(bm.thickness_mm) > 0:
+            t = _pos(bm.thickness_mm) / 10.0    # تبدیل به سانتی‌متر
+        L, H, D = _pos(u.length_cm), _pos(u.height_cm), _pos(u.depth_cm)
+        inner = max(0.0, L - 2 * t)             # عرض مؤثرِ قطعاتِ داخلی
+        shelves = _pos(u.shelves)
         rows: List[PanelRow] = []
 
         rows.append(PanelRow("بدنه کناری (چپ و راست)", 2, D, H, "body"))
         if u.has_bottom_panel:
-            rows.append(PanelRow("کف یونیت", 1, L - 2 * t, D, "body"))
+            rows.append(PanelRow("کف یونیت", 1, inner, D, "body"))
         if u.has_top_panel and u.unit_type != "ground":
-            rows.append(PanelRow("سقف یونیت", 1, L - 2 * t, D, "body"))
+            rows.append(PanelRow("سقف یونیت", 1, inner, D, "body"))
         if u.unit_type == "tall":
-            rows.append(PanelRow("طبقه‌ی ثابت وسط", 1, L - 2 * t, D, "body"))
+            rows.append(PanelRow("طبقه‌ی ثابت وسط", 1, inner, D, "body"))
 
         # طبقات داخلی
-        if u.shelves and u.shelves > 0:
-            rows.append(PanelRow(f"طبقه‌ی داخلی ({int(u.shelves)} عدد)", _f(u.shelves), L - 2 * t, D, "body"))
+        if shelves > 0:
+            rows.append(PanelRow(f"طبقه‌ی داخلی ({_i(shelves)} عدد)", shelves, inner, D, "body"))
 
         # فیبر پشت
         bm_back = self.mat(u.back_id)
@@ -710,21 +900,98 @@ class CostingEngine:
         # کشوها: کف و پشتِ جعبه (بغل‌ها در ردیف کشو محاسبه می‌شوند)
         return rows
 
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _input_warnings(u: UnitRow, res: UnitResult) -> None:
+        """
+        ★ هشدارِ صریح برای ورودی‌های نامعتبرِ یونیت.
+
+        پیش‌تر ابعاد/شمارنده‌های منفی یا صفر **بی‌صدا** در فرمول می‌رفتند و
+        خروجیِ ظاهراً معتبر می‌ساختند: ``depth_cm = 0`` بدنه‌ی رایگان می‌داد،
+        ``shelves = -3`` قیمت را از ۱٬۰۰۰٬۰۰۰ به ۴۰۰٬۰۰۰ می‌رساند و
+        ``legs_per_unit = -4`` ردیف پایه را منفی می‌کرد. اکنون همان مقادیر
+        در محاسبه صفرِ مؤثرند (کرانِ صفر)، ولی کاربر **می‌بیند** که چرا.
+        """
+        label = u.label or "یونیت"
+        for field, name in (("length_cm", "طول"), ("height_cm", "ارتفاع"),
+                            ("depth_cm", "عمق")):
+            raw = _f(getattr(u, field), 0.0)
+            if raw < 0:
+                res.warnings.append(
+                    f"«{label}»: {name} یونیت منفی ({raw:g} سانتی‌متر) بود — صفر "
+                    "در نظر گرفته شد. ابعاد منفی معنای فیزیکی ندارد و قیمت را "
+                    "خراب می‌کند.")
+            elif raw == 0 and field != "length_cm":
+                res.warnings.append(
+                    f"«{label}»: {name} یونیت صفر است — مساحت قطعاتِ وابسته به آن "
+                    "صفر شد و هزینه‌ی ورق بدنه محاسبه نمی‌شود!")
+        for field, name in (("shelves", "تعداد طبقه"), ("legs_per_unit", "تعداد پایه"),
+                            ("pins_per_shelf", "خار در هر طبقه")):
+            raw = _f(getattr(u, field), 0.0)
+            if raw < 0:
+                res.warnings.append(
+                    f"«{label}»: {name} منفی ({raw:g}) بود — صفر در نظر گرفته شد "
+                    "(مقدار منفی پیش‌تر بی‌صدا از قیمت کل کم می‌کرد).")
+
     def panels_of(self, u: UnitRow) -> List[PanelRow]:
         if u.custom_panels:
-            return [PanelRow(**{k: v for k, v in d.items()
-                                if k in PanelRow.__dataclass_fields__}) for d in u.custom_panels]
+            return [PanelRow(**_coerce(PanelRow, d)) for d in u.custom_panels]
         return self.default_panels(u)
 
     # ------------------------------------------------------------------
     # محاسبه‌ی یک یونیت
+    # ------------------------------------------------------------------
+    def _sheet_price_check(self, mat: Optional[Material], res: UnitResult,
+                           what: str, area_total: float) -> float:
+        """
+        ★ نرخِ قابل‌اتکای «هر مترمربع» برای یک قلمِ ورقی + هشدارِ صریح.
+
+        چرا لازم بود (باگِ «بدنه‌ی رایگانِ بی‌صدا»):
+        قلمی که واحدش ``sheet`` است ولی **ابعاد ورق** ندارد، در
+        ``Material.price_per_sqm`` مقدار ``0`` برمی‌گرداند. در نتیجه کل بدنه
+        با مساحتِ درست ولی مبلغِ صفر در فاکتور می‌نشست و چون هیچ هشداری هم
+        صادر نمی‌شد، کاربر یک پیش‌فاکتورِ ظاهراً سالم و به‌شدت ارزان به مشتری
+        می‌داد. فرمِ متریال فقط ``price > 0`` را چک می‌کند و ابعاد ورق اختیاری
+        است، پس این حالت کاملاً قابل ساخت بود.
+
+        همین‌جا حالتِ معکوس هم گرفته می‌شود: قلمی که دسته‌اش «ورق» است ولی
+        واحدش ``piece``/``lm`` مانده، ``price_per_sqm`` را برابرِ خودِ ``price``
+        برمی‌گرداند؛ یعنی «قیمتِ هر عدد» به‌جای «قیمتِ هر مترمربع» ضرب می‌شد و
+        چند برابر **بیش‌گیری** می‌کرد.
+
+        خروجی: نرخِ معتبر هر مترمربع (ممکن است صفر باشد) — این متد هرگز ردیف
+        را حذف نمی‌کند، فقط آن را **قابل دیدن** می‌کند.
+        """
+        ppsqm = _f(mat.price_per_sqm) if mat is not None else 0.0
+        if mat is None:
+            return ppsqm
+        if mat.unit == "sheet" and not mat.has_sheet_dims:
+            res.warnings.append(
+                f"«{mat.name}» به‌عنوان {what} انتخاب شده ولی ابعاد ورقِ آن ثبت "
+                f"نشده است — قیمتِ هر مترمربع صفر به دست می‌آید و "
+                f"{area_total:.3f} م² {what} رایگان محاسبه شد! ابعاد ورق را در "
+                "کتابخانه‌ی قیمت‌ها کامل کنید.")
+        elif mat.category in SHEET_CATEGORIES and mat.unit not in ("sheet", "sqm"):
+            res.warnings.append(
+                f"«{mat.name}» در دسته‌ی {what} است ولی واحدش «{mat.unit}» ثبت "
+                "شده — قیمتِ هر عدد به‌جای قیمتِ هر مترمربع در محاسبه می‌رود و "
+                "مبلغ درست نیست. واحدِ قلم را اصلاح کنید.")
+        elif ppsqm <= 0:
+            res.warnings.append(
+                f"«{mat.name}» ({what}) قیمتِ مؤثرِ صفر دارد — "
+                f"{area_total:.3f} م² بدون هزینه ثبت شد.")
+        return ppsqm
+
     # ------------------------------------------------------------------
     def calc_unit(self, u: UnitRow, page: Page) -> UnitResult:
         # ⚠ تعداد یونیت: پیش‌تر qty=0 یا منفی به‌جای حذف، «یک عدد» قیمت می‌خورد
         #   (چون `int(u.qty or 1)` صفر را falsy می‌گرفت و max(1,..) منفی را ۱
         #   می‌کرد). اکنون تعداد مؤثر ≤ ۰ یعنی یونیت کنار گذاشته می‌شود +
         #   هشدار به کاربر (به‌جای قیمتِ بی‌صدا).
-        qty = int(_f(u.qty, 0))
+        # ★ تبدیل امن: پیش‌تر ``int("2.7")`` → ``ValueError`` و ``int(None)`` →
+        #   ``TypeError`` کل موتور را می‌خواباند. اکنون مثل موتور JS با
+        #   «برش» به عدد صحیح می‌رسد (۲٫۷ → ۲).
+        qty = _i(u.qty, 0)
         res = UnitResult(label=u.label or "یونیت", qty=qty)
         if qty <= 0:
             res.warnings.append(
@@ -735,10 +1002,11 @@ class CostingEngine:
         n = qty
         items: List[LineItem] = []
 
+        # ★ هشدارِ ورودی‌های نامعتبر (ابعاد/شمارنده‌های منفی یا صفر)
+        self._input_warnings(u, res)
+
         body_mat = self.mat(u.body_id)
         back_mat = self.mat(u.back_id)
-        body_ppsqm = _f(body_mat.price_per_sqm) if body_mat else 0.0
-        back_ppsqm = _f(back_mat.price_per_sqm) if back_mat else 0.0
 
         panels = self.panels_of(u)
         body_area = 0.0
@@ -751,10 +1019,17 @@ class CostingEngine:
             else:
                 body_area += p.area_sqm
 
+        # پرتِ منفی یعنی «مساحتِ کم‌تر از خالص» — بی‌معنی است و ورق را
+        # کمتر از نیاز گرد می‌کرد. کرانِ صفر + هشدار.
         waste = _f(page.waste_percent, 10.0)
+        if waste < 0:
+            res.warnings.append(
+                f"پرتِ ورق منفی ({waste:g}٪) بود — صفر در نظر گرفته شد.")
+            waste = 0.0
 
         # --- ورق بدنه ---
         if body_area > 0 and body_mat is not None:
+            body_ppsqm = self._sheet_price_check(body_mat, res, "ورق بدنه", body_area * n)
             per_unit_area = body_area * (1 + waste / 100.0)
             sheet_area = _f(body_mat.sheet_area_sqm)
             if sheet_area > 0:
@@ -788,6 +1063,7 @@ class CostingEngine:
 
         # --- فیبر پشت ---
         if back_area > 0 and back_mat is not None:
+            back_ppsqm = self._sheet_price_check(back_mat, res, "فیبر پشت", back_area * n)
             per_unit_area = back_area * (1 + waste / 100.0)
             sheet_area = _f(back_mat.sheet_area_sqm)
             if sheet_area > 0:
@@ -817,9 +1093,16 @@ class CostingEngine:
         # --- نوار PVC بدنه ---
         if body_area > 0 and u.banding_id:
             bmat = self.mat(u.banding_id)
+            # ★ ضریبِ منفی پیش‌تر متراژ (و مبلغ) نوار را منفی می‌کرد و بی‌صدا
+            #   از جمع کل کم می‌شد. ضریب نوار یک نسبتِ فیزیکی است → کرانِ صفر.
             factor = _f(page.banding_body_factor, 2.2)
+            if factor < 0:
+                res.warnings.append(
+                    f"ضریب نوار بدنه منفی ({factor:g}) بود — صفر در نظر گرفته شد "
+                    "(متراژ نوار منفی وجود ندارد).")
+                factor = 0.0
             meters = body_area * n * factor
-            meters *= (1 + _f(page.banding_waste_percent) / 100.0)
+            meters *= (1 + _pos(page.banding_waste_percent) / 100.0)
             price = _f(bmat.price) if bmat else _f(u.banding_price)
             items.append(LineItem("banding_body", "نوار PVC بدنه",
                                   bmat.name if bmat else (u.banding_name or "نوار PVC"),
@@ -839,10 +1122,10 @@ class CostingEngine:
         # --- صفحه‌ی کابینت ---
         # اگر کاربر «متر طول صفحه» را در سطح بخش وارد کرده باشد، همان ملاک است
         # و دیگر برای هر یونیت جداگانه صفحه حساب نمی‌شود (جلوگیری از دوباره‌شماری).
-        if u.countertop_id and _f(page.countertop_lm) <= 0:
+        if u.countertop_id and _pos(page.countertop_lm) <= 0:
             cm = self.mat(u.countertop_id)
             if cm is not None:
-                lm = _f(u.length_cm) / 100.0 * n
+                lm = _pos(u.length_cm) / 100.0 * n
                 price = _f(cm.price)
                 width = _f(cm.width_cm) or 60.0
                 items.append(LineItem("countertop", "صفحه کابینت", cm.name,
@@ -860,7 +1143,7 @@ class CostingEngine:
         if u.crown_id and u.unit_type in ("wall", "tall"):
             cm = self.mat(u.crown_id)
             if cm is not None:
-                lm = _f(u.length_cm) / 100.0 * n
+                lm = _pos(u.length_cm) / 100.0 * n
                 items.append(LineItem("crown", "تاج", cm.name, f"{lm:.2f} متر طول",
                                       lm, "متر", _f(cm.price), lm * _f(cm.price),
                                       mat_id=int(u.crown_id), mat_cat="crown"))
@@ -869,7 +1152,7 @@ class CostingEngine:
         if u.underlight_id and u.unit_type == "wall":
             cm = self.mat(u.underlight_id)
             if cm is not None:
-                lm = _f(u.length_cm) / 100.0 * n
+                lm = _pos(u.length_cm) / 100.0 * n
                 items.append(LineItem("underlight", "زیرچراغ", cm.name, f"{lm:.2f} متر طول",
                                       lm, "متر", _f(cm.price), lm * _f(cm.price),
                                       mat_id=int(u.underlight_id), mat_cat="underlight"))
@@ -878,14 +1161,14 @@ class CostingEngine:
         if u.kickboard_id and u.unit_type in ("ground", "tall"):
             cm = self.mat(u.kickboard_id)
             if cm is not None:
-                lm = _f(u.length_cm) / 100.0 * n
+                lm = _pos(u.length_cm) / 100.0 * n
                 items.append(LineItem("kickboard", "پاخور", cm.name, f"{lm:.2f} متر طول",
                                       lm, "متر", _f(cm.price), lm * _f(cm.price),
                                       mat_id=int(u.kickboard_id), mat_cat="kickboard"))
 
         # --- پایه ---
         if u.leg_id and u.unit_type in ("ground", "tall"):
-            legs = _f(u.legs_per_unit, 4) * n
+            legs = _pos(u.legs_per_unit, 4) * n
             price = self.price_of(u.leg_id, u.leg_price)
             items.append(LineItem("leg", "پایه", (self.mat(u.leg_id).name if self.mat(u.leg_id)
                                                   else u.leg_name) or "پایه",
@@ -893,13 +1176,15 @@ class CostingEngine:
                                   mat_id=int(u.leg_id), mat_cat="leg"))
 
         # --- خار طبقه ---
-        if u.shelf_pin_id and u.shelves:
-            pins = _f(u.pins_per_shelf, 4) * _f(u.shelves) * n
+        if u.shelf_pin_id and _pos(u.shelves) > 0:
+            # ★ `_f(u.shelves)` منفی بود و `int(...)` روی رشته می‌ترکید؛
+            #   تعداد منفیِ خار هم بی‌صدا از قیمت کل کم می‌کرد.
+            pins = _pos(u.pins_per_shelf, 4) * _pos(u.shelves) * n
             price = self.price_of(u.shelf_pin_id, u.shelf_pin_price)
             items.append(LineItem("shelf_pin", "خار طبقه",
                                   (self.mat(u.shelf_pin_id).name if self.mat(u.shelf_pin_id)
                                    else u.shelf_pin_name) or "خار طبقه",
-                                  f"{pins:.0f} عدد ({int(u.shelves)} طبقه × {int(u.pins_per_shelf)} خار)",
+                                  f"{pins:.0f} عدد ({_i(u.shelves)} طبقه × {_i(u.pins_per_shelf, 4)} خار)",
                                   pins, "عدد", price, pins * price,
                                   mat_id=int(u.shelf_pin_id), mat_cat="shelf_pin"))
 
@@ -921,12 +1206,14 @@ class CostingEngine:
     def _calc_door(self, dr: DoorRow, unit_qty: int, res: UnitResult,
                    items: List[LineItem], page: Optional[Page] = None,
                    body_mat: Optional[Material] = None) -> None:
-        leaves = dr.leaves * unit_qty
+        leaves = dr.leaves * max(0, _i(unit_qty))
         if leaves <= 0:
             return
-        area = dr.area_sqm * unit_qty
+        area = dr.area_sqm * max(0, _i(unit_qty))
         res.door_area += area
         waste = _f(page.waste_percent, 10.0) if page is not None else 10.0
+        if waste < 0:
+            waste = 0.0
 
         # ★ «در از ورق بدنه»
         # اگر کاربر تیک زده باشد که لنگه‌ها از همان ورقِ بدنه برش بخورند،
@@ -944,10 +1231,22 @@ class CostingEngine:
             else:
                 res.warnings.append(
                     f"«{dr.label or 'در'}»: تیکِ «در از ورق بدنه» نادیده گرفته شد — {why}")
+                # ★ باگِ «لنگه‌ی درِ کاملاً رایگان»: وقتی تیک نادیده گرفته می‌شود
+                #   موتور به متریالِ خودِ در برمی‌گردد، ولی در حالتِ پیش‌فرضِ
+                #   رابط ``material_id = 0`` است (و چون تیک خورده، انتخابگرِ
+                #   متریالِ در هم پنهان می‌شود). در نتیجه نه ورق بدنه مصرف شد،
+                #   نه ورق در — و ``elif dr.material_id:`` هم چون شناسه صفر بود
+                #   هشدار نمی‌داد. لنگه‌ها **بی‌صدا رایگان** می‌شدند.
+                if dmat is None and not dr.material_id:
+                    res.warnings.append(
+                        f"«{dr.label or 'در'}»: متریالی برای {leaves} لنگه در "
+                        f"({area:.3f} م²) انتخاب نشده — ورق در **رایگان** محاسبه "
+                        "شد! یا متریالِ در را انتخاب کنید یا ابعاد لنگه را "
+                        "کوچک‌تر از ورق بدنه بگیرید.")
 
         if use_body:
             sheet_area = _f(dmat.sheet_area_sqm)
-            ppsqm = _f(dmat.price_per_sqm)
+            ppsqm = self._sheet_price_check(dmat, res, "ورق بدنه (در)", area)
             if sheet_area > 0:
                 gross = area * (1 + waste / 100.0)
                 items.append(LineItem(
@@ -963,7 +1262,7 @@ class CostingEngine:
                     area, "م²", ppsqm, area * ppsqm,
                     mat_id=int(dmat.id), mat_cat="body_sheet", area_sqm=area))
         elif dmat is not None:
-            ppsqm = _f(dmat.price_per_sqm)
+            ppsqm = self._sheet_price_check(dmat, res, "ورق در", area)
             if dmat.unit == "sheet" and dmat.sheet_area_sqm > 0:
                 # گردکردن به ورق کامل در `_batch_sheets` و در سطح کل بخش انجام
                 # می‌شود (نه برای هر یونیت) — پرت هم از تنظیم بخش می‌آید نه ۸٪ ثابت.
@@ -1022,28 +1321,28 @@ class CostingEngine:
 
         # لولا
         if dr.hinge_id or dr.hinge_price:
-            qty = _f(dr.hinges_per_leaf, 2) * leaves
+            qty = _pos(dr.hinges_per_leaf, 2) * leaves
             price = self.price_of(dr.hinge_id, dr.hinge_price)
             name = (self.mat(dr.hinge_id).name if self.mat(dr.hinge_id) else dr.hinge_name) or "لولا"
             items.append(LineItem("hinge", "لولا", name,
-                                  f"{int(dr.hinges_per_leaf)} عدد در هر لنگه × {leaves} لنگه",
+                                  f"{_i(dr.hinges_per_leaf, 2)} عدد در هر لنگه × {leaves} لنگه",
                                   qty, "عدد", price, qty * price,
                                   mat_id=int(dr.hinge_id), mat_cat="hinge"))
 
         # گازور / جک
         if (dr.gas_spring_id or dr.gas_spring_price) and dr.gas_springs_per_leaf:
-            qty = _f(dr.gas_springs_per_leaf) * leaves
+            qty = _pos(dr.gas_springs_per_leaf) * leaves
             price = self.price_of(dr.gas_spring_id, dr.gas_spring_price)
             name = (self.mat(dr.gas_spring_id).name if self.mat(dr.gas_spring_id)
                     else dr.gas_spring_name) or "گازور"
             items.append(LineItem("gas_spring", "گازور / جک", name,
-                                  f"{int(dr.gas_springs_per_leaf)} عدد در هر لنگه",
+                                  f"{_i(dr.gas_springs_per_leaf)} عدد در هر لنگه",
                                   qty, "عدد", price, qty * price,
                                   mat_id=int(dr.gas_spring_id), mat_cat="gas_spring"))
 
         # دستگیره
         if dr.handle_id or dr.handle_price:
-            qty = _f(dr.handles_per_leaf, 1) * leaves
+            qty = _pos(dr.handles_per_leaf, 1) * leaves
             price = self.price_of(dr.handle_id, dr.handle_price)
             name = (self.mat(dr.handle_id).name if self.mat(dr.handle_id) else dr.handle_name) or "دستگیره"
             items.append(LineItem("handle", "دستگیره", name, f"{leaves} لنگه",
@@ -1071,15 +1370,23 @@ class CostingEngine:
     # ------------------------------------------------------------------
     def _calc_drawer(self, dw: DrawerRow, unit_qty: int, res: UnitResult,
                      items: List[LineItem], page: Optional[Page] = None) -> None:
-        count = int(dw.qty or 0) * unit_qty
+        # ★ ``int("2.7")`` → ``ValueError`` و ``int(None)`` → ``TypeError``:
+        #   یک فیلدِ «تعداد کشو» با مقدار متنی/خالی، کل موتور را می‌خواباند و
+        #   چون ``recalc`` استثنا را می‌بلعد، پروژه برای همیشه قیمت کهنه داشت.
+        #   اکنون با «برش» به عدد صحیح می‌رسد (هم‌تراز با موتور JS).
+        count = _i(dw.qty, 0) * max(0, _i(unit_qty))
         if count <= 0:
             return
         waste = _f(page.waste_percent, 10.0) if page is not None else 10.0
+        if waste < 0:
+            waste = 0.0
 
         # بدنه‌ی جعبه‌ی کشو
-        if dw.sheet_id or dw.sheet_price_per_sqm:
+        if dw.sheet_id or _pos(dw.sheet_price_per_sqm):
             m = self.mat(dw.sheet_id)
-            ppsqm = _f(m.price_per_sqm) if m else _f(dw.sheet_price_per_sqm)
+            ppsqm = (self._sheet_price_check(m, res, "ورق جعبه‌ی کشو",
+                                             dw.box_area_sqm * count)
+                     if m else max(0.0, _f(dw.sheet_price_per_sqm)))
             name = m.name if m else (dw.sheet_name or "ورق بدنه‌ی کشو")
             if m is None and ppsqm <= 0 and dw.sheet_id:
                 res.warnings.append(
@@ -1096,9 +1403,11 @@ class CostingEngine:
                                   sheet_area_sqm=sa))
 
         # تیره‌ی کشو
-        if dw.front_id or dw.front_price_per_sqm:
+        if dw.front_id or _pos(dw.front_price_per_sqm):
             m = self.mat(dw.front_id)
-            ppsqm = _f(m.price_per_sqm) if m else _f(dw.front_price_per_sqm)
+            ppsqm = (self._sheet_price_check(m, res, "تیره‌ی کشو",
+                                             dw.front_area_sqm * count)
+                     if m else max(0.0, _f(dw.front_price_per_sqm)))
             name = m.name if m else (dw.front_name or "تیره‌ی کشو")
             if m is None and ppsqm <= 0 and dw.front_id:
                 res.warnings.append(
@@ -1164,14 +1473,45 @@ class CostingEngine:
     SHEET_ITEM_KEYS = ("body_sheet", "back_sheet", "door_sheet",
                        "drawer_front", "drawer_box")
 
-    def batch_sheets(self, items: List[LineItem]) -> Dict[int, float]:
+    #: نگاشتِ «کلید ردیف → سطل هزینه‌ی بخش».
+    #: ⚠ کلید ``"service"`` عمداً در هیچ سطلی نیست: ردیف‌های خدمات توسط
+    #:   ``_calc_services`` ساخته می‌شوند و جمعشان یک‌بار در ``service_cost``
+    #:   می‌آید. اگر این‌جا هم شمرده شوند، مبلغ خدمات دوبار در ``subtotal``
+    #:   لحاظ می‌شود (باگ قدیمیِ دوباره‌شماری که برطرف شد).
+    #: به‌صورت ویژگیِ کلاس بیرون آمده تا ``_rebuild_page_totals`` (پاسِ دومِ
+    #: تجمیع ورق در سطح پروژه) دقیقاً همان سطل‌بندی را بازتولید کند.
+    PAGE_GROUP_MAP: Dict[str, Any] = {
+        "material_cost": {"body_sheet", "back_sheet", "countertop", "crown",
+                          "underlight", "kickboard", "banding_body", "banding_drawer",
+                          "drawer_box"},
+        "door_cost": {"door_sheet", "door_model", "banding_door", "drawer_front"},
+        "accessory_cost": {"hinge", "gas_spring", "shelf_pin", "handle", "leg",
+                           "drawer_slide", "accessory"},
+        "labor_cost": {"assembly_unit", "assembly_door", "assembly_drawer",
+                       "packaging_door"},
+    }
+
+    def batch_sheets(self, items: List[LineItem], scope: str = "این بخش") -> Dict[int, float]:
         """
-        ★ تجمیع مصرف ورق در سطح یک بخش (نه هر یونیت).
+        ★ تجمیع مصرف ورق در سطح یک **محدوده** (بخش یا کل پروژه) — نه هر یونیت.
 
         پیش‌تر مساحت هر یونیت به‌تنهایی به «ورق کامل» گرد می‌شد؛ یعنی یک یونیت
         ۴۵ سانتی با ۱٫۲ مترمربع بدنه، یک ورق ۶٫۷ مترمربعی مصرف می‌کرد. در
         کارگاهِ واقعی دورریزِ یک یونیت تکه‌ی یونیت بعدی می‌شود و همه‌ی قطعاتِ
         هم‌جنس با هم روی ورق چیده می‌شوند.
+
+        ★★ سطحِ تجمیع (رفع باگ F-01): این تابع پیش‌تر **فقط یک‌بار و برای
+        ردیف‌های همان بخش** صدا زده می‌شد. یعنی همان استدلالِ بالا («دورریزِ یک
+        یونیت، تکه‌ی یونیت بعدی است») دقیقاً بین دو بخش نقض می‌شد: یک
+        آشپزخانه‌ی ۸ یونیتی که به ۸ بخش تقسیم شده بود **۸ ورق** قیمت می‌خورد
+        در حالی که از نظر فیزیکی **۳ ورق** لازم داشت (+۱۶۷٪). اکنون
+        ``calc_project`` یک‌بار هم همین تابع را روی **همه‌ی ردیف‌های همه‌ی
+        بخش‌ها** صدا می‌زند (``repool_sheets_project``) تا ورقِ هر متریال در
+        سطح پروژه یک‌جا گرد شود.
+
+        ★ idempotent: صدا‌زدنِ چندباره‌اش روی یک ردیف، عبارتِ «— از N ورق …» را
+        تکرار نمی‌کند (متنِ پایه‌ی هر ردیف یک‌بار ثبت می‌شود). این برای پاسِ
+        دومِ سطح پروژه ضروری است.
 
         این تابع:
           ۱. ردیف‌های ورقی را بر اساس متریال گروه می‌کند؛
@@ -1184,17 +1524,19 @@ class CostingEngine:
         """
         groups: Dict[int, List[LineItem]] = {}
         for it in items:
-            if it.key in self.SHEET_ITEM_KEYS and it.mat_id and it.sheet_area_sqm > 0:
+            if it.key in self.SHEET_ITEM_KEYS and it.mat_id and _f(it.sheet_area_sqm) > 0:
                 groups.setdefault(int(it.mat_id), []).append(it)
 
         sheets_by_material: Dict[int, float] = {}
         for mid, its in groups.items():
             m = self.materials.get(mid)
-            total_gross = sum(_f(i.area_sqm) for i in its)      # با پرت
-            total_net = sum(_f(i.qty) for i in its)             # بدون پرت (نمایشی)
+            total_gross = sum(_pos(i.area_sqm) for i in its)    # با پرت
+            total_net = sum(_pos(i.qty) for i in its)           # بدون پرت (نمایشی)
             sheet_area = _f(its[0].sheet_area_sqm)
             if total_gross <= 0 or sheet_area <= 0:
                 continue
+            # ⚠ گاردِ ``round(..., 6)`` خطای شناور را خنثی می‌کند تا مثلاً
+            #   ``2.0000000001`` سه ورق نشود. این رفتارِ سالم دست‌نخورده ماند.
             sheets = float(math.ceil(round(total_gross / sheet_area, 6)))
             sheets_by_material[mid] = sheets
             sheet_price = _f(m.price) if m is not None else 0.0
@@ -1203,16 +1545,76 @@ class CostingEngine:
             # این‌طور جمع ردیف‌ها دقیقاً برابر «تعداد ورق × قیمت ورق» می‌شود
             # و همزمان پرت و دورریزِ برش هم در قیمت دیده می‌شود.
             eff = (total_cost / total_net) if total_net > 0 else 0.0
-            size = (f"{m.sheet_width_cm:.0f}×{m.sheet_height_cm:.0f}"
+            size = (f"{_f(m.sheet_width_cm):.0f}×{_f(m.sheet_height_cm):.0f}"
                     if m is not None else "")
             for i in its:
-                share = (_f(i.area_sqm) / total_gross) if total_gross else 0.0
+                share = (_pos(i.area_sqm) / total_gross) if total_gross else 0.0
                 i.sheets = sheets * share
                 i.unit_label = "م²"
                 i.unit_price = eff
                 i.amount = total_cost * share
-                i.detail = (i.detail or "") + f" — از {sheets:.0f} ورق {size}ِ این بخش"
+                # متنِ پایه یک‌بار ثبت می‌شود تا پاسِ دوم (سطح پروژه) عبارت را
+                # دو بار به ردیف نچسباند.
+                base = self._detail_base.get(id(i))
+                if base is None:
+                    base = i.detail or ""
+                    self._detail_base[id(i)] = base
+                i.detail = base + f" — از {sheets:.0f} ورق {size}ِ {scope}"
         return sheets_by_material
+
+    # ------------------------------------------------------------------
+    def repool_sheets_project(self, page_results: List[PageResult]) -> bool:
+        """
+        ★ پاسِ دومِ تجمیع ورق در **سطح کل پروژه** (رفع باگ F-01).
+
+        همه‌ی ردیف‌های ورقیِ همه‌ی بخش‌ها یک‌جا گروه می‌شوند و ورقِ هر متریال
+        یک‌بار گرد می‌شود. چون ``ceil(Σ) ≤ Σ ceil`` است، این پاس هرگز قیمت را
+        **افزایش** نمی‌دهد؛ فقط ورقِ اضافه‌ای را برمی‌دارد که در اثرِ تقسیمِ
+        پروژه به چند بخش ساخته می‌شد. برای پروژه‌ی تک‌بخشی هیچ تغییری نمی‌دهد.
+
+        خروجی: ``True`` اگر مبلغ/سهم ورقِ دست‌کم یک ردیف عوض شد (یعنی جمع‌های
+        بخش باید دوباره ساخته شود).
+        """
+        if len(page_results) < 2:
+            return False
+        all_items = [i for pr in page_results for i in pr.items]
+        snapshot = {id(i): (round(_f(i.amount), 6), round(_f(i.sheets), 9))
+                    for i in all_items}
+        self.batch_sheets(all_items, scope="کل پروژه")
+        for i in all_items:
+            old = snapshot.get(id(i))
+            if old is None:
+                continue
+            if (abs(old[0] - round(_f(i.amount), 6)) > 1e-6
+                    or abs(old[1] - round(_f(i.sheets), 9)) > 1e-9):
+                return True
+        return False
+
+    # ------------------------------------------------------------------
+    def _rebuild_page_totals(self, page: Page, pr: PageResult) -> None:
+        """
+        بازسازی جمع‌های یک بخش بعد از تغییرِ مبلغ ردیف‌ها (پاسِ دومِ ورق).
+
+        فقط سطل‌های ``PAGE_GROUP_MAP`` از روی ردیف‌ها دوباره جمع می‌شوند؛
+        ``detail_cost``/``service_cost``/``extra_cost`` دست‌نخورده می‌مانند، چون
+        ردیف‌های ورقی هرگز در آن سطل‌ها نمی‌روند. ``_apply_overhead`` هم
+        idempotent است (ردیف کهنه‌ی سربار را پاک و با مبلغ تازه می‌سازد).
+        """
+        for attr in ("material_cost", "door_cost", "accessory_cost", "labor_cost"):
+            setattr(pr, attr, 0.0)
+        for it in pr.items:
+            for attr, keys in self.PAGE_GROUP_MAP.items():
+                if it.key in keys:
+                    setattr(pr, attr, getattr(pr, attr) + _f(it.amount))
+                    break
+        pr.subtotal = (pr.material_cost + pr.door_cost + pr.accessory_cost +
+                       pr.detail_cost + pr.labor_cost + pr.service_cost + pr.extra_cost)
+        pr.total_sheets = sum(_f(i.sheets) for i in pr.items)
+        # هزینه‌ی هر یونیت هم با مبالغِ نهایی همگام می‌ماند تا نامساویِ
+        # «جمع یونیت‌ها == جمع بخش» برقرار بماند.
+        for ur in pr.unit_results:
+            ur.cost = sum(_f(i.amount) for i in ur.items)
+        self._apply_overhead(pr, page)
 
     # ------------------------------------------------------------------
     def calc_page(self, page: Page) -> PageResult:
@@ -1225,14 +1627,18 @@ class CostingEngine:
             pr.items.extend(ur.items)
             pr.warnings.extend(ur.warnings)
             # تعداد مؤثر یونیت: صفر/منفی یعنی یونیت کنار گذاشته شده (بدون هزینه)
-            nq = max(0, int(_f(u.qty, 0)))
+            nq = max(0, _i(u.qty, 0))
             pr.total_units += nq
             pr.total_doors += sum(d.leaves for d in u.doors) * nq
-            pr.total_drawers += sum(max(0, int(d.qty or 0)) for d in u.drawers) * nq
+            # ⚠ `int(d.qty or 0)` روی «تعداد کشو» با مقدارِ متنی (``"2.7"``) یا
+            #   ``None`` با ValueError/TypeError موتور را می‌خواباند — و چون
+            #   `recalc_all_projects` استثنا را می‌بلعد، پروژه برای همیشه روی
+            #   خطای ۵۰۰/قیمت کهنه می‌ماند. تبدیلِ امن + کرانِ صفر.
+            pr.total_drawers += sum(max(0, _i(d.qty, 0)) for d in u.drawers) * nq
             if u.unit_type in ("ground", "tall"):
-                pr.total_ground_lm += _f(u.length_cm) / 100.0 * nq
+                pr.total_ground_lm += _pos(u.length_cm) / 100.0 * nq
             if u.unit_type == "wall":
-                pr.total_wall_lm += _f(u.length_cm) / 100.0 * nq
+                pr.total_wall_lm += _pos(u.length_cm) / 100.0 * nq
 
         # آمار تجمیعی — «قبل از» خدمات محاسبه می‌شود چون مبنای «مترمربع»
         # (sqm) در خدماتِ صفحه به مساحت کل قطعات همین بخش نیاز دارد.
@@ -1280,8 +1686,14 @@ class CostingEngine:
 
         # اضافات
         for ex in page.extras:
-            if not ex.label and not ex.price:
+            if not ex.label and not _f(ex.price):
                 continue
+            # ★ قلمِ اضافه با تعداد/قیمت منفی پیش‌تر بی‌صدا از جمع کل کم می‌کرد
+            #   (تخفیفِ پنهان روی سند مالی). اکنون کرانِ صفر دارد + هشدار.
+            if _f(ex.qty) < 0 or _f(ex.price) < 0:
+                pr.warnings.append(
+                    f"«{ex.label or 'قلم متفرقه'}»: تعداد یا قیمت منفی بود — صفر در "
+                    "نظر گرفته شد. قلمِ منفی پیش‌تر بی‌صدا از جمع کل کم می‌کرد.")
             pr.items.append(LineItem("extra", "اضافات و اکسسوری", ex.label or "قلم متفرقه",
                                      ex.note or "", _f(ex.qty), ex.unit_label(),
                                      _f(ex.price), _f(ex.cost), visible=bool(ex.visible)))
@@ -1290,23 +1702,9 @@ class CostingEngine:
         # خدمات سطح صفحه
         pr.service_cost = self._calc_services(page, pr)
 
-        # جمع‌بندی
-        # ⚠ کلید «service» عمداً در هیچ سطلی نیست: ردیف‌های خدمات توسط
-        #   `_calc_services` ساخته می‌شوند و جمعشان یک‌بار در `service_cost`
-        #   می‌آید. اگر این‌جا هم شمرده شوند، مبلغ خدمات دوبار در `subtotal`
-        #   لحاظ می‌شود (باگ قدیمیِ دوباره‌شماری که برطرف شد).
-        group_map = {
-            "material_cost": {"body_sheet", "back_sheet", "countertop", "crown",
-                              "underlight", "kickboard", "banding_body", "banding_drawer",
-                              "drawer_box"},
-            "door_cost": {"door_sheet", "door_model", "banding_door", "drawer_front"},
-            "accessory_cost": {"hinge", "gas_spring", "shelf_pin", "handle", "leg",
-                               "drawer_slide", "accessory"},
-            "labor_cost": {"assembly_unit", "assembly_door", "assembly_drawer",
-                           "packaging_door"},
-        }
+        # جمع‌بندی — سطل‌بندی در ``PAGE_GROUP_MAP`` تعریف شده است.
         for it in pr.items:
-            for attr, keys in group_map.items():
+            for attr, keys in self.PAGE_GROUP_MAP.items():
                 if it.key in keys:
                     setattr(pr, attr, getattr(pr, attr) + _f(it.amount))
                     break
@@ -1375,15 +1773,21 @@ class CostingEngine:
             "percent": 0.0,
         }
         for u in page.units:
-            ctx["shelf"] += max(0.0, _f(u.shelves)) * max(0, int(_f(u.qty, 0)))
+            ctx["shelf"] += _pos(u.shelves) * max(0, _i(u.qty, 0))
         for s in page.services:
-            if not s.label and not s.price:
+            if not s.label and not _f(s.price):
                 continue
             if s.basis == "percent":
                 continue        # در سطح پروژه و پس از محاسبه‌ی جمع اعمال می‌شود
+            if _f(s.price) < 0:
+                pr.warnings.append(
+                    f"«{s.label or 'خدمات'}»: بهای خدمت منفی بود — صفر در نظر "
+                    "گرفته شد (خدمتِ با بهای منفی از جمع کل کم می‌کرد).")
             basis = s.basis if s.basis in ctx else "fixed"
-            qty = ctx[basis] if basis != "percent" else 1.0
-            amount = _f(qty) * _f(s.price)
+            # ★ مبنای منفی/NaN پیش‌تر مبلغ خدمت را منفی می‌کرد و بی‌صدا از
+            #   جمع کل کم می‌شد (مثلاً عمق منفی → مساحت منفی → خدمت منفی).
+            qty = max(0.0, _f(ctx[basis])) if basis != "percent" else 1.0
+            amount = qty * _pos(s.price)
             pr.items.append(LineItem("service", "خدمات", s.label or "خدمات",
                                      s.note or f"مبنای محاسبه: {basis}", qty, "",
                                      _f(s.price), amount))
@@ -1408,6 +1812,22 @@ class CostingEngine:
         # ورودی‌های نامعقول (درصد منفی، مارجین ≥ ۱۰۰ و …) پیش‌تر بی‌صدا
         # نتایج عجیب می‌ساختند (مثلاً تخفیف منفی قیمت را از ناخالص بالاتر
         # می‌برد). اکنون مقدارِ مؤثر محدود می‌شود و هشدارش به کاربر می‌رسد.
+        # ★ ورودیِ غیرمتناهی (NaN/inf) پیش‌تر از ``_f`` سالم رد می‌شد و تا
+        #   انتهای زنجیره می‌رفت: ``{"final_price": NaN}`` در خروجی API یک
+        #   **JSON نامعتبر** است (``JSON.parse`` در مرورگر می‌ترکد) و در SQLite
+        #   ستون REAL آن را NULL ذخیره می‌کرد → قیمت بی‌صدا «صفر» می‌شد.
+        #   اکنون در همین مرز گرفته می‌شود و کاربر هم می‌فهمد چرا.
+        for _nm, _v in (("درصد سود", profit_percent), ("درصد تخفیف", discount_percent),
+                        ("مبلغ تخفیف", discount_amount), ("درصد مالیات", vat_percent),
+                        ("مبلغ نصب", install_value), ("درصد بیعانه", deposit_percent),
+                        ("مبلغ بیعانه", deposit_amount),
+                        ("مبلغ ثابت اضافه", extra_fixed_amount)):
+            try:
+                _x = float(_v)
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if _x != _x or _x in (math.inf, -math.inf):
+                out.warnings.append(f"{_nm} نامعتبر (غیرعددی/بی‌نهایت) بود — صفر در نظر گرفته شد.")
         profit_percent = _f(profit_percent)
         if profit_percent < 0:
             out.warnings.append(f"درصد سود منفی ({profit_percent:g}٪) بود — صفر در نظر گرفته شد.")
@@ -1449,17 +1869,40 @@ class CostingEngine:
                      total_wall_lm=0.0, total_body_area=0.0, total_door_area=0.0,
                      total_back_area=0.0, total_banding_m=0.0, total_sheets=0.0)
 
+        # ── پاسِ ۱ ─ محاسبه‌ی هر بخش به‌تنهایی ────────────────────────────
+        # (تجمیع ورق در سطح بخش این‌جا انجام می‌شود، مثل قبل)
+        self._detail_base.clear()
+        pairs: List[Tuple[Page, PageResult]] = []
         for page in pages:
-            pr = self.calc_page(page)
+            pairs.append((page, self.calc_page(page)))
+
+        # ── پاسِ ۲ ─ تجمیع ورق در سطح **کل پروژه** (رفع باگ F-01) ─────────
+        # ورقِ یک متریال در کارگاه یک‌جا برش می‌خورد، نه بخش‌بخش. بدون این پاس،
+        # تقسیمِ یک آشپزخانه به N بخش، تعداد ورق (و مبلغ گران‌ترین قلم فاکتور)
+        # را تا N برابر باد می‌کرد. چون ceil(Σ) ≤ Σ ceil است، این پاس فقط
+        # مبلغ را **کم** می‌کند و هرگز از نیاز فیزیکی ورق پایین‌تر نمی‌رود.
+        if self.repool_sheets_project([pr for _, pr in pairs]):
+            for page, pr in pairs:
+                self._rebuild_page_totals(page, pr)
+
+        # ── پاسِ ۳ ─ خدمات درصدی و انباشت نتیجه ──────────────────────────
+        for page, pr in pairs:
             # خدمات درصدی — همه نسبت به «جمع اقلامِ قبل از خدمات درصدی» حساب
             # می‌شوند (بدون اثر مرکب روی هم)؛ پیش‌تر هر خدمت درصدی روی جمعِ
             # شاملِ خدمت درصدیِ قبلی اعمال می‌شد.
+            # ⚠ عمداً **بعد** از پاسِ ۲ اعمال می‌شود تا درصدِ خدمت روی جمعِ
+            #   اصلاح‌شده‌ی ورق بنشیند، نه روی جمعِ بادکرده‌ی بخش‌بخش.
             pct_services = [s for s in page.services if s.basis == "percent"]
             if pct_services:
                 base = pr.subtotal
                 pct_total = 0.0
                 for s in pct_services:
-                    pct = max(0.0, _f(s.price))
+                    pct_raw = _f(s.price)
+                    if pct_raw < 0:
+                        out.warnings.append(
+                            f"«{s.label or 'خدمات درصدی'}»: درصدِ منفی بود — صفر در "
+                            "نظر گرفته شد.")
+                    pct = max(0.0, pct_raw)
                     amt = base * pct / 100.0
                     pr.items.append(LineItem("service", "خدمات", s.label or "خدمات درصدی",
                                              f"{pct:g}٪ از جمع بخش", 1, "", pct, amt))
@@ -1472,14 +1915,20 @@ class CostingEngine:
             out.items.extend(pr.items)
             out.warnings.extend(pr.warnings)
             for k in stats:
-                stats[k] += getattr(pr, k, 0) or 0
+                stats[k] += _f(getattr(pr, k, 0))
 
+        extra_fixed_amount = _f(extra_fixed_amount)
+        if extra_fixed_amount:
+            # ★ کرانِ صفر: مبلغِ ثابتِ منفی پیش‌تر بی‌صدا از جمع کل کم می‌شد.
+            if extra_fixed_amount < 0:
+                out.warnings.append("مبلغ ثابتِ اضافه منفی بود — صفر در نظر گرفته شد.")
+                extra_fixed_amount = 0.0
         if extra_fixed_amount:
             out.items.append(LineItem("extra_fixed", "اضافات و اکسسوری",
                                       "مبلغ ثابت بابت تفاوت نوع در / اقلام کلی", "",
-                                      1, "موردی", _f(extra_fixed_amount), _f(extra_fixed_amount)))
-            out.pages_cost += _f(extra_fixed_amount)
-            stats["extra_fixed"] = _f(extra_fixed_amount)
+                                      1, "موردی", extra_fixed_amount, extra_fixed_amount))
+            out.pages_cost += extra_fixed_amount
+            stats["extra_fixed"] = extra_fixed_amount
 
         # هزینه‌ی نصب
         install = self._calc_installation(install_mode, install_value, out.pages_cost, stats)
@@ -1551,10 +2000,18 @@ class CostingEngine:
         cost = _f(cost)
         p = _f(percent)
         if mode == "margin":
+            # ⚠ مارجین ≥ ۱۰۰٪ مخرج را صفر/منفی می‌کند: ۹۹٫۹۹۹۹٪ پیش‌تر قیمتِ
+            #   نهایی ~۱۰^۱۲ می‌ساخت و ۱۰۰٪ تقسیم بر صفر بود. کران بسته شد.
             if p >= 100:
                 return 0.0
-            return cost * p / (100.0 - p)
-        return cost * p / 100.0
+            profit = cost * p / (100.0 - p)
+        else:
+            profit = cost * p / 100.0
+        # ★ کرانِ سلامت: هر نتیجه‌ی غیرمتناهی (یا منفیِ ناشی از ورودی خراب)
+        #   به صفر برمی‌گردد تا عددِ پوچ روی سند مالی نرود.
+        if not math.isfinite(profit) or profit < 0:
+            return 0.0
+        return profit
 
     @staticmethod
     def sell_price(cost: float, mode: str, percent: float) -> float:
