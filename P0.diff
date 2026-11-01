@@ -1,0 +1,75 @@
+--- a/webui/css/styles.css
++++ b/webui/css/styles.css
+@@ -2936,3 +2936,32 @@
+   .cell-input.w-dim { min-width: 4.4rem; }
+   .cell-input.w-qty { min-width: 4rem; }
+ }
++
++
++/* ==========================================================================
++   ★ PATCH P0 — زنجیره‌ی «نوارهای چسبان» و سرستونِ کارت‌های ویرایشگر
++   --------------------------------------------------------------------------
++   مشکل: سرستونِ کارت‌های ویرایشگر (همان نوارِ «بخش‌ها (سبک‌ها)» + «افزودن بخش»)
++   `position: static` بود، پس هنگام اسکرول زیرِ نوارِ جمعِ پایین و نوارِ «افزودن»
++   می‌رفت و از دید خارج می‌شد؛ و بنرِ «حالتِ نمایشی» که بالای ویرایشگر است،
++   نوارِ فرمانِ چسبان را جابه‌جا می‌کرد بدونِ این‌که آفست‌ها به‌روز شوند.
++   ========================================================================== */
++:root { --demo-banner-h: 0px; --editor-bar-h: 0px; }
++
++/* بنرِ حالتِ نمایشی هم چسبان شود تا با اسکرول نرود و شکاف نسازد */
++.demo-banner { position: sticky; top: var(--topbar-h); z-index: 29; }
++
++/* نوارِ فرمان: زیرِ نوارِ عنوان + بنر */
++.editor-bar { top: calc(var(--topbar-h) + var(--demo-banner-h)); }
++
++/* ★ نکته‌ی حیاتی: .card با overflow:hidden یک «ظرفِ اسکرول» می‌سازد و
++   position:sticky داخلش هرگز نمی‌چسبد. clip همان برش را می‌دهد بدونِ ظرفِ اسکرول. */
++#page-projects .card { overflow: clip; }
++
++/* سرستونِ کارت‌های ویرایشگر: چسبان، زیرِ همه‌ی نوارهای بالایی */
++#page-projects .card-head {
++  position: sticky;
++  top: calc(var(--topbar-h) + var(--demo-banner-h) + var(--editor-bar-h));
++  z-index: 4;
++  background: var(--surface);
++}
+--- a/webui/js/ui.js
++++ b/webui/js/ui.js
+@@ -1458,6 +1458,15 @@
+   const stickyAb = ab && ab.offsetParent && getComputedStyle(ab).position === "sticky";
+   const ah = stickyAb ? Math.ceil(ab.getBoundingClientRect().height) + 8 : 0;
+   document.documentElement.style.setProperty("--addbar-h", ah + "px");
++  /* ★ PATCH P0: ارتفاعِ زنده‌ی نوارِ فرمانِ چسبان و بنرِ «حالتِ نمایشی».
++     بدونِ این دو، سرستونِ کارت‌ها و نوارِ «افزودن» زیرشان پنهان می‌شدند. */
++  const eb = document.getElementById("editorBar");
++  const ebSticky = eb && !eb.hidden && eb.offsetParent && getComputedStyle(eb).position === "sticky";
++  document.documentElement.style.setProperty("--editor-bar-h",
++    (ebSticky ? Math.ceil(eb.getBoundingClientRect().height) + 8 : 0) + "px");
++  const db = document.getElementById("demoBanner");
++  document.documentElement.style.setProperty("--demo-banner-h",
++    (db && !db.hidden ? Math.ceil(db.getBoundingClientRect().height) : 0) + "px");
+ }
+ function readTotalbarInto(p) {
+   p.profit_mode = el("tbProfitMode").value;
+@@ -3605,6 +3614,9 @@
+   if (typeof ResizeObserver !== "undefined") {
+     const tbEl = el("totalBar");
+     if (tbEl) { try { new ResizeObserver(() => syncStickyOffsets()).observe(tbEl); } catch (e) {} }
++    /* ★ PATCH P0: نوارِ فرمان با wrap شدن ارتفاعش عوض می‌شود */
++    const ebEl = el("editorBar");
++    if (ebEl) { try { new ResizeObserver(() => syncStickyOffsets()).observe(ebEl); } catch (e) {} }
+   }
+   window.addEventListener("resize", syncStickyOffsets);
+   syncStickyOffsets();
+--- a/webui/js/ui-modal.js
++++ b/webui/js/ui-modal.js
+@@ -302,6 +302,9 @@
+   if (id !== MODAL_GUARD_ID) markModalDirty(id, !!opts.dirty);
+   syncInert();
+   lockScroll(true);
++  /* ★ PATCH P0: کلاسِ stacked-* قبلاً فقط اضافه می‌شد و پاک نمی‌شد؛
++     پس یک‌بار بازکردنِ دو مودال، پرده را برای همیشه تیره‌تر می‌کرد. */
++  back.classList.remove("stacked-1", "stacked-2", "stacked-3");
+   back.classList.add("stacked-" + Math.min(3, MODALS.stack.length));
+   /* فوکوس پس از یک فریم تا انیمیشنِ باز شدن پرش نداشته باشد */
+   setTimeout(() => { if (topModalId() === id) focusFirst(node); }, 50);

@@ -1458,6 +1458,15 @@ function syncStickyOffsets() {
   const stickyAb = ab && ab.offsetParent && getComputedStyle(ab).position === "sticky";
   const ah = stickyAb ? Math.ceil(ab.getBoundingClientRect().height) + 8 : 0;
   document.documentElement.style.setProperty("--addbar-h", ah + "px");
+  /* ★ PATCH P0: ارتفاعِ زنده‌ی نوارِ فرمانِ چسبان و بنرِ «حالتِ نمایشی».
+     بدونِ این دو، سرستونِ کارت‌ها و نوارِ «افزودن» زیرشان پنهان می‌شدند. */
+  const eb = document.getElementById("editorBar");
+  const ebSticky = eb && !eb.hidden && eb.offsetParent && getComputedStyle(eb).position === "sticky";
+  document.documentElement.style.setProperty("--editor-bar-h",
+    (ebSticky ? Math.ceil(eb.getBoundingClientRect().height) + 8 : 0) + "px");
+  const db = document.getElementById("demoBanner");
+  document.documentElement.style.setProperty("--demo-banner-h",
+    (db && !db.hidden ? Math.ceil(db.getBoundingClientRect().height) : 0) + "px");
 }
 function readTotalbarInto(p) {
   p.profit_mode = el("tbProfitMode").value;
@@ -3605,6 +3614,9 @@ function wire() {
   if (typeof ResizeObserver !== "undefined") {
     const tbEl = el("totalBar");
     if (tbEl) { try { new ResizeObserver(() => syncStickyOffsets()).observe(tbEl); } catch (e) {} }
+    /* ★ PATCH P0: نوارِ فرمان با wrap شدن ارتفاعش عوض می‌شود */
+    const ebEl = el("editorBar");
+    if (ebEl) { try { new ResizeObserver(() => syncStickyOffsets()).observe(ebEl); } catch (e) {} }
   }
   window.addEventListener("resize", syncStickyOffsets);
   syncStickyOffsets();

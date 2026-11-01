@@ -302,6 +302,9 @@ function openModal(id, opts) {
   if (id !== MODAL_GUARD_ID) markModalDirty(id, !!opts.dirty);
   syncInert();
   lockScroll(true);
+  /* ★ PATCH P0: کلاسِ stacked-* قبلاً فقط اضافه می‌شد و پاک نمی‌شد؛
+     پس یک‌بار بازکردنِ دو مودال، پرده را برای همیشه تیره‌تر می‌کرد. */
+  back.classList.remove("stacked-1", "stacked-2", "stacked-3");
   back.classList.add("stacked-" + Math.min(3, MODALS.stack.length));
   /* فوکوس پس از یک فریم تا انیمیشنِ باز شدن پرش نداشته باشد */
   setTimeout(() => { if (topModalId() === id) focusFirst(node); }, 50);
