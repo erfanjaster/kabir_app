@@ -1,0 +1,697 @@
+# -*- coding: utf-8 -*-
+"""لایه‌ی دسترسی به داده (DAO) — CRUD برای متریال، سبک، پروژه و فاکتور."""
+
+from __future__ import annotations
+
+import json
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from ..core.costing import Material, Page
+from . import seed
+from .db import Database
+
+
+def _now() -> str:
+    return datetime.now().isoformat(timespec="seconds")
+
+
+# ===========================================================================
+# «مُهرِ مالی» پروژه‌های قطعی
+# ===========================================================================
+#: وضعیت‌هایی که پروژه را از نظر مالی **قطعی** می‌کنند.
+#: ``draft`` (پیش‌نویس) و ``open`` (در جریان) عمداً این‌جا نیستند: پروژه‌ی باز
+#: باید با تغییر نرخ متریال به‌روز بماند — این دقیقاً همان تفکیکی است که
+#: کاربر انتظار دارد.
+SEALED_STATUSES = ("done",)
+
+#: نوع فاکتوری که سندِ قطعی/بایگانی‌شده محسوب می‌شود.
+#: ``quote`` (پیش‌فاکتور) و ``proforma`` عمداً مُهر نمی‌زنند: پیش‌فاکتور سندِ
+#: قیمتِ روز است و باید با نرخ‌های تازه به‌روز شود.
+SEALED_INVOICE_KINDS = ("invoice",)
+
+#: ستون‌هایی که «مبلغِ محاسبه‌شده‌ی» پروژه‌اند و روی پروژه‌ی مُهرشده بازنویسی
+#: نمی‌شوند. ``rates_rev`` عمداً این‌جا نیست (پایین توضیح داده شده).
+SEALED_FINANCIAL_FIELDS = ("final_price", "total_cost")
+
+
+def _num(v: Any, default: float = 0.0) -> float:
+    """تبدیل امن به float (فقط برای مقایسه‌های داخلی این ماژول)."""
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        return float(default)
+    return x if x == x else float(default)          # NaN → default
+
+
+# ===========================================================================
+# راه‌اندازی اولیه
+# ===========================================================================
+
+def bootstrap(db: Optional[Database] = None) -> bool:
+    """اگر پایگاه‌داده خالی بود، دسته‌ها و متریال‌های نمونه را درج می‌کند."""
+    db = db or Database.instance()
+    first_run = db.get_bool("first_run_done", False)
+    n_cat = db.scalar("SELECT COUNT(*) FROM material_categories", default=0) or 0
+    n_mat = db.scalar("SELECT COUNT(*) FROM materials", default=0) or 0
+    if n_cat == 0:
+        db.executemany(
+            "INSERT OR IGNORE INTO material_categories(key,title,unit,sort_order) VALUES(?,?,?,?)",
+            [(k, t, u, s) for k, t, u, s in seed.CATEGORIES],
+        )
+    if n_mat == 0:
+        db.executemany(
+            "INSERT INTO materials(category,name,unit,price,sheet_width,sheet_height,"
+            "thickness_mm,width_cm,supplier,note,active,created_at,updated_at) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?,1,?,?)",
+            [(m[1], m[0], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], _now(), _now())
+             for m in seed.MATERIALS],
+        )
+    n_styles = db.scalar("SELECT COUNT(*) FROM styles", default=0) or 0
+    if n_styles == 0:
+        for i, st in enumerate(seed.SAMPLE_STYLES):
+            db.execute(
+                "INSERT INTO styles(name,note,data,sort_order,created_at,updated_at) VALUES(?,?,?,?,?,?)",
+                (st["name"], st.get("note", ""), json.dumps(st["data"], ensure_ascii=False),
+                 i, _now(), _now()),
+            )
+    if not first_run:
+        db.set_setting("first_run_done", "1")
+    return not first_run
+
+
+# ===========================================================================
+# دسته‌بندی‌ها
+# ===========================================================================
+
+class CategoryRepo:
+    def __init__(self, db: Optional[Database] = None):
+        self.db = db or Database.instance()
+
+    def all(self) -> List[Dict[str, Any]]:
+        return [dict(r) for r in self.db.q(
+            "SELECT * FROM material_categories ORDER BY sort_order, id")]
+
+    def labels(self) -> Dict[str, str]:
+        return {r["key"]: r["title"] for r in self.db.q("SELECT key,title FROM material_categories")}
+
+    def add(self, key: str, title: str, unit: str = "piece") -> int:
+        return self.db.execute(
+            "INSERT OR IGNORE INTO material_categories(key,title,unit,sort_order) VALUES(?,?,?,?)",
+            (key, title, unit, 99))
+
+    def rename(self, key: str, title: str) -> None:
+        self.db.execute("UPDATE material_categories SET title=? WHERE key=?", (title, key))
+
+
+# ===========================================================================
+# متریال و خدمات
+# ===========================================================================
+
+class MaterialRepo:
+    def __init__(self, db: Optional[Database] = None):
+        self.db = db or Database.instance()
+        self.cats = CategoryRepo(self.db)
+
+    # --- خواندن ---
+    def all(self, active_only: bool = False) -> List[Material]:
+        sql = "SELECT * FROM materials"
+        if active_only:
+            sql += " WHERE active=1"
+        sql += " ORDER BY category, name"
+        return [self._to_obj(r) for r in self.db.q(sql)]
+
+    def by_category(self, category: str, active_only: bool = True) -> List[Material]:
+        sql = "SELECT * FROM materials WHERE category=?"
+        if active_only:
+            sql += " AND active=1"
+        sql += " ORDER BY name"
+        return [self._to_obj(r) for r in self.db.q(sql, (category,))]
+
+    def get(self, mid: int) -> Optional[Material]:
+        row = self.db.one("SELECT * FROM materials WHERE id=?", (mid,))
+        return self._to_obj(row) if row else None
+
+    def find_by_name(self, name: str, category: Optional[str] = None) -> Optional[Material]:
+        if category:
+            row = self.db.one("SELECT * FROM materials WHERE name=? AND category=?", (name, category))
+        else:
+            row = self.db.one("SELECT * FROM materials WHERE name=?", (name,))
+        return self._to_obj(row) if row else None
+
+    def search(self, text: str) -> List[Material]:
+        like = f"%{text}%"
+        return [self._to_obj(r) for r in self.db.q(
+            "SELECT * FROM materials WHERE name LIKE ? OR note LIKE ? OR supplier LIKE ? "
+            "ORDER BY category, name", (like, like, like))]
+
+    def categories_with_counts(self) -> List[Dict[str, Any]]:
+        rows = self.db.q(
+            "SELECT c.key, c.title, c.unit, COUNT(m.id) AS cnt, COALESCE(SUM(m.active),0) AS act "
+            "FROM material_categories c LEFT JOIN materials m ON m.category=c.key "
+            "GROUP BY c.key ORDER BY c.sort_order, c.id")
+        return [dict(r) for r in rows]
+
+    @staticmethod
+    def _to_obj(row) -> Material:
+        return Material(
+            id=row["id"], name=row["name"], category=row["category"], unit=row["unit"],
+            price=float(row["price"] or 0), sheet_width_cm=float(row["sheet_width"] or 0),
+            sheet_height_cm=float(row["sheet_height"] or 0), thickness_mm=float(row["thickness_mm"] or 0),
+            width_cm=float(row["width_cm"] or 0), note=row["note"] or "",
+            supplier=row["supplier"] or "",
+        )
+
+    # --- نوشتن ---
+    def add(self, m: Material) -> int:
+        return self.db.execute(
+            "INSERT INTO materials(category,name,unit,price,sheet_width,sheet_height,"
+            "thickness_mm,width_cm,supplier,note,active,created_at,updated_at) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?,1,?,?)",
+            (m.category, m.name, m.unit, m.price, m.sheet_width_cm, m.sheet_height_cm,
+             m.thickness_mm, m.width_cm, getattr(m, "supplier", ""), m.note, _now(), _now()))
+
+    def update(self, m: Material) -> None:
+        old = self.get(m.id)
+        self.db.execute(
+            "UPDATE materials SET category=?, name=?, unit=?, price=?, sheet_width=?, "
+            "sheet_height=?, thickness_mm=?, width_cm=?, supplier=?, note=?, updated_at=? WHERE id=?",
+            (m.category, m.name, m.unit, m.price, m.sheet_width_cm, m.sheet_height_cm,
+             m.thickness_mm, m.width_cm, getattr(m, "supplier", ""), m.note, _now(), m.id))
+        if old and abs(float(old.price) - float(m.price)) > 0.001:
+            self.log_price(m.id, float(old.price), float(m.price), "ویرایش دستی")
+
+    def set_price(self, mid: int, price: float, reason: str = "تغییر قیمت") -> None:
+        old = self.get(mid)
+        self.db.execute("UPDATE materials SET price=?, updated_at=? WHERE id=?", (price, _now(), mid))
+        if old:
+            self.log_price(mid, float(old.price), float(price), reason)
+
+    def log_price(self, mid: int, old: float, new: float, reason: str = "") -> None:
+        pct = ((new - old) / old * 100.0) if old else 0.0
+        self.db.execute(
+            "INSERT INTO price_history(material_id,old_price,new_price,change_pct,reason,created_at) "
+            "VALUES(?,?,?,?,?,?)", (mid, old, new, pct, reason, _now()))
+
+    def bulk_change_price(self, category: Optional[str], percent: float,
+                          only_ids: Optional[List[int]] = None, reason: str = "به‌روزرسانی دسته‌جمعی") -> int:
+        """افزایش/کاهش درصدی قیمت‌ها — با ثبت تاریخچه (فقط برای تغییرات واقعی)."""
+        rows = self.all()
+        count = 0
+        for m in rows:
+            if only_ids is not None and m.id not in only_ids:
+                continue
+            if category and m.category != category:
+                continue
+            new_price = round(float(m.price) * (1 + percent / 100.0), 2)
+            # ⚠ اگر قیمت عملاً عوض نمی‌شود (مثلاً درصدِ صفر یا گرد‌شدن)،
+            #   تاریخچه‌ی پوچ ثبت نکن و در شمارش هم نیاور.
+            if abs(new_price - float(m.price)) < 0.005:
+                continue
+            self.set_price(m.id, new_price, reason)
+            count += 1
+        return count
+
+    def toggle_active(self, mid: int) -> bool:
+        cur = self.db.scalar("SELECT active FROM materials WHERE id=?", (mid,), 1)
+        new = 0 if cur else 1
+        self.db.execute("UPDATE materials SET active=?, updated_at=? WHERE id=?", (new, _now(), mid))
+        return bool(new)
+
+    def delete(self, mid: int) -> None:
+        self.db.execute("DELETE FROM price_history WHERE material_id=?", (mid,))
+        self.db.execute("DELETE FROM materials WHERE id=?", (mid,))
+
+    def history(self, mid: Optional[int] = None, limit: int = 200) -> List[Dict[str, Any]]:
+        sql = ("SELECT h.*, m.name AS material_name FROM price_history h "
+               "LEFT JOIN materials m ON m.id=h.material_id ")
+        params: tuple = ()
+        if mid:
+            sql += "WHERE h.material_id=? "
+            params = (mid,)
+        sql += "ORDER BY h.id DESC LIMIT ?"
+        return [dict(r) for r in self.db.q(sql, params + (limit,))]
+
+    def duplicates(self) -> List[Dict[str, Any]]:
+        rows = self.db.q("SELECT name, category, COUNT(*) c FROM materials "
+                         "GROUP BY name, category HAVING c > 1")
+        return [dict(r) for r in rows]
+
+
+# ===========================================================================
+# سبک‌های پروژه
+# ===========================================================================
+
+class StyleRepo:
+    def __init__(self, db: Optional[Database] = None):
+        self.db = db or Database.instance()
+
+    def all(self) -> List[Dict[str, Any]]:
+        out = []
+        for r in self.db.q("SELECT * FROM styles ORDER BY sort_order, name"):
+            d = dict(r)
+            try:
+                d["data"] = json.loads(d.get("data") or "{}")
+            except json.JSONDecodeError:
+                d["data"] = {}
+            out.append(d)
+        return out
+
+    def get(self, sid: int) -> Optional[Dict[str, Any]]:
+        r = self.db.one("SELECT * FROM styles WHERE id=?", (sid,))
+        if not r:
+            return None
+        d = dict(r)
+        try:
+            d["data"] = json.loads(d.get("data") or "{}")
+        except json.JSONDecodeError:
+            d["data"] = {}
+        return d
+
+    def count(self) -> int:
+        return int(self.db.scalar("SELECT COUNT(*) FROM styles", default=0) or 0)
+
+    def add(self, name: str, data: Dict[str, Any], note: str = "") -> int:
+        return self.db.execute(
+            "INSERT INTO styles(name,note,data,sort_order,created_at,updated_at) VALUES(?,?,?,?,?,?)",
+            (name, note, json.dumps(data, ensure_ascii=False), self.count(), _now(), _now()))
+
+    def update(self, sid: int, name: str, data: Dict[str, Any], note: str = "") -> None:
+        self.db.execute(
+            "UPDATE styles SET name=?, note=?, data=?, updated_at=? WHERE id=?",
+            (name, note, json.dumps(data, ensure_ascii=False), _now(), sid))
+
+    def duplicate(self, sid: int) -> Optional[int]:
+        st = self.get(sid)
+        if not st:
+            return None
+        return self.add(f"{st['name']} (کپی)", st["data"], st.get("note", ""))
+
+    def delete(self, sid: int) -> None:
+        self.db.execute("DELETE FROM styles WHERE id=?", (sid,))
+
+
+# ===========================================================================
+# پروژه‌ها و صفحه‌ها
+# ===========================================================================
+
+class ProjectRepo:
+    def __init__(self, db: Optional[Database] = None):
+        self.db = db or Database.instance()
+
+    # --- پروژه ---
+    def all(self) -> List[Dict[str, Any]]:
+        return [dict(r) for r in self.db.q("SELECT * FROM projects ORDER BY id DESC")]
+
+    def get(self, pid: int) -> Optional[Dict[str, Any]]:
+        r = self.db.one("SELECT * FROM projects WHERE id=?", (pid,))
+        return dict(r) if r else None
+
+    def create(self, data: Dict[str, Any]) -> int:
+        cols = ["code", "customer_name", "customer_phone", "customer_mobile", "customer_address",
+                "title", "status", "install_mode", "install_value", "profit_mode", "profit_percent",
+                "discount_percent", "discount_amount", "vat_enabled", "vat_percent",
+                "extra_fixed_amount", "deposit_percent", "deposit_amount",
+                "ground_share_percent",
+                "valid_until", "note", "final_price", "total_cost", "rates_rev"]
+        vals = [data.get(c) for c in cols]
+        vals[0] = vals[0] or self.next_code()
+        if vals[-1] is None:
+            vals[-1] = 0
+        sql = (f"INSERT INTO projects({','.join(cols)},created_at,updated_at) "
+               f"VALUES({','.join(['?'] * len(cols))},?,?)")
+        pid = self.db.execute(sql, vals + [_now(), _now()])
+        return int(pid)
+
+    #: فیلدهای مالیِ «محاسبه‌شده» — همان‌هایی که بازمحاسبه‌ی نرخ می‌نویسد.
+    FINANCIAL_FIELDS = SEALED_FINANCIAL_FIELDS
+
+    def seal_reason(self, pid: int) -> Optional[str]:
+        """
+        چرا این پروژه از نظر مالی **مُهرشده** است؟ (``None`` یعنی باز است)
+
+        یک پروژه وقتی مُهر می‌خورد که یا
+          ۱) فاکتور فروشِ قطعی (``kind='invoice'``) برایش صادر شده باشد، یا
+          ۲) وضعیتش «انجام‌شده» (``done``) باشد.
+
+        ★ چرا این تفکیک لازم بود (باگ F-02):
+        ``recalc_all_projects`` با ``repo.all()`` کار می‌کرد و **هیچ** فیلترِ
+        وضعیتی نداشت؛ جدول ``projects`` هم هیچ ستونِ قفل/بایگانی ندارد. در
+        نتیجه با یک «+۵۰٪» روی قیمت ورق، پروژه‌ی قطعیِ
+        ``14,025,000`` به ``21,037,500`` بازنویسی می‌شد، در حالی که ردیفِ
+        ``invoices`` (که snapshot کامل JSON دارد) روی ``14,025,000`` می‌ماند.
+        یعنی **دو عددِ متناقضِ همیشگی** برای یک کار: سندِ چاپ‌شده‌ی دستِ مشتری
+        یک مبلغ می‌گفت و گزارشِ درآمد/سودِ داشبورد مبلغی دیگر. چون داشبورد
+        ``Σ final_price`` همه‌ی پروژه‌ها را جمع می‌زد، سودِ گزارش‌شده هم
+        عملاً جعلی می‌شد.
+
+        مُهر در **تک‌نقطه‌ی نوشتن** (همین ``update``) اعمال می‌شود تا هیچ
+        مسیری — بازمحاسبه‌ی خودکار، تغییر دسته‌جمعی قیمت، یا حتی
+        ``final_price`` ارسالیِ کلاینت — نتواند بی‌صدا سندِ قطعی را بشکند.
+        """
+        row = self.get(pid)
+        if row is None:
+            return None
+        status = str(row.get("status") or "").strip().lower()
+        if status in SEALED_STATUSES:
+            return f"وضعیت پروژه «{status}» (قطعی) است"
+        inv = InvoiceRepo(self.db).final_invoice_for(pid)
+        if inv is not None:
+            return f"فاکتور قطعیِ {inv.get('number') or 'ثبت‌شده'} برایش صادر شده"
+        return None
+
+    def is_sealed(self, pid: int) -> bool:
+        """آیا مبلغِ ذخیره‌شده‌ی این پروژه قفل است؟ (نگاه به :meth:`seal_reason`)"""
+        return self.seal_reason(pid) is not None
+
+    def update(self, pid: int, data: Dict[str, Any], force: bool = False) -> bool:
+        """
+        به‌روزرسانی فیلدهای مجازِ پروژه.
+
+        خروجی: ``True`` اگر **همه‌ی** فیلدهای درخواستی نوشته شد؛ ``False`` اگر
+        دست‌کم یکی از فیلدهای مالی به‌خاطر مُهرِ پروژه نادیده گرفته شد.
+
+        ★ ``force=True`` تنها راهِ عبور از مُهر است و باید صریح و آگاهانه
+          استفاده شود (مثلاً ابزارِ مهاجرت/ترمیم). مسیرِ عادیِ بازمحاسبه آن
+          را نمی‌فرستد.
+
+        ★ چرا ``rates_rev`` مسدود نمی‌شود؟ چون اگر مسدود شود، پروژه‌ی مُهرشده
+          برای همیشه ``stale=True`` می‌ماند و رابط، بی‌پایان هشدارِ «نرخ
+          قدیمی» می‌دهد و هر بار هم تلاشِ بازنویسیِ بی‌نتیجه می‌کند. مبلغ
+          (که همان چیزی است که با سندِ قطعی مقایسه می‌شود) دست‌نخورده می‌ماند
+          و دلیلش در ``activity_log`` ثبت می‌شود تا قابلِ حسابرسی باشد.
+        """
+        allowed = ["code", "customer_name", "customer_phone", "customer_mobile", "customer_address",
+                   "title", "status", "install_mode", "install_value", "profit_mode", "profit_percent",
+                   "discount_percent", "discount_amount", "vat_enabled", "vat_percent",
+                   "extra_fixed_amount", "deposit_percent", "deposit_amount",
+                   "ground_share_percent",
+                   "valid_until", "note", "final_price", "total_cost", "rates_rev"]
+        # ── مُهرِ مالی ────────────────────────────────────────────────────
+        blocked: List[str] = []
+        if not force and any(k in data for k in self.FINANCIAL_FIELDS):
+            reason = self.seal_reason(pid)
+            if reason:
+                cur = self.get(pid) or {}
+                for k in self.FINANCIAL_FIELDS:
+                    if k in data and abs(_num(data.get(k)) - _num(cur.get(k))) > 0.005:
+                        blocked.append(k)
+                if blocked:
+                    data = {k: v for k, v in data.items() if k not in blocked}
+                    self.db.log(
+                        "seal",
+                        f"بازنویسیِ {' و '.join(blocked)} پروژه #{pid} انجام نشد — {reason}. "
+                        f"مبلغِ مُهرشده حفظ شد؛ برای تغییر، اول فاکتور قطعی را باطل کنید "
+                        f"یا وضعیت پروژه را از «انجام‌شده» خارج کنید.")
+
+        sets, vals = [], []
+        for k in allowed:
+            if k in data:
+                sets.append(f"{k}=?")
+                vals.append(data[k])
+        if not sets:
+            return not blocked
+        sets.append("updated_at=?")
+        vals += [_now(), pid]
+        self.db.execute(f"UPDATE projects SET {','.join(sets)} WHERE id=?", vals)
+        return not blocked
+
+    def delete(self, pid: int) -> None:
+        # در یک تراکنشِ واحد — پیش‌تر سه حذفِ جدا بود و قطعیِ میانه می‌توانست
+        # داده‌ی یتیم به‌جا بگذارد.
+        with self.db.tx() as conn:
+            conn.execute("DELETE FROM pages WHERE project_id=?", (pid,))
+            conn.execute("DELETE FROM invoices WHERE project_id=?", (pid,))
+            conn.execute("DELETE FROM projects WHERE id=?", (pid,))
+
+    def duplicate(self, pid: int) -> Optional[int]:
+        p = self.get(pid)
+        if not p:
+            return None
+        new = dict(p)
+        new.pop("id", None)
+        new["code"] = self.next_code()
+        new["title"] = f"{p.get('title') or ''} (کپی)".strip()
+        new["status"] = "draft"
+        new_id = self.create(new)
+        for pg in self.pages_of(pid):
+            self.add_page(new_id, pg["name"], pg.get("style_id", 0),
+                          json.loads(pg.get("data") or "{}"), pg.get("sort_order", 0))
+        return new_id
+
+    def next_code(self) -> str:
+        # ⚠ پیش‌تر از COUNT(*)+1 استفاده می‌شد؛ با حذفِ یک پروژه، کدِ تکراری
+        #   تولید می‌شد. اکنون بزرگ‌ترین شماره‌ی سریالِ همین روز + ۱ می‌آید.
+        from ..core.persian import jdate_str
+        prefix = f"PR-{jdate_str(persian=False).replace('/', '')}-"
+        rows = self.db.q("SELECT code FROM projects WHERE code LIKE ?", (prefix + "%",))
+        n = 0
+        for r in rows:
+            tail = str(r["code"] or "")[len(prefix):]
+            if tail.isdigit():
+                n = max(n, int(tail))
+        return f"{prefix}{n + 1:03d}"
+
+    # --- صفحه‌ها ---
+    def pages_of(self, pid: int) -> List[Dict[str, Any]]:
+        return [dict(r) for r in self.db.q(
+            "SELECT * FROM pages WHERE project_id=? ORDER BY sort_order, id", (pid,))]
+
+    def add_page(self, pid: int, name: str, style_id: int = 0,
+                 data: Optional[Dict[str, Any]] = None, sort_order: int = 0) -> int:
+        return int(self.db.execute(
+            "INSERT INTO pages(project_id,name,style_id,data,sort_order) VALUES(?,?,?,?,?)",
+            (pid, name, style_id, json.dumps(data or {}, ensure_ascii=False), sort_order)))
+
+    def save_page(self, page_id: int, name: str, style_id: int, data: Dict[str, Any]) -> None:
+        self.db.execute(
+            "UPDATE pages SET name=?, style_id=?, data=? WHERE id=?",
+            (name, style_id, json.dumps(data, ensure_ascii=False), page_id))
+
+    def get_page(self, page_id: int) -> Optional[Dict[str, Any]]:
+        r = self.db.one("SELECT * FROM pages WHERE id=?", (page_id,))
+        return dict(r) if r else None
+
+    def delete_page(self, page_id: int) -> None:
+        self.db.execute("DELETE FROM pages WHERE id=?", (page_id,))
+
+    def reorder_pages(self, pid: int, ordered_ids: List[int]) -> None:
+        for i, pgid in enumerate(ordered_ids):
+            self.db.execute("UPDATE pages SET sort_order=? WHERE id=? AND project_id=?", (i, pgid, pid))
+
+    # --- بارگذاری کامل به آبجکت ---
+    def load_pages(self, pid: int) -> List[Page]:
+        out: List[Page] = []
+        for row in self.pages_of(pid):
+            try:
+                data = json.loads(row.get("data") or "{}")
+            except json.JSONDecodeError:
+                data = {}
+            data["id"] = row["id"]
+            data["project_id"] = row["project_id"]
+            data["name"] = row.get("name") or data.get("name") or "بخش"
+            data["style_id"] = row.get("style_id") or 0
+            out.append(Page.from_dict(data))
+        return out
+
+    def save_page_obj(self, page: Page) -> None:
+        data = page.to_dict()
+        if page.id:
+            self.save_page(page.id, page.name, page.style_id, data)
+        else:
+            page.id = self.add_page(page.project_id, page.name, page.style_id, data)
+
+    # --- آمار ---
+    def stats(self) -> Dict[str, Any]:
+        total = int(self.db.scalar("SELECT COUNT(*) FROM projects", default=0) or 0)
+        done = int(self.db.scalar("SELECT COUNT(*) FROM projects WHERE status='done'", default=0) or 0)
+        sum_price = float(self.db.scalar(
+            "SELECT COALESCE(SUM(final_price),0) FROM projects", default=0) or 0)
+        sum_cost = float(self.db.scalar(
+            "SELECT COALESCE(SUM(total_cost),0) FROM projects", default=0) or 0)
+        n_mat = int(self.db.scalar("SELECT COUNT(*) FROM materials", default=0) or 0)
+        n_styles = int(self.db.scalar("SELECT COUNT(*) FROM styles", default=0) or 0)
+        n_inv = int(self.db.scalar("SELECT COUNT(*) FROM invoices", default=0) or 0)
+        return {
+            "projects": total, "done": done, "draft": total - done,
+            "sum_price": sum_price, "sum_cost": sum_cost,
+            "sum_profit": sum_price - sum_cost,
+            "materials": n_mat, "styles": n_styles, "invoices": n_inv,
+        }
+
+    def monthly(self, months: int = 6) -> List[Dict[str, Any]]:
+        """
+        جمع فروشِ N ماهِ اخیر — همیشه به‌ترتیبِ زمانی و با «صفر» برای ماه‌های
+        بدون پروژه.
+
+        ⚠ پیش‌تر فقط ماه‌های دارای داده برمی‌گشت؛ در نتیجه «فروش این ماه» در
+        داشبورد می‌توانست مبلغِ ماهِ دیگری باشد و «رشد ماهانه» دو ماهِ
+        نامتوالی را مقایسه می‌کرد.
+        """
+        months = max(1, int(months))
+        rows = self.db.q(
+            "SELECT substr(created_at,1,7) AS ym, COUNT(*) AS cnt, "
+            "COALESCE(SUM(final_price),0) AS total FROM projects "
+            "GROUP BY ym")
+        by_ym = {str(r["ym"]): r for r in rows}
+        today = datetime.now()
+        out: List[Dict[str, Any]] = []
+        y, m = today.year, today.month
+        keys = []
+        for _ in range(months):
+            keys.append(f"{y:04d}-{m:02d}")
+            m -= 1
+            if m == 0:
+                y, m = y - 1, 12
+        for ym in reversed(keys):
+            r = by_ym.get(ym)
+            out.append({"ym": ym,
+                        "cnt": int(r["cnt"]) if r else 0,
+                        "total": float(r["total"]) if r else 0.0})
+        return out
+
+
+# ===========================================================================
+# فاکتورها
+# ===========================================================================
+
+class InvoiceRepo:
+    def __init__(self, db: Optional[Database] = None):
+        self.db = db or Database.instance()
+
+    def all(self) -> List[Dict[str, Any]]:
+        out = []
+        for r in self.db.q("SELECT * FROM invoices ORDER BY id DESC"):
+            d = dict(r)
+            try:
+                d["data"] = json.loads(d.get("data") or "{}")
+            except json.JSONDecodeError:
+                d["data"] = {}
+            out.append(d)
+        return out
+
+    def get(self, iid: int) -> Optional[Dict[str, Any]]:
+        r = self.db.one("SELECT * FROM invoices WHERE id=?", (iid,))
+        if not r:
+            return None
+        d = dict(r)
+        try:
+            d["data"] = json.loads(d.get("data") or "{}")
+        except json.JSONDecodeError:
+            d["data"] = {}
+        return d
+
+    def save(self, project_id: int, number: str, data: Dict[str, Any],
+             total: float, kind: str = "quote") -> int:
+        # ⚠ نام مشتری در داده‌ی فاکتور زیرِ کلیدِ تودرتوی «customer» است؛
+        #   پیش‌تر data.get("customer_name") همیشه خالی بود و ستونِ DB هیچ‌وقت
+        #   پر نمی‌شد (جست‌وجوی مشتری روی فاکتورها کار نمی‌کرد).
+        customer = (data.get("customer") or {})
+        customer_name = data.get("customer_name") or customer.get("name", "")
+        return int(self.db.execute(
+            "INSERT INTO invoices(project_id,number,kind,customer_name,data,total,created_at) "
+            "VALUES(?,?,?,?,?,?,?)",
+            (project_id, number, kind, customer_name,
+             json.dumps(data, ensure_ascii=False), total, _now())))
+
+    def delete(self, iid: int) -> None:
+        self.db.execute("DELETE FROM invoices WHERE id=?", (iid,))
+
+    def final_invoice_for(self, project_id: int) -> Optional[Dict[str, Any]]:
+        """
+        آخرین **فاکتور قطعی** (``kind='invoice'``) یک پروژه، یا ``None``.
+
+        ★ این متد مبنای «مُهرِ مالی» در :meth:`ProjectRepo.seal_reason` است.
+        سندِ بایگانی‌شده خودش مصون بود (ردیف ``invoices`` یک snapshot کامل
+        JSON دارد و هیچ بازمحاسبه‌ای لمسش نمی‌کند)؛ آنچه می‌لنگید سمتِ
+        ``projects`` بود که بی‌قید بازنویسی می‌شد. با این نگاه، «سند قطعی»
+        منبعِ حقیقتِ قفل‌بودن است و نیازی به ستون/مهاجرتِ تازه‌ی schema نیست.
+
+        پیش‌فاکتور (``quote``/``proforma``) عمداً مُهر نمی‌زند: پیش‌فاکتور
+        قیمتِ روز است و باید با نرخ‌های تازه به‌روز بماند.
+        """
+        if not project_id:
+            return None
+        marks = ",".join("?" * len(SEALED_INVOICE_KINDS))
+        r = self.db.one(
+            f"SELECT id, number, kind, total, created_at FROM invoices "
+            f"WHERE project_id=? AND kind IN ({marks}) "
+            f"ORDER BY id DESC LIMIT 1",
+            (project_id, *SEALED_INVOICE_KINDS))
+        return dict(r) if r else None
+
+    def sealed_project_ids(self) -> set:
+        """شناسه‌ی همه‌ی پروژه‌هایی که فاکتور قطعی دارند (برای پالایش دسته‌جمعی)."""
+        marks = ",".join("?" * len(SEALED_INVOICE_KINDS))
+        rows = self.db.q(
+            f"SELECT DISTINCT project_id FROM invoices WHERE kind IN ({marks})",
+            tuple(SEALED_INVOICE_KINDS))
+        return {int(r[0]) for r in rows if r[0] is not None}
+
+    def next_number(self, kind: str = "quote") -> str:
+        # ⚠ پیش‌تر COUNT(*)+1 بود؛ بعد از حذف یک فاکتور، شماره‌ی تکراری صادر
+        #   می‌شد. اکنون بزرگ‌ترین سریالِ ثبت‌شده برای همین نوع و روز + ۱.
+        from ..core.persian import jdate_str
+        prefix = "PI" if kind == "quote" else "INV"
+        prefix = f"{prefix}-{jdate_str(persian=False).replace('/', '')}-"
+        rows = self.db.q("SELECT number FROM invoices WHERE kind=? AND number LIKE ?",
+                         (kind, prefix + "%"))
+        n = 0
+        for r in rows:
+            tail = str(r["number"] or "")[len(prefix):]
+            if tail.isdigit():
+                n = max(n, int(tail))
+        return f"{prefix}{n + 1:04d}"
+
+
+# ===========================================================================
+# الگوهای یونیت — «یونیت آماده» برای استفاده‌ی مجدد در پروژه‌های بعدی
+# ===========================================================================
+
+class UnitTemplateRepo:
+    """
+    کابینت‌کار در هر پروژه همان یونیت‌های تکراری را می‌سازد (یونیت سینک ۹۰،
+    یونیت گاز، کمد ایستاده و …). این‌جا یک یونیتِ کامل — با متریال، درها و
+    کشوها — یک‌بار ذخیره می‌شود و بعد با یک کلیک در هر پروژه‌ای قرار می‌گیرد.
+    """
+
+    def __init__(self, db: Optional[Database] = None):
+        self.db = db or Database.instance()
+
+    def all(self) -> List[Dict[str, Any]]:
+        rows = self.db.q("SELECT * FROM unit_templates ORDER BY sort_order, id")
+        out = []
+        for r in rows:
+            d = dict(r)
+            try:
+                d["data"] = json.loads(d.get("data") or "{}")
+            except json.JSONDecodeError:
+                d["data"] = {}
+            out.append(d)
+        return out
+
+    def get(self, tid: int) -> Optional[Dict[str, Any]]:
+        r = self.db.one("SELECT * FROM unit_templates WHERE id=?", (tid,))
+        if not r:
+            return None
+        d = dict(r)
+        try:
+            d["data"] = json.loads(d.get("data") or "{}")
+        except json.JSONDecodeError:
+            d["data"] = {}
+        return d
+
+    def add(self, name: str, data: Dict[str, Any], note: str = "") -> int:
+        n = int(self.db.scalar("SELECT COUNT(*) FROM unit_templates", default=0) or 0)
+        return int(self.db.execute(
+            "INSERT INTO unit_templates(name,note,data,sort_order,created_at,updated_at) "
+            "VALUES(?,?,?,?,?,?)",
+            (name, note, json.dumps(data or {}, ensure_ascii=False), n, _now(), _now())))
+
+    def update(self, tid: int, name: str, data: Dict[str, Any], note: str = "") -> None:
+        self.db.execute(
+            "UPDATE unit_templates SET name=?, note=?, data=?, updated_at=? WHERE id=?",
+            (name, note, json.dumps(data or {}, ensure_ascii=False), _now(), tid))
+
+    def delete(self, tid: int) -> None:
+        self.db.execute("DELETE FROM unit_templates WHERE id=?", (tid,))
