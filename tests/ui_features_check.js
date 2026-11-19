@@ -42,6 +42,7 @@ var __t = {
   get SETTINGS() { return SETTINGS; },
   get MATERIALS() { return MATERIALS; },
   get PROJECTS() { return PROJECTS; },
+  get DP_UNIT_MAP() { return DP_UNIT_MAP; },
 };
 `;
 
@@ -130,7 +131,40 @@ u2.label = "زیر سینک";
 sb.applyUnitTypeDefaults(u2, "wall");
 check("custom label preserved", u2.label === "زیر سینک", u2.label);
 
-/* --- ۵) پروژه‌ی دمو: تغییر نرخ متریال → مبلغ پروژه به‌روز می‌شود --- */
+/* --- ۵) اولویت پیش‌فرض‌های من در برابر سبک بخش --- */
+{
+  const bodyA = sb.__t.MATERIALS.find((m) => m.name === "ام‌دی‌اف سفید صدفی ۱۶ میل").id;
+  const bodyB = sb.__t.MATERIALS.find((m) => m.name === "ام‌دی‌اف طوسی ۱۶ میل").id;
+  const styleOf = () => ({ body_id: bodyB });
+  const run = () => {
+    const u = {};
+    sb.applyStyleThenDefaults(u, () => Object.assign(u, styleOf()), sb.__t.DP_UNIT_MAP);
+    return u;
+  };
+
+  /* روشن: انتخاب کاربر در تنظیمات برنده است */
+  sb.__t.SETTINGS.defaults_beat_style = "1";
+  sb.__t.SETTINGS.default_unit_body_id = String(bodyA);
+  const r1 = run();
+  check("defaults beat style: کاربر برنده است", r1.body_id === bodyA, `${r1.body_id}`);
+
+  /* خاموش: سبک بخش برنده است */
+  sb.__t.SETTINGS.defaults_beat_style = "0";
+  const r2 = run();
+  check("style beats defaults: سبک برنده است", r2.body_id === bodyB, `${r2.body_id}`);
+
+  /* خاموش + جای خالی در سبک: پیش‌فرض جای خالی را پر می‌کند */
+  const r3 = sb.applyStyleThenDefaults({}, () => {}, sb.__t.DP_UNIT_MAP);
+  check("style off but empty: پیش‌فرض پر می‌کند", r3.body_id === bodyA, `${r3.body_id}`);
+
+  /* پیش‌فرض خالی: سبک دست‌نخورده می‌ماند */
+  sb.__t.SETTINGS.defaults_beat_style = "1";
+  sb.__t.SETTINGS.default_unit_body_id = "";
+  const r4 = run();
+  check("empty default keeps style", r4.body_id === bodyB, `${r4.body_id}`);
+}
+
+/* --- ۶) پروژه‌ی دمو: تغییر نرخ متریال → مبلغ پروژه به‌روز می‌شود --- */
 const p = sb.__t.PROJECTS[0];
 const before = sb.calcProjectLocal(p).final_price;
 const bodyMat = sb.__t.MATERIALS.find((m) => m.name === "ام‌دی‌اف سفید برفی ۱۶ میل");

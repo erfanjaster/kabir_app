@@ -1,5 +1,5 @@
 /* ==========================================================================
-   کبیر ۲ — ui.js
+   نسخه ۲ — ui.js
    رندرها، ویرایشگر پروژه، فاکتور، تنظیمات و سیم‌کشی رویدادها.
    حالت متصل: داده از API (kabir/web/server.py) و محاسبه با موتور واقعی.
    حالت نمایشی: داده‌های نمونه و موتور محلی (engine.js) — بدون سرور.
@@ -205,6 +205,7 @@ function forceCloseEditor() {
   state.dirty = false;
   paintDirtyState2();
   el("projectEditor").hidden = true;
+  setEditingMode(false);
   syncStickyOffsets();
   undoReset();
 }
@@ -221,6 +222,17 @@ async function navigate(page, sub, silentScroll) {
 }
 
 /* ============================================================== داشبورد */
+/** پس از هر تغییر در پروژه‌ها، آمارِ داشبورد را از سرور تازه می‌کند.
+ *  (پیش‌تر DASH فقط یک‌بار هنگام bootstrap خوانده می‌شد و بعد از ساخت/حذف
+ *  یا ذخیره‌ی پروژه، آمار و نمودار تا رفرشِ صفحه قدیمی می‌ماند.) */
+async function refreshDashboard() {
+  if (!API.ok) return;
+  try {
+    const r = await API.req("GET", "/api/dashboard");
+    if (r && r.dashboard) { DASH = r.dashboard; renderDashboard(); }
+  } catch (e) { /* اتصال قطع است؛ نمایشِ فعلی حفظ می‌شود */ }
+}
+
 function buildDash() {
   if (API.ok && DASH) {
     const b = DASH.by_status || {};
@@ -239,7 +251,8 @@ function buildDash() {
   const arr = SALES_DEMO;
   const last = arr[arr.length - 1] || { amount: 0 };
   const prev = arr[arr.length - 2] || { amount: 0 };
-  const growth = prev.amount ? ((last.amount - prev.amount) / prev.amount) * 100 : 0;
+  /* ★ بدونِ ماهِ قبل، «رشد» معنا ندارد — badge صفر درصده نشان داده نمی‌شود */
+  const growth = prev.amount ? ((last.amount - prev.amount) / prev.amount) * 100 : null;
   const profit = PROJECTS.filter((p) => p.status !== "canceled")
     .reduce((a, p) => a + (p.final_price - p.total_cost), 0);
   return {
@@ -261,17 +274,28 @@ function renderDashboard() {
   el("statProjectsSub").textContent = d.sub;
   countUp(el("statSales"), d.sales, (v) => `${fmt(scaled(v) / 1e6)} <small>میلیون ${CUR.name}</small>`);
   const tr = el("statSalesTrend");
-  tr.className = "stat-trend " + (d.growth >= 0 ? "up" : "down");
-  tr.textContent = (d.growth >= 0 ? "▲ +" : "▼ ") + fmt(Math.abs(d.growth), true) + "٪";
+  /* ★ badge رشد فقط وقتی معنا دارد که ماهِ قبلِ دارای فروش وجود داشته باشد؛
+     «▲ +۰٫۰٪» برای ماهِ اولِ کارگاه فقط سر و صدا بود.                    */
+  if (d.growth === null || d.growth === undefined) {
+    tr.className = "stat-trend";
+    tr.textContent = "";
+    tr.hidden = true;
+  } else {
+    tr.hidden = false;
+    tr.className = "stat-trend " + (d.growth >= 0 ? "up" : "down");
+    tr.textContent = d.growth === 0 ? "— بدون تغییر" : (d.growth > 0 ? "▲ +" : "▼ ") + fmt(Math.abs(d.growth), true) + "٪";
+  }
   countUp(el("statProfit"), d.profit, (v) => `${fmt(scaled(v) / 1e6)} <small>میلیون ${CUR.name}</small>`);
   countUp(el("statMaterials"), d.materials, (v) => fa(Math.round(v)));
   const act = MATERIALS.filter((m) => m.active).length;
   el("statMaterialsSub").textContent = `در ${fa(CATS.length)} دسته‌بندی • ${fa(act)} قلم فعال`;
   el("chartUnit").textContent = `میلیون ${CUR.name}`;
 
-  const chart = d.chart.length ? d.chart : [{ label: "—", v: 0 }];
+  const chart = d.chart.length ? d.chart : [];
+  const hasData = chart.some((c) => c.v > 0);
   const max = Math.max(...chart.map((c) => c.v), 1);
-  el("salesChart").innerHTML = chart.map((c, i) => `
+  el("salesChart").classList.toggle("chart-empty", !hasData);
+  el("salesChart").innerHTML = hasData ? chart.map((c, i) => `
     <div class="chart-col${i === chart.length - 1 ? " hl" : ""}">
       <div class="chart-bar-wrap">
         <div class="chart-bar" style="height:${Math.max(4, (c.v / max) * 100)}%;animation-delay:${i * 60}ms">
@@ -279,8 +303,9 @@ function renderDashboard() {
         </div>
       </div>
       <span class="chart-label">${esc(c.label)}</span>
-    </div>`).join("");
-  el("chartBadge").textContent = chart.length > 1
+    </div>`).join("")
+    : `<div class="empty">${ICONS.inbox}<div>هنوز فروشی ثبت نشده است — با ثبت اولین پروژه، نمودار فروش ماهانه همین‌جا ساخته می‌شود.</div></div>`;
+  el("chartBadge").textContent = hasData && chart.length > 1 && d.growth
     ? `رشد ${fmt(d.growth, true)}٪ نسبت به ماه قبل` : "";
 
   el("recentProjects").innerHTML = d.recent.length ? d.recent.map((p) => `
@@ -667,6 +692,12 @@ function renderDimRibbon() {
   const warnCell = warns.length
     ? `<button class="dim-cell warn-chip" type="button" id="dimWarnChip" title="${esc(warns.slice(0, 3).join("\n"))}${warns.length > 3 ? "\n…" : ""}">⚠ <b>${fa(warns.length)}</b> هشدار محاسبه — ببینید</button>`
     : "";
+  /* ★ صفحه‌ی L: اگر متر طول صفحه از طول دیوارِ همین بخش بیشتر شود، یعنی
+     احتمالاً گوشه دوبار حساب شده است. در آشپزخانه‌ی L، طول صفحه = مجموع
+     دیوارها منهای عمق یک یونیت در هر گوشه (معمولاً ۵۵–۶۰ سم). */
+  const ctWarn = wallCm > 0 && (+pg.countertop_lm || 0) > wallCm / 100 + 0.01
+    ? `<span class="dim-cell warn-chip" title="طول صفحه‌ی واردشده از طول دیوار این بخش بیشتر است. در گوشه‌ی L/U، عمق یک یونیت (۵۵–۶۰ سم) را از جمع طول دیوارها کم کنید.">⚠ طول صفحه از دیوار بیشتر است — گوشه را کم کنید</span>`
+    : "";
 
   host.innerHTML =
     cell("متر طول زمینی", fmt(ground, true), "", "جمع طول یونیت‌های زمینی و کمد ایستاده") +
@@ -676,6 +707,7 @@ function renderDimRibbon() {
     cell("کشو", fa(drawers)) +
     (sheets ? cell("ورق لازم", fa(sheets), "accent", "تعداد ورق کاملی که باید بخرید — با تجمیع قطعات هم‌جنس محاسبه شده") : "") +
     warnCell +
+    ctWarn +
     diffCell;
 }
 
@@ -757,7 +789,10 @@ function autoDoorsForUnit(u, styleData) {
   dr.qty = leaves;
   dr.w_cm = leafWidth(u.length_cm, leaves);
   dr.h_cm = r1((+u.height_cm || 0) - DOOR_REVEAL_CM);
-  dr.hinges_per_leaf = (+u.height_cm || 0) >= 150 ? 4 : 2;
+  /* ★ تعداد لولا: درِ بلندتر از ۱٫۵ متر حداقل ۴ لولا می‌خواهد؛ تنظیمات می‌تواند
+     بیشترش کند ولی کمتر از حدِ ایمن نمی‌شود (درِ ۲۲۰ با ۲ لولا آویزان می‌ماند). */
+  dr.hinges_per_leaf = Math.max(settingNum("default_door_hinges_per_leaf", 2),
+    (+u.height_cm || 0) >= 150 ? 4 : 2);
   if (d.door) dr.material_id = midByName(d.door);
   if (d.door_model) dr.door_model_id = midByName(d.door_model);
   if (d.hinge) dr.hinge_id = midByName(d.hinge);
@@ -765,6 +800,7 @@ function autoDoorsForUnit(u, styleData) {
   if (d.banding) dr.banding_id = midByName(d.banding);
   if (d.assembly_door) dr.assembly_id = midByName(d.assembly_door);
   if (d.packaging_door) dr.packaging_id = midByName(d.packaging_door);
+  applyDefaultsOver(dr, DP_DOOR_MAP);
   u.doors = u.doors || [];
   u.doors.push(dr);
   return dr;
@@ -914,11 +950,13 @@ function renderEditorTables() {
   pg.units.forEach((u, i) => {
     const open = state.expanded.has(`${p.id}:${state.pageIdx}:${i}`);
     const a = (extra) => withRow(extra, "unit", i);
+    const bpBtn = (ui) =>
+      actBtn("", "bp", "نمای فنی ۲D", `data-bp="${ui}"`);
     uRows += `
       <tr${rowAttrs("unit", i)}>
         <td><div class="row-id-cell">
           ${inpT("unit", "label", u.label, a(`data-ui="${i}"`))}
-          ${acts(`${tplBtn(i)}${dupBtn("unit", i)}${SEP}${delBtn("unit", i)}`)}
+          ${acts(`${bpBtn(i)}${tplBtn(i)}${dupBtn("unit", i)}${SEP}${delBtn("unit", i)}`)}
         </div></td>
         <td><select class="cell-select" data-scope="unit" data-k="unit_type" data-ui="${i}" ${a("")}>
           ${Object.entries(UNIT_TYPES).map(([k, l]) => `<option value="${k}"${u.unit_type === k ? " selected" : ""}>${l}</option>`).join("")}
@@ -1000,9 +1038,14 @@ function renderEditorTables() {
           <div class="field"><label>ورق در</label>${doorSheetCell(u, dr, ui, di)}</div>
           <div class="field"><label>مدل / اجرت در</label>${matSelect("door_model", dr.door_model_id, `data-scope="door" data-k="door_model_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
           <div class="field"><label>لولا</label>${matSelect("hinge", dr.hinge_id, `data-scope="door" data-k="hinge_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
+          <div class="field"><label>گازور / جک</label>${matSelect("gas_spring", dr.gas_spring_id, `data-scope="door" data-k="gas_spring_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
           <div class="field"><label>دستگیره</label>${matSelect("handle", dr.handle_id, `data-scope="door" data-k="handle_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
           <div class="field"><label>مونتاژ</label>${matSelect("service", dr.assembly_id, `data-scope="door" data-k="assembly_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
           <div class="field"><label>بسته‌بندی</label>${matSelect("service", dr.packaging_id, `data-scope="door" data-k="packaging_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
+          <div class="field"><label>لولا (عدد در هر لنگه)</label>${inp("door", "hinges_per_leaf", dr.hinges_per_leaf, a(`data-ui="${ui}" data-di="${di}"`), U_QTY, "w-qty")}</div>
+          <div class="field"><label>دستگیره (عدد در هر لنگه)</label>${inp("door", "handles_per_leaf", dr.handles_per_leaf, a(`data-ui="${ui}" data-di="${di}"`), U_QTY, "w-qty")}</div>
+          <div class="field"><label>گاز/پیستون (عدد در هر لنگه)</label>${inp("door", "gas_springs_per_leaf", dr.gas_springs_per_leaf, a(`data-ui="${ui}" data-di="${di}"`), U_QTY, "w-qty")}</div>
+          <div class="field"><label class="check" style="margin-top:1.35rem"><input type="checkbox" data-scope="door" data-k="glass" data-ui="${ui}" data-di="${di}" ${a("")}${dr.glass ? " checked" : ""}> در شیشه‌دار</label></div>
         </div>
       </td></tr>`;
     }
@@ -1175,12 +1218,81 @@ function refreshTbUnits() {
 }
 
 /* راهنمای واحدِ قیمت در مودال متریال */
+/* ═══ پیش‌فرض‌های جزئیات: پرکردن، خواندن و ذخیره ═══ */
+function populateDefaultPicks() {
+  $$("[data-dp]").forEach((sel) => {
+    const cat = sel.dataset.dpcat;
+    const cur = String(SETTINGS[sel.dataset.dp] ?? "");
+    const rows = (MATERIALS || []).filter((m) => m.cat === cat);
+    sel.innerHTML = `<option value="">— بدون پیش‌فرض —</option>` +
+      rows.map((m) => `<option value="${m.id}"${String(m.id) === cur ? " selected" : ""}>${esc(m.name)}</option>`).join("");
+    /* اگر قلمِ ذخیره‌شده دیگر وجود ندارد، به «بدون پیش‌فرض» برگردد */
+    sel.value = cur && rows.some((m) => String(m.id) === cur) ? cur : "";
+  });
+  /* حالت نوار PVC */
+  const bp = el("dpUnitBandMode");
+  if (bp) {
+    const cur = String(SETTINGS.default_unit_banding_mode || "auto");
+    bp.innerHTML = Object.keys(BANDING_MODES)
+      .map((v) => `<option value="${v}"${v === cur ? " selected" : ""}>${esc(BANDING_MODES[v])}</option>`).join("");
+    bp.value = BANDING_MODES[cur] ? cur : "auto";
+  }
+  /* اعداد */
+  $$("[data-dp-num]").forEach((inp) => {
+    const v = SETTINGS[inp.dataset.dpNum];
+    inp.value = v === undefined || v === "" ? "" : fmtInp(v);
+  });
+  $$('[data-dp-bool]').forEach((inp) => {
+    inp.checked = settingBool(inp.dataset.dpBool, inp.dataset.dpDefault === "1");
+  });
+  $$('[data-dp-str]').forEach((inp) => {
+    inp.value = SETTINGS[inp.dataset.dpStr] ?? inp.dataset.dpDefault ?? "";
+  });
+}
+
+function collectDefaultPicks(out) {
+  $$("[data-dp]").forEach((sel) => { out[sel.dataset.dp] = sel.value || ""; });
+  if (el("dpUnitBandMode")) out.default_unit_banding_mode = el("dpUnitBandMode").value || "auto";
+  $$("[data-dp-num]").forEach((inp) => {
+    out[inp.dataset.dpNum] = toEn(inp.value).replace(/[^\d.]/g, "");
+  });
+  $$('[data-dp-bool]').forEach((inp) => {
+    out[inp.dataset.dpBool] = inp.checked ? "1" : "0";
+  });
+  $$('[data-dp-str]').forEach((inp) => {
+    out[inp.dataset.dpStr] = inp.value;
+  });
+  return out;
+}
+
 function setMfPriceHint() {
   const h = el("mfPriceHint");
   if (!h) return;
   const uSel = el("mfUnit");
   const uLbl = uSel && uSel.selectedOptions[0] ? uSel.selectedOptions[0].textContent : "";
   h.textContent = `قیمت به «${CUR.name}» به ازای هر «${uLbl}»`;
+  /* ★ قلمِ ورقیِ واقعی: فیلدهای ابعاد ورق را «الزامی» نشان بده تا کاربر
+     پیش از ذخیره بفهمد، نه بعد از اینکه فاکتورِ ارزان صادر شد.            */
+  const SHEET_CATS = ["body_sheet", "door_sheet", "back_sheet", "drawer_sheet"];
+  const cat = el("mfCat") ? el("mfCat").value : "";
+  const unit = uSel ? uSel.value : "";
+  const needsDims = unit === "sheet" && SHEET_CATS.includes(cat);
+  ["mfSheetW", "mfSheetH"].forEach((id) => {
+    const inp = el(id);
+    if (!inp) return;
+    inp.required = needsDims;
+    const label = inp.parentElement && inp.parentElement.querySelector("label");
+    if (label) {
+      const star = label.querySelector(".req-star");
+      if (needsDims && !star) {
+        const s = document.createElement("span");
+        s.className = "req-star";
+        s.textContent = " *";
+        s.title = "برای قلمِ ورقی الزامی است";
+        label.appendChild(s);
+      } else if (!needsDims && star) star.remove();
+    }
+  });
 }
 
 /* ---------------------------------------------------------- محاسبه‌ی زنده */
@@ -1556,6 +1668,7 @@ function openProjectEditor(id, withDraft) {
   if (!withDraft) state.pageIdx = 0;
   state.expanded.clear();
   el("projectEditor").hidden = false;
+  setEditingMode(true);
   /* کد و عنوانِ پروژه حالا در نوارِ فرمانِ چسبان دیده می‌شوند تا کاربر هنگام
      اسکرول در جدولِ بلند همیشه بداند «روی کدام پروژه» کار می‌کند.             */
   if (el("edCodeChip")) el("edCodeChip").textContent = p.code || "—";
@@ -1618,6 +1731,29 @@ function openProjectEditor(id, withDraft) {
   el("projectEditor").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+/** حالتِ «میزِ کار»: فهرستِ پروژه‌ها پنهان می‌شود تا ویرایشگر تمامِ ارتفاع بگیرد */
+function setEditingMode(on) {
+  const page = el("page-projects");
+  if (page) page.classList.toggle("editing", !!on);
+}
+
+/** فوکوسِ نرم روی عنوانِ پروژه — برای شروعِ فوریِ تایپ در پروژه‌ی تازه */
+function focusTitleSoon() {
+  requestAnimationFrame(() => {
+    const t = el("edTitle");
+    if (t && !el("projectEditor").hidden) { t.focus(); t.select(); }
+  });
+}
+
+/** «جزئیات بیشتر»ِ مشخصات پروژه: وضعیت، تلفن، اعتبار و نشانی */
+function setProjMoreOpen(open) {
+  const box = el("projMoreFields"), btn = el("btnProjMore");
+  if (!box) return;
+  box.hidden = !open;
+  if (btn) btn.setAttribute("aria-expanded", open ? "true" : "false");
+  if (btn) btn.classList.toggle("open", !!open);
+}
+
 function closeProjectEditor() {
   /* سه کنشِ ثابت (همان قراردادِ لایه‌ی مودال): ذخیره و بستن / ماندن / دور ریختن.
      کنشِ خطرناک عمداً قرمز و در کنارِ کنشِ امنِ سبز است تا انتخابِ درست آسان باشد. */
@@ -1660,6 +1796,7 @@ async function saveProject(silentToast) {
       clearDraft(p.id);
       undoReset();
       renderSectionPills(); renderSectionBar(); renderEditorTables();
+      refreshDashboard();
       renderProjects(); renderDashboard(); fillInvoiceProjects();
       if (!silentToast) toast("تغییرات پروژه در پایگاه‌داده ذخیره شد", "success");
       return true;
@@ -1669,6 +1806,7 @@ async function saveProject(silentToast) {
     }
   }
   clearDirty();
+  refreshDashboard();
   renderProjects(); renderDashboard(); fillInvoiceProjects();
   demoSave();
   if (!silentToast) toast("تغییرات ذخیره شد (حالت نمایشی)", "success");
@@ -1875,19 +2013,25 @@ const SETTING_MAP = {
   setWallD: "unit_wall_depth_cm", setWallS: "unit_wall_shelves",
   setTallL: "unit_tall_length_cm", setTallH: "unit_tall_height_cm",
   setTallD: "unit_tall_depth_cm", setTallS: "unit_tall_shelves",
+  /* ابعاد پیش‌فرض در و کشو */
+  setDoorQty: "default_door_qty", setDoorW: "default_door_w_cm", setDoorH: "default_door_h_cm",
+  setDrawerW: "default_drawer_w_cm", setDrawerH: "default_drawer_h_cm", setDrawerD: "default_drawer_d_cm",
 };
 const NUMERIC_SETTINGS = new Set(["setProfitPct", "setOverhead", "setWaste", "setInstallVal",
   "setSheetW", "setSheetH", "setFiberW", "setFiberH", "setBandBody", "setBandDoor",
   "setVatPct", "setBackupKeep",
   "setGroundL", "setGroundH", "setGroundD", "setGroundS",
   "setWallL", "setWallH", "setWallD", "setWallS",
-  "setTallL", "setTallH", "setTallD", "setTallS"]);
+  "setTallL", "setTallH", "setTallD", "setTallS",
+  "setDoorQty", "setDoorW", "setDoorH", "setDrawerW", "setDrawerH", "setDrawerD"]);
 /* مقادیر پیش‌فرض کارخانه — برای دکمه‌ی «بازنشانی پیش‌فرض‌ها» */
 const FACTORY_NUM_SETTINGS = {
   setProfitPct: "30", setOverhead: "0", setWaste: "10", setInstallVal: "0", setVatPct: "10",
   setGroundL: "60", setGroundH: "72", setGroundD: "55", setGroundS: "1",
   setWallL: "60", setWallH: "70", setWallD: "30", setWallS: "1",
   setTallL: "60", setTallH: "220", setTallD: "58", setTallS: "2",
+  setDoorQty: "1", setDoorW: "45", setDoorH: "70",
+  setDrawerW: "60", setDrawerH: "18", setDrawerD: "45",
 };
 
 function fillSettings() {
@@ -1897,6 +2041,7 @@ function fillSettings() {
     if (NUMERIC_SETTINGS.has(id)) el(id).value = fmtInp(v);
     else el(id).value = String(v);
   }
+  populateDefaultPicks();   /* پیش‌فرض‌های جزئیات (متریال/یراق) */
   el("swVatSet").checked = String(SETTINGS.vat_enabled) === "1";
   el("swFaDigits").checked = String(SETTINGS.persian_digits ?? "1") === "1";
   el("swAutoBackup").checked = String(SETTINGS.auto_backup ?? "1") === "1";
@@ -1921,6 +2066,7 @@ function collectSettings() {
   out.backup_keep = toEn(el("setBackupKeep").value);
   out.theme = document.documentElement.dataset.theme;
   out.web_font_size = String(el("setFontSize").value);
+  collectDefaultPicks(out);   /* پیش‌فرض‌های جزئیات (متریال/یراق) */
   return out;
 }
 
@@ -2114,16 +2260,131 @@ async function deleteTemplate(id) {
    همان چیزی که اپراتور ارّه و دستگاه نوارچسبان لازم دارد + برگه‌ی خرید. */
 let _wsData = null;
 let _wsTab = "cut";
+let _cmData = null;
 
-async function openWorkshopModal() {
+/* ═══════════════════════ پل CutMaster 2D ═══════════════════════
+   فایلِ ذخیره‌شده‌ی CutMaster را می‌خوانیم، با برش‌نامه‌ی همین پروژه
+   مقایسه می‌کنیم و نقشه‌ی واقعیِ چیده‌ماندنِ هر ورق را رسم می‌کنیم.        */
+async function compareCutMasterFile(file) {
+  const host = el("cmResult"), nameEl = el("cmFileName");
+  if (!host) return;
+  if (!API.ok) {
+    host.innerHTML = `<div class="empty">مقایسه با CutMaster به سرور نیاز دارد — کابینت سازی عرفان را اجرا کنید: python main.py</div>`;
+    return;
+  }
   const p = state.editingProject;
   if (!p) return;
   readEditorFieldsInto(p);
+  nameEl.textContent = "";
+  host.innerHTML = `<div class="empty">در حال خواندن فایل…</div>`;
+  let xmlText;
+  try { xmlText = await file.text(); }
+  catch (e) { host.innerHTML = `<div class="empty">خواندن فایل ناموفق بود: ${esc(e.message)}</div>`; return; }
+  try {
+    const resp = await API.req("POST", "/api/cutmaster/compare",
+      { xml: xmlText, project: calcFields(p), pages: p.pages });
+    _cmData = resp;
+    nameEl.textContent = file.name;
+    renderCutMasterCompare();
+  } catch (e) {
+    host.innerHTML = `<div class="empty">⚠ ${esc(e.message)}</div>`;
+  }
+}
+
+function renderCutMasterCompare() {
+  const host = el("cmResult");
+  if (!host || !_cmData) return;
+  const cm = _cmData.cm || {}, cmp = _cmData.compare || {};
+  const st = cm.stats || {};
+
+  /* --- آمارِ واقعی CutMaster --- */
+  const statHtml = `
+    <div class="ws-stats">
+      <span class="dim-cell accent"><b>${fa(st.used_sheets || 0)}</b>ورق مصرف‌شده در CutMaster</span>
+      <span class="dim-cell"><b>${fa(Math.round(st.average_yield || 0))}٪</b>بازده چیدمان</span>
+      <span class="dim-cell"><b>${fmt(st.part_area_sqm || 0, true)}</b>مترمربع قطعه</span>
+      <span class="dim-cell"><b>${fmt(st.cut_length_m || 0, true)}</b>متر برش</span>
+      <span class="dim-cell"><b>${fa(cmp.total_cm || 0)}</b>قطعه در CutMaster</span>
+      <span class="dim-cell"><b>${fa(cmp.total_ours || 0)}</b>قطعه در برش‌نامه‌ی ما</span>
+    </div>`;
+
+  /* --- جدولِ مغایرت --- */
+  const okRow = (c) => `
+    <tr><td>${esc(c.part)}</td><td class="sub">${esc(c.unit)}</td>
+        <td class="num ltr">${fa(Math.round(c.length_mm))}×${fa(Math.round(c.width_mm))}</td>
+        <td class="num">${fa(c.our_qty)}</td>
+        <td class="ok-cell">${c.diff === 0 ? "✓ مطابق" : `نسبت به ما ${c.diff < 0 ? fa(-c.diff) + " کمتر" : "+" + fa(c.diff)}`}</td></tr>`;
+  const missRow = (c, side) => `
+    <tr class="cm-bad"><td>${esc(side === "ours" ? c.part : `قطعه #${fa(c.idx)} CutMaster`)}</td>
+        <td class="sub">${esc(side === "ours" ? c.unit : "—")}</td>
+        <td class="num ltr">${fa(Math.round(c.length_mm))}×${fa(Math.round(c.width_mm))}</td>
+        <td class="num">${fa(c.qty)}</td>
+        <td class="bad-cell">${side === "ours" ? "در CutMaster نیست ⚠" : "در برش‌نامه‌ی ما نیست ⚠"}</td></tr>`;
+  const nBad = (cmp.ours_only || []).length + (cmp.cm_only || []).length;
+  const cmpHtml = `
+    <h4 class="cm-h4">${nBad ? `⚠ ${fa(nBad)} مغایرت پیدا شد — پیش از ارّه ببینید` : "✓ همه‌ی قطعات مطابق است"}</h4>
+    <div class="table-wrap"><table class="data">
+      <thead><tr><th>قطعه</th><th>یونیت</th><th>ابعاد (میلی‌متر)</th><th>تعداد</th><th>وضعیت</th></tr></thead>
+      <tbody>
+        ${(cmp.ours_only || []).map((c) => missRow(c, "ours")).join("")}
+        ${(cmp.cm_only || []).map((c) => missRow(c, "cm")).join("")}
+        ${(cmp.matched || []).map(okRow).join("")}
+      </tbody>
+    </table></div>`;
+
+  /* --- نقشه‌ی چیده‌ماندنِ هر ورق --- */
+  const pIdx = {};
+  (cm.parts || []).forEach((p) => { pIdx[p.idx] = p; });
+  const layoutHtml = (cm.diagrams || []).map((d) => {
+    const W = d.len_mm, H = d.wid_mm;
+    if (!W || !H) return "";
+    const uid = "cml" + d.tnb;
+    const s = Math.min(1, 640 / W, 420 / H);
+    const sw = W * s, sh = H * s;
+    let g = `<svg viewBox="0 0 ${sw} ${sh}" class="cm-sheet" role="img" aria-label="ورق ${fa(d.tnb)}">
+      <rect x="0" y="0" width="${sw}" height="${sh}" fill="#123a5c" stroke="#5b8ab8" stroke-width="2" rx="4"/>
+      <defs><pattern id="${uid}oc" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="7" stroke="rgba(255,217,138,0.5)" stroke-width="1.5"/></pattern></defs>`;
+    (d.offcuts || []).forEach((o) => {
+      g += `<rect x="${o.x_mm * s}" y="${o.y_mm * s}" width="${o.w_mm * s}" height="${o.h_mm * s}"
+        fill="url(#${uid}oc)" stroke="rgba(255,217,138,0.35)" stroke-width="0.8"/>`;
+    });
+    (d.pieces || []).forEach((e) => {
+      g += `<rect x="${e.x_mm * s}" y="${e.y_mm * s}" width="${e.w_mm * s}" height="${e.h_mm * s}"
+        fill="rgba(127,216,196,0.16)" stroke="#7fd8c4" stroke-width="1.1">
+        <title>${esc((pIdx[e.part] ? `قطعه #${fa(e.part)}` : ""))} ${fa(Math.round(e.w_mm))}×${fa(Math.round(e.h_mm))} میلی‌متر</title></rect>`;
+      if (e.w_mm * s > 34 && e.h_mm * s > 14) {
+        g += `<text x="${(e.x_mm + e.w_mm / 2) * s}" y="${(e.y_mm + e.h_mm / 2) * s + 3}"
+          text-anchor="middle" font-size="9" fill="#bfe8de" font-family="Vazirmatn, Tahoma, sans-serif">${e.part}</text>`;
+      }
+    });
+    g += `</svg>`;
+    return `<figure class="cm-fig"><div class="cm-sheet-wrap">${g}</div>
+      <figcaption>ورق ${fa(d.tnb)} — ${fa(Math.round(W))}×${fa(Math.round(H))} میلی‌متر • ${fa((d.pieces || []).length)} قطعه • هشور = پرت (چیده‌ماندن)</figcaption></figure>`;
+  }).join("");
+
+  host.innerHTML = statHtml + cmpHtml +
+    (layoutHtml ? `<h4 class="cm-h4">نقشه‌ی واقعی چیده‌ماندن (از CutMaster)</h4><div class="cm-layouts">${layoutHtml}</div>`
+                : `<p class="tiny muted">در این فایل نقشه‌ی چیدمانی ذخیره نشده بود.</p>`);
+}
+
+async function openWorkshopModal(tab) {
+  const p = state.editingProject;
+  if (!p) return;
+  readEditorFieldsInto(p);
+  if (tab) _wsTab = tab;
   const host = el("ws-cut");
   el("wsProjectName").textContent = `${p.title || ""} — ${p.code || ""}`.trim();
   openModal("workshop");
   host.innerHTML = `<div class="empty">در حال آماده‌سازی برش‌نامه…</div>`;
   el("ws-sheets").innerHTML = ""; el("ws-shop").innerHTML = "";
+  /* ★ هر بار پروژه باز می‌شود، نتیجه‌ی مقایسه‌ی قبلی باید پاک شود وگرنه
+     نتیجه‌ی پروژه‌ی دیگر روی این پروژه دیده می‌شد.                        */
+  _cmData = null;
+  const cmHost = el("cmResult");
+  if (cmHost) cmHost.innerHTML = "";
+  const cmName = el("cmFileName");
+  if (cmName) cmName.textContent = "";
   let pack;
   if (API.ok) {
     try {
@@ -2139,7 +2400,6 @@ async function openWorkshopModal() {
   _wsData = pack;
   renderWorkshop();
 }
-
 function renderWorkshop() {
   const d = _wsData;
   if (!d) return;
@@ -2235,7 +2495,7 @@ function renderWorkshop() {
 async function downloadWorkshopExcel() {
   const p = state.editingProject;
   if (!p) return;
-  if (!API.ok) { toast("خروجی اکسل فقط با سرور کبیر ممکن است (حالت نمایشی)", "warn"); return; }
+  if (!API.ok) { toast("خروجی اکسل فقط با سرور کابینت سازی عرفان ممکن است (حالت نمایشی)", "warn"); return; }
   try {
     const blob = await API.blob("POST", "/api/workshop/xlsx", { project: calcFields(p), pages: p.pages });
     const a = document.createElement("a");
@@ -2323,8 +2583,13 @@ async function buildQuickProject() {
       const r = await API.req("POST", "/api/quick-project", q);
       const np = normalizeProject(r.project);
       PROJECTS.unshift(np);
+      refreshDashboard();
       renderProjects(); fillInvoiceProjects(); renderDashboard();
       closeModal("quick");
+      /* ★ قیمت‌گیری سریع از داشبورد هم قابل اجراست؛ پیش از بازکردنِ ویرایشگر
+         باید به صفحه‌ی پروژه‌ها رفت، وگرنه ویرایشگر در صفحه‌ی پنهان باز می‌شود
+         و کاربر فقط یک مودالِ بسته و صفحه‌ی قبلی را می‌بیند. */
+      await navigate("projects");
       openProjectEditor(np.id);
       const c = r.calc || {};
       toast(`پروژه ساخته شد — مبلغ برآوردی: ${fmt(scaled(c.final_price || 0))} ${CUR.name} • ابعاد را با اندازه‌ی واقعی چک کنید`, "success");
@@ -2347,10 +2612,17 @@ async function buildQuickProject() {
       pg.countertop_lm = q.countertop_id ? (q.countertop_lm || q.ground_lm) : 0;
       pg.wall_length_cm = q.ground_lm * 100;
       applyStyleToPage(pg, sid);
+      /* انتخابِ صفحه در قیمت‌گیری سریع بر سبک اولویت دارد: «بدون صفحه»
+         یعنی هیچ صفحه‌ای، و انتخابِ صریح هم نباید با صفحه‌ی پیش‌فرضِ سبک
+         جایگزین شود (applyStyleToPage صفحه‌ی سبک را روی همه می‌چسباند). */
+      const cid = q.countertop_id ? Number(q.countertop_id) : 0;
+      pg.units.forEach((u) => { if (u.unit_type === "ground") u.countertop_id = cid; });
       p.pages = [pg];
       PROJECTS.unshift(p); demoSave();
+      refreshDashboard();
       renderProjects(); fillInvoiceProjects(); renderDashboard();
       closeModal("quick");
+      await navigate("projects");
       openProjectEditor(p.id);
       toast("پروژه ساخته شد (حالت نمایشی)", "success");
     }
@@ -2433,13 +2705,16 @@ function wire() {
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".search-wrap")) el("searchDrop").hidden = true;
   });
-  el("searchDrop").addEventListener("click", (e) => {
+  el("searchDrop").addEventListener("click", async (e) => {
     const b = e.target.closest(".sd-item");
     if (!b) return;
     el("searchDrop").hidden = true;
     gs.value = "";
     if (b.dataset.sdPage) navigate(b.dataset.sdPage);
-    else if (b.dataset.sdProject) { navigate("projects"); openProjectEditor(b.dataset.sdProject); }
+    else if (b.dataset.sdProject) {
+      await navigate("projects");
+      if (state.page === "projects") openProjectEditor(b.dataset.sdProject);
+    }
     else if (b.dataset.sdMat !== undefined) {
       navigate("materials");
       el("matSearch").value = b.dataset.sdMat;
@@ -2523,9 +2798,11 @@ function wire() {
     if (API.ok) { try { HISTORY = (await API.req("GET", "/api/price-history")).history; } catch (e) { /* ignore */ } }
     renderHistory();
   });
-  el("recentProjects").addEventListener("click", (e) => {
+  el("recentProjects").addEventListener("click", async (e) => {
     const b = e.target.closest("[data-open-project]");
-    if (b) { navigate("projects"); openProjectEditor(b.dataset.openProject); }
+    if (!b) return;
+    await navigate("projects");
+    if (state.page === "projects") openProjectEditor(b.dataset.openProject);
   });
   /* ★ P1/P2/D4: این دکمه دیگر مودال باز نمی‌کند.
      پیش‌تر: کلیک → navigate → مودالِ ۵ فیلدی → پرکردن → «ایجاد پروژه» →
@@ -2537,6 +2814,12 @@ function wire() {
      مودالِ قدیمی فقط برای مسیرِ «ساخت پروژه با این سبک» از صفحه‌ی سبک‌ها
      باقی مانده، چون آن‌جا انتخابِ سبک *دلیلِ* شروع است نه یک مانع. */
   el("btnQuickProject").addEventListener("click", () => startNewProjectInstant());
+  /* میان‌برهای داشبورد («شروع سریع») به همان کنش‌های سراسری وصل می‌شوند،
+     نه به مسیرِ تازه‌ای که رفتار دوگانه بسازد. */
+  const qaNew = el("qaNewProject");
+  if (qaNew) qaNew.addEventListener("click", () => startNewProjectInstant());
+  const qaQuote = el("qaQuickQuote");
+  if (qaQuote) qaQuote.addEventListener("click", () => openQuickModal());
 
   /* ---------------- متریال ---------------- */
   el("matSearch").addEventListener("input", renderMaterials);
@@ -2555,7 +2838,7 @@ function wire() {
   });
   el("btnCloseHistory").addEventListener("click", () => (el("historyCard").hidden = true));
   el("btnMatExcel").addEventListener("click", async () => {
-    if (!API.ok) { toast("خروجی اکسل در حالت نمایشی فعال نیست — کبیر را اجرا کنید: python main.py", "warn"); return; }
+    if (!API.ok) { toast("خروجی اکسل در حالت نمایشی فعال نیست — کابینت سازی عرفان را اجرا کنید: python main.py", "warn"); return; }
     try {
       const f = await API.blob("GET", "/api/materials/export");
       downloadBlob(f.bytes, f.name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -2742,6 +3025,7 @@ function wire() {
   });
 
   el("mfUnit").addEventListener("change", setMfPriceHint);
+  el("mfCat").addEventListener("change", setMfPriceHint);   /* ★ ابعادِ الزامی با تغییرِ دسته هم به‌روز شود */
 
   /* ★ ثبتِ فرمِ متریال — هم با کلیک، هم با Enter/Ctrl+S (از لایه‌ی مودال).
      خطای اعتبارسنجی کنارِ خودِ فیلد نشان داده می‌شود و فوکوس روی اولین
@@ -2749,9 +3033,18 @@ function wire() {
   async function saveMaterialForm() {
     clearFieldErrors(el("modal-material"));
     const payload = matPayload();
+    /* ★ قلمِ ورقیِ واقعی بدونِ ابعاد ورق = هزینه‌ی ورقِ پروژه‌ها بی‌صدا صفر.
+       همین‌جا سد می‌شود (قلم‌های «خدمات» که واحدشان ورق است ابعاد ندارند
+       و نباید سد بخورند — فقط دسته‌های ورقیِ واقعی چک می‌شوند).            */
+    const SHEET_CATS = ["body_sheet", "door_sheet", "back_sheet", "drawer_sheet"];
+    const needsDims = payload.unit === "sheet" && SHEET_CATS.includes(payload.cat);
     if (!validateForm([
       ["mfName", (v) => !!v.trim(), "نام قلم را وارد کنید — بدون نام، در فهرست‌ها پیدا نمی‌شود."],
       ["mfPrice", (v) => parseNum(v) > 0, "قیمت باید عددی بزرگ‌تر از صفر باشد."],
+      ...(needsDims ? [
+        ["mfSheetW", (v) => parseNum(v) > 0, "برای قلمِ ورقی، عرض ورق الزامی است — بدونِ آن قیمتِ هر مترمربع صفر و هزینه‌ی ورقِ پروژه‌ها بی‌صدا صفر می‌شود."],
+        ["mfSheetH", (v) => parseNum(v) > 0, "برای قلمِ ورقی، ارتفاع ورق الزامی است — بدونِ آن قیمتِ هر مترمربع صفر و هزینه‌ی ورقِ پروژه‌ها بی‌صدا صفر می‌شود."],
+      ] : []),
     ])) return false;
     let resp = null;
     if (API.ok) {
@@ -2795,6 +3088,7 @@ function wire() {
       }
       renderProjects();
     }
+    refreshDashboard();
     renderDashboard();
     if (state.editingProject) { renderSectionBar(); renderEditorTables(); scheduleRecalc(100); }
   }
@@ -3009,15 +3303,14 @@ function wire() {
       applyStyleToUnit(u, styleDataOf(pg));
       pg.units.push(u);
     }
-    navigate("projects");
+    await navigate("projects");
+    refreshDashboard();
     renderProjects(); renderDashboard(); fillInvoiceProjects();
     openProjectEditor(np.id);
-    /* فوکوس روی عنوان: اولین چیزی که کاربر باید تایپ کند، نه یک کلیکِ اضافه */
-    requestAnimationFrame(() => {
-      const t = el("edTitle");
-      if (t && !el("projectEditor").hidden) { t.focus(); t.select(); }
-    });
-    toast("پروژه ساخته شد — عنوان را بنویسید و ابعاد یونیت را وارد کنید", "success");
+    /* پروژه‌ی تازه یعنی کاربر باید عنوان و مشتری را بنویسد → فوکوس مستقیم
+       روی «عنوان» در همان نوارِ باریکِ مشخصات می‌نشیند. */
+    focusTitleSoon();
+    toast("پروژه ساخته شد — ابعاد یونیت را وارد کنید", "success");
   }
 
   async function createProjectForm() {
@@ -3051,6 +3344,8 @@ function wire() {
     }
     if (!PROJECTS.includes(np)) PROJECTS.unshift(np);
     closeModal("project");
+    await navigate("projects");
+    refreshDashboard();
     renderProjects(); renderDashboard(); fillInvoiceProjects();
     openProjectEditor(np.id);
     toast("پروژه‌ی جدید ایجاد شد — یونیت‌ها را وارد کنید", "success");
@@ -3077,7 +3372,8 @@ function wire() {
           catch (err) { toast("حذف ناموفق: " + esc(err.message), "error"); return; }
         } else demoSave();
         PROJECTS.splice(PROJECTS.indexOf(p), 1);
-        if (state.editingProject === p) { state.editingProject = null; el("projectEditor").hidden = true; }
+        if (state.editingProject === p) { state.editingProject = null; el("projectEditor").hidden = true; setEditingMode(false); }
+        refreshDashboard();
         renderProjects(); renderDashboard(); fillInvoiceProjects();
         toast("پروژه حذف شد", "success");
       }, "حذف پروژه");
@@ -3109,6 +3405,7 @@ function wire() {
       demoSave();
     }
     PROJECTS.unshift(np);
+    refreshDashboard();
     renderProjects(); fillInvoiceProjects(); renderDashboard();
     openProjectEditor(np.id);
     toast("کپی پروژه ایجاد شد", "success");
@@ -3155,7 +3452,8 @@ function wire() {
       toast("بخش جدید اضافه شد — سبک و یونیت‌ها را وارد کنید");
     }
   });
-  el("btnAddSection").addEventListener("click", () => el("btnAddSection2").click());
+  /* دکمه‌ی قدیمی «افزودن بخش» در نوارِ فشرده حذف شد — قرصِ «＋ بخش» تنها مسیر است */
+  if (el("btnAddSection")) el("btnAddSection").addEventListener("click", () => el("btnAddSection2").click());
   el("btnDelSection").addEventListener("click", () => {
     const p = state.editingProject;
     if (!p) return;
@@ -3183,6 +3481,13 @@ function wire() {
     const st = STYLES.find((s) => s.id === Number(pg.style_id));
     const before = undoSnapshot();          /* وضعیتِ پیش از اعمال — برای بازگردانی */
     applyStyleToPage(pg, pg.style_id);
+    if (defaultsBeatStyle()) {
+      pg.units.forEach((u) => {
+        applyDefaultsOver(u, DP_UNIT_MAP);
+        (u.doors || []).forEach((d) => applyDefaultsOver(d, DP_DOOR_MAP));
+        (u.drawers || []).forEach((d) => applyDefaultsOver(d, DP_DRAWER_MAP));
+      });
+    }
     markDirty();
     renderSectionBar(); renderEditorTables(); scheduleRecalc(50);
     toast(`متریالِ سبک «<b>${esc(st.name)}</b>» روی همه‌ی یونیت‌ها، درها و کشوهای این بخش اعمال شد`,
@@ -3242,13 +3547,17 @@ function wire() {
     return (st && st.data) || {};
   }
   function applyStyleToUnit(u, d) {
-    for (const [role, attr] of [["body", "body_id"], ["back", "back_id"], ["banding", "banding_id"],
-      ["countertop", "countertop_id"], ["leg", "leg_id"], ["shelf_pin", "shelf_pin_id"],
-      ["crown", "crown_id"], ["underlight", "underlight_id"], ["kickboard", "kickboard_id"],
-      ["assembly", "assembly_id"]]) {
-      if (d[role]) u[attr] = midByName(d[role]);
-    }
-    if (!u.assembly_id) u.assembly_id = midByName("سوراخ‌کاری و مونتاژ (هر یونیت)");
+    const setStyle = () => {
+      for (const [role, attr] of [["body", "body_id"], ["back", "back_id"], ["banding", "banding_id"],
+        ["countertop", "countertop_id"], ["leg", "leg_id"], ["shelf_pin", "shelf_pin_id"],
+        ["crown", "crown_id"], ["underlight", "underlight_id"], ["kickboard", "kickboard_id"],
+        ["assembly", "assembly_id"]]) {
+        if (d[role]) u[attr] = midByName(d[role]);
+      }
+      if (!u.assembly_id) u.assembly_id = midByName("سوراخ‌کاری و مونتاژ (هر یونیت)");
+    };
+    /* ★ اولویت قابل تنظیم: «پیش‌فرض‌های من» (روشن) یا «سبک بخش» (خاموش). */
+    applyStyleThenDefaults(u, setStyle, DP_UNIT_MAP);
   }
   $$(".add-row").forEach((b) => b.addEventListener("click", () => {
     const p = state.editingProject;
@@ -3260,7 +3569,17 @@ function wire() {
     let focusKind = null, focusIdx = null;
     if (kind === "units" || (kind && kind.startsWith("unit:"))) {
       const type = kind.startsWith("unit:") ? kind.slice("unit:".length) : "ground";
-      const u = defaultUnit(type);
+      /* ★ گوشه‌ی L: موتور آن را مثل یونیت زمینی می‌شمارد (بدون سقف، با پایه
+         و پاخور) ولی ابعاد پایه‌ی ۹۰×۹۰×۷۲ می‌گیرد تا کاربر مجبور نباشد
+         عمق را دستی از ۵۵ به ۹۰ تغییر دهد. */
+      let u;
+      if (type === "corner") {
+        u = defaultUnit("ground");
+        u.label = "یونیت گوشه";
+        u.length_cm = 90; u.depth_cm = 90; u.height_cm = 72; u.shelves = 1;
+      } else {
+        u = defaultUnit(type);
+      }
       applyStyleToUnit(u, d);
       pg.units.push(u);
       focusKind = "unit"; focusIdx = pg.units.length - 1;
@@ -3268,23 +3587,33 @@ function wire() {
     } else if (kind === "doors") {
       if (!pg.units.length) { toast("ابتدا یک یونیت بسازید", "warn"); return; }
       const dr = defaultDoor();
-      if (d.door) dr.material_id = midByName(d.door);
-      if (d.door_model) dr.door_model_id = midByName(d.door_model);
-      if (d.hinge) dr.hinge_id = midByName(d.hinge);
-      if (d.handle) dr.handle_id = midByName(d.handle);
-      if (d.banding) dr.banding_id = midByName(d.banding);
-      if (d.assembly_door) dr.assembly_id = midByName(d.assembly_door);
-      if (d.packaging_door) dr.packaging_id = midByName(d.packaging_door);
+      const setDoorStyle = () => {
+        if (d.door) dr.material_id = midByName(d.door);
+        if (d.door_model) dr.door_model_id = midByName(d.door_model);
+        if (d.hinge) dr.hinge_id = midByName(d.hinge);
+        if (d.handle) dr.handle_id = midByName(d.handle);
+        if (d.banding) dr.banding_id = midByName(d.banding);
+        if (d.assembly_door) dr.assembly_id = midByName(d.assembly_door);
+        if (d.packaging_door) dr.packaging_id = midByName(d.packaging_door);
+      };
+      applyStyleThenDefaults(dr, setDoorStyle, DP_DOOR_MAP);
+      const doorUnit = pg.units[state.lastUnitIdx || 0];
+      dr.w_cm = leafWidth(doorUnit.length_cm, dr.qty);
+      const fitH = r1((+doorUnit.height_cm || 0) - DOOR_REVEAL_CM);
+      if (!dr.h_cm || dr.h_cm > fitH) dr.h_cm = fitH;
       pg.units[state.lastUnitIdx || 0].doors.push(dr);
       focusKind = "door"; focusIdx = (state.lastUnitIdx || 0) + ":" + (pg.units[state.lastUnitIdx || 0].doors.length - 1);
     } else if (kind === "drawers") {
       if (!pg.units.length) { toast("ابتدا یک یونیت بسازید", "warn"); return; }
       const dw = defaultDrawer();
-      if (d.slide) dw.slide_id = midByName(d.slide);
-      if (d.drawer_sheet) dw.sheet_id = midByName(d.drawer_sheet);
-      if (d.door) dw.front_id = midByName(d.door);
-      if (d.handle) dw.handle_id = midByName(d.handle);
-      if (d.banding) dw.banding_id = midByName(d.banding);
+      const setDrawerStyle = () => {
+        if (d.slide) dw.slide_id = midByName(d.slide);
+        if (d.drawer_sheet) dw.sheet_id = midByName(d.drawer_sheet);
+        if (d.door) dw.front_id = midByName(d.door);
+        if (d.handle) dw.handle_id = midByName(d.handle);
+        if (d.banding) dw.banding_id = midByName(d.banding);
+      };
+      applyStyleThenDefaults(dw, setDrawerStyle, DP_DRAWER_MAP);
       pg.units[state.lastUnitIdx || 0].drawers.push(dw);
       focusKind = "drawer"; focusIdx = (state.lastUnitIdx || 0) + ":" + (pg.units[state.lastUnitIdx || 0].drawers.length - 1);
     } else if (kind === "facade") {
@@ -3292,13 +3621,29 @@ function wire() {
         pg.detail_mode = "detailed";
         renderSectionBar();
       }
-      pg.detail_rows.push({ label: "ردیف درنما", qty: 1, w_cm: 100, h_cm: 60, price_per_sqm: 300000 });
+      pg.detail_rows.push({
+        label: settingStr("default_facade_label", "ردیف درنما"),
+        qty: settingNum("default_facade_qty", 1),
+        w_cm: settingNum("default_facade_w_cm", 100),
+        h_cm: settingNum("default_facade_h_cm", 60),
+        price_per_sqm: settingNum("default_facade_price_per_sqm", 300000),
+      });
       focusKind = "facade"; focusIdx = pg.detail_rows.length - 1;
     } else if (kind === "extras") {
-      pg.extras.push({ label: "قلم جدید", qty: 1, unit: "piece", price: 500000, visible: true });
+      pg.extras.push({
+        label: settingStr("default_extra_label", "قلم جدید"),
+        qty: settingNum("default_extra_qty", 1),
+        unit: settingStr("default_extra_unit", "piece"),
+        price: settingNum("default_extra_price", 500000), visible: true,
+      });
       focusKind = "extra"; focusIdx = pg.extras.length - 1;
     } else if (kind === "services") {
-      pg.services.push({ label: "خدمت جدید", basis: "fixed", qty: 1, price: 300000 });
+      pg.services.push({
+        label: settingStr("default_service_label", "خدمت جدید"),
+        basis: settingStr("default_service_basis", "fixed"),
+        qty: settingNum("default_service_qty", 1),
+        price: settingNum("default_service_price", 300000),
+      });
       focusKind = "service"; focusIdx = pg.services.length - 1;
     }
     markDirty();
@@ -3481,6 +3826,10 @@ function wire() {
     /* ذخیره‌ی یونیت به‌عنوان الگو */
     const tp = e.target.closest("[data-tpl-save]");
     if (tp) { openTemplateSaveModal(+tp.dataset.tplSave); return; }
+
+    /* نمای فنی ۲D — کاغذ آبی */
+    const bp = e.target.closest("[data-bp]");
+    if (bp) { openBlueprintModal(+bp.dataset.bp); return; }
 
     const d = e.target.closest("[data-del-row]");
     if (d) {
@@ -3678,7 +4027,7 @@ function wire() {
     } else window.print();
   });
   el("btnPdfInv").addEventListener("click", () => busy(el("btnPdfInv"), async () => {
-    if (!API.ok) { toast("خروجی PDF در حالت نمایشی فعال نیست — کبیر را اجرا کنید: python main.py", "warn"); return; }
+    if (!API.ok) { toast("خروجی PDF در حالت نمایشی فعال نیست — کابینت سازی عرفان را اجرا کنید: python main.py", "warn"); return; }
     if (!state.inv.payload) { await refreshInvoice(); }
     try {
       const body = Object.assign({}, state.inv.payload, { number: state.inv.number });
@@ -3688,7 +4037,7 @@ function wire() {
     } catch (e) { toast("خطا: " + esc(e.message), "error"); }
   }));
   el("btnXlsInv").addEventListener("click", () => busy(el("btnXlsInv"), async () => {
-    if (!API.ok) { toast("خروجی اکسل در حالت نمایشی فعال نیست — کبیر را اجرا کنید: python main.py", "warn"); return; }
+    if (!API.ok) { toast("خروجی اکسل در حالت نمایشی فعال نیست — کابینت سازی عرفان را اجرا کنید: python main.py", "warn"); return; }
     if (!state.inv.payload) { await refreshInvoice(); }
     try {
       const body = Object.assign({}, state.inv.payload, { number: state.inv.number });
@@ -3939,7 +4288,12 @@ function wire() {
 
   /* --- برش‌نامه و لیست خرید --- */
   const btnWs = el("btnWorkshop");
-  if (btnWs) btnWs.addEventListener("click", () => busy(btnWs, openWorkshopModal));
+  if (btnWs) btnWs.addEventListener("click", () => busy(btnWs, () => openWorkshopModal("cut")));
+  /* ★ ورودیِ آشکارِ کات مستر — مستقیم روی تب مقایسه باز می‌شود */
+  const btnCm = el("btnCutMaster");
+  if (btnCm) btnCm.addEventListener("click", () => busy(btnCm, () => openWorkshopModal("cm")));
+  const btnCm2 = el("btnCutMaster2");
+  if (btnCm2) btnCm2.addEventListener("click", () => openWorkshopModal("cm"));
   const wsTabs = el("wsTabs");
   if (wsTabs) wsTabs.addEventListener("click", (e) => {
     const t = e.target.closest("[data-wstab]");
@@ -3954,6 +4308,24 @@ function wire() {
     document.body.classList.add("printing-ws");
     const done = () => document.body.classList.remove("printing-ws");
     setTimeout(() => { window.print(); setTimeout(done, 400); }, 60);
+  });
+
+  /* --- پل CutMaster 2D: فایل → مقایسه با برش‌نامه --- */
+  const btnCmPick = el("btnCmPick"), cmFile = el("cmFile");
+  if (btnCmPick && cmFile) {
+    btnCmPick.addEventListener("click", () => cmFile.click());
+    cmFile.addEventListener("change", () => {
+      const f = cmFile.files && cmFile.files[0];
+      if (!f) return;
+      compareCutMasterFile(f);
+      cmFile.value = "";
+    });
+  }
+
+  /* --- نمای فنی ۲D (کاغذ آبی) --- */
+  const btnBpPrint = el("btnBpPrint");
+  if (btnBpPrint) btnBpPrint.addEventListener("click", () => {
+    if (typeof printBlueprint === "function") printBlueprint();
   });
 
   /* --- رند کردن مبلغ نهایی --- */
@@ -4072,6 +4444,13 @@ function wire() {
        باشد — وگرنه «راهنما» فقط با موس باز می‌شد (نقض Keyboard-First).   */
     guideHead.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); }
+    });
+  }
+
+  const btnProjMore = el("btnProjMore");
+  if (btnProjMore) {
+    btnProjMore.addEventListener("click", () => {
+      setProjMoreOpen(el("projMoreFields").hidden);
     });
   }
   const btnSecBar = el("btnSecBar"), secBarWrap = el("secBarWrap");
@@ -4299,6 +4678,7 @@ function renderAll() {
   if (state.editingProject && !PROJECTS.includes(state.editingProject)) {
     state.editingProject = null;
     el("projectEditor").hidden = true;
+    setEditingMode(false);
   }
 }
 
@@ -4326,7 +4706,7 @@ function startConnWatchdog() {
           API.ok = false;
           fails = 0;
           setConnBadge();
-          toast("اتصال به سرور کبیر قطع شد — حالت نمایشی فعال است", "warn");
+          toast("اتصال به سرور کابینت سازی عرفان قطع شد — حالت نمایشی فعال است", "warn");
         }
       } else fails = 0;
     } else {
@@ -4334,7 +4714,7 @@ function startConnWatchdog() {
       if (ok) {
         setConnBadge();
         renderAll();
-        toast("دوباره به سرور کبیر متصل شد", "success");
+        toast("دوباره به سرور کابینت سازی عرفان متصل شد", "success");
       }
     }
   }, 20000);
@@ -4363,17 +4743,17 @@ async function init() {
   wire();
   startConnWatchdog();
 
-  const route = () => {
+  const route = async () => {
     const h = (location.hash || "").replace(/^#\/?/, "").split("/");
     const page = PAGES[h[0]] ? h[0] : "dashboard";
-    navigate(page, h[1], true);
-    if (page === "projects" && h[1]) openProjectEditor(h[1]);
+    await navigate(page, h[1], true);
+    if (page === "projects" && h[1] && state.page === "projects") openProjectEditor(h[1]);
   };
   window.addEventListener("hashchange", route);
   route();
   hideSplash();
   if (!ok) {
-    setTimeout(() => toast("سرور کبیر در دسترس نیست — رابط در <b>حالت نمایشی</b> با داده‌های نمونه اجرا شد. برای اتصال واقعی کبیر را اجرا کنید: <b class='ltr'>python main.py</b>", "warn"), 900);
+    setTimeout(() => toast("سرور کابینت سازی عرفان در دسترس نیست — رابط در <b>حالت نمایشی</b> با داده‌های نمونه اجرا شد. برای اتصال واقعی کابینت سازی عرفان را اجرا کنید: <b class='ltr'>python main.py</b>", "warn"), 900);
   }
 }
 

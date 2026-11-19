@@ -1,12 +1,12 @@
 @echo off
 setlocal EnableExtensions
 chcp 65001 >nul
-title Kabir - Update
+title Erfan Cabinet - Update
 
 echo ============================================================
-echo   Kabir - Standalone Updater
+echo   Erfan Cabinet - Standalone Updater
 echo ============================================================
-echo   Downloads and installs the latest version of Kabir,
+echo   Downloads and installs the latest version of Erfan Cabinet,
 echo   then backs up and upgrades your database safely.
 echo   Your projects, materials, invoices and settings are kept.
 echo ============================================================
@@ -30,7 +30,7 @@ if not defined PY (
     exit /b 1
 )
 
-rem ---------- 2) Locate the Kabir application folder ----------
+rem ---------- 2) Locate the Erfan Cabinet application folder ----------
 cd /d "%~dp0"
 set "APPDIR="
 if exist "%~dp0main.py" set "APPDIR=%~dp0"
@@ -47,10 +47,10 @@ if not defined APPDIR for /d %%D in ("%USERPROFILE%\Desktop\kabir*") do call :pr
 if not defined APPDIR for /d %%D in ("%USERPROFILE%\Downloads\kabir*") do call :probe "%%~D"
 if defined APPDIR goto :have_app
 
-echo Kabir was not found next to this file or in the usual folders.
+echo Erfan Cabinet was not found next to this file or in the usual folders.
 echo.
-echo   1 - Install a fresh copy of Kabir into: %~dp0kabir_app
-echo   2 - Type the path to your existing Kabir folder
+echo   1 - Install a fresh copy of Erfan Cabinet into: %~dp0kabir_app
+echo   2 - Type the path to your existing Erfan Cabinet folder
 echo   3 - Cancel
 echo.
 set "CH=1"
@@ -61,12 +61,12 @@ set "APPDIR=%~dp0kabir_app\"
 goto :have_app
 
 :ask_path
-set /p "APPDIR=Full path to your Kabir folder, then press Enter: "
+set /p "APPDIR=Full path to your Erfan Cabinet folder, then press Enter: "
 if not defined APPDIR goto :cancel
 set "APPDIR=%APPDIR:"=%"
 if not exist "%APPDIR%\main.py" if not exist "%APPDIR%\update.py" (
     echo.
-    echo [WARN] That folder does not look like a Kabir folder - main.py not found.
+    echo [WARN] That folder does not look like a Erfan Cabinet folder - main.py not found.
     echo        The latest version will be downloaded into it anyway.
     echo.
 )
@@ -77,7 +77,7 @@ set "APPDIR=%APPDIR%\"
 :appdir_ok
 if not exist "%APPDIR%" mkdir "%APPDIR%"
 echo.
-echo Kabir folder: %APPDIR%
+echo Erfan Cabinet folder: %APPDIR%
 echo.
 
 rem ---------- 3) Refresh the updater core - always. ----------
@@ -110,7 +110,7 @@ cd /d "%APPDIR%"
 %PY% update.py %*
 if errorlevel 1 goto :failed
 echo.
-echo [OK] Update complete. Start Kabir with run.bat in the app folder.
+echo [OK] Update complete. Start Erfan Cabinet with run.bat in the app folder.
 echo.
 pause
 exit /b 0

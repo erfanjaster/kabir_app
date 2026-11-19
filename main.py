@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-کبیر — نقطه‌ی ورود نرم‌افزار (رابط وب)
+کابینت سازی عرفان — نقطه‌ی ورود نرم‌افزار (رابط وب)
 =======================================
 سرویس‌دهنده‌ی وب را روی http://localhost:8080 بالا می‌آورد و مرورگر را باز
 می‌کند. تمام رابط کاربری نرم‌افزار تحت وب است و داده‌ها در پایگاه‌داده‌ی
@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import sys
 import traceback
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -26,11 +27,16 @@ if str(ROOT) not in sys.path:
 
 
 def _excepthook(exc_type, exc_value, exc_tb):
-    """ثبت خطاهای غیرمنتظره در فایل لاگ برای گزارش‌گیری."""
+    """ثبت خطاهای غیرمنتظره در فایل لاگ برای گزارش‌گیری.
+
+    ★ append نه overwrite: لاگِ قبلیْ نریست سابقه‌ی خطاهاست؛ اگر با write_text
+    پاک می‌شد، خطایِ امروز، ردِ دیروز را می‌بلعید.
+    """
     msg = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
     try:
         from kabir import config
-        config.LOG_PATH.write_text(msg, encoding="utf-8")
+        with config.LOG_PATH.open("a", encoding="utf-8") as f:
+            f.write(f"\n===== {datetime.now().isoformat(timespec='seconds')} =====\n{msg}")
     except Exception:                          # noqa: BLE001
         pass
     print(msg, file=sys.stderr)

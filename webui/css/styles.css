@@ -1,5 +1,5 @@
 /* ==========================================================================
-   کبیر — سیستم طراحی رابط وب (نسخهٔ ۳٫۰)
+   کابینت سازی عرفان — سیستم طراحی رابط وب (نسخهٔ ۳٫۰)
    پژوهش و مرجع: docs/DESIGN.md
    پوستهٔ روشن «کاغذِ کارگاه» / پوستهٔ تاریک «شبِ کارگاه» — فارسی، راست‌به‌چپ
    ========================================================================== */
@@ -904,6 +904,11 @@ table.data.center th, table.data.center td { text-align: center; }
 .field > label, .lbl { font-size: 0.77rem; font-weight: 600; color: var(--text-2); line-height: 1.6; }
 .field .hint { font-size: 0.69rem; color: var(--text-3); line-height: 1.6; }
 
+/* ★ نشانِ «الزامی» روی برچسبِ فیلدهای ابعاد ورق برای قلمِ ورقی */
+.req-star { color: var(--danger); font-weight: 700; }
+input:required { border-color: var(--border); }
+input:required:placeholder-shown { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warning, #d97706) 45%, transparent); }
+
 input[type="text"], input[type="number"], input[type="tel"], input[type="date"],
 input[type="search"], select, textarea {
   padding: 0.5rem 0.8rem;
@@ -1714,6 +1719,10 @@ input[type="range"]::-moz-range-thumb {
 .conn-retry:hover { background: rgba(255, 255, 255, 0.16); }
 .conn-retry:disabled { opacity: 0.5; cursor: wait; }
 
+.sec-strip { display: flex; align-items: center; justify-content: space-between;
+  gap: .7rem; flex-wrap: wrap; padding: .5rem .7rem;
+  border-bottom: 1px solid var(--border); }
+.sec-strip .sec-pills { margin-bottom: 0; }
 .sec-pills { display: flex; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
 .sec-pill {
   display: inline-flex;
@@ -2073,6 +2082,44 @@ table.data th.sorted.desc .sort-ic { transform: scaleY(-1); }
 .ws-stats { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .8rem;
   padding: .5rem .7rem; background: var(--surface-2);
   border: 1px solid var(--border); border-radius: var(--r-sm, 10px); }
+
+/* --- نمای فنی ۲D (کاغذ آبی) --- رنگ‌ها داخلِ خودِ SVG است؛ اینجا فقط چیدمان */
+.bp-meta { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .8rem; }
+.bp-chip { padding: .25rem .6rem; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 999px; font-size: .78rem; }
+.bp-chip b { color: var(--text-1); }
+.bp-chip.warn { border-color: color-mix(in srgb, var(--warning, #d97706) 55%, transparent);
+  background: color-mix(in srgb, var(--warning, #d97706) 12%, var(--surface-2)); }
+.bp-views { display: flex; flex-direction: column; gap: .9rem; }
+.bp-fig { margin: 0; }
+.bp-fig svg { width: 100%; height: auto; display: block; }
+.bp-fig figcaption { text-align: center; font-size: .75rem; color: var(--text-3); margin-top: .35rem; }
+.bp-front { max-width: 40rem; margin-inline: auto; }
+.bp-pair { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; }
+.bp-note { margin-top: .2rem; line-height: 1.9; }
+@media (max-width: 720px) { .bp-pair { grid-template-columns: 1fr; } }
+
+/* --- پل CutMaster 2D (تب مقایسه) --- رنگِ نقشه‌ها داخلِ خودِ SVG است */
+.cm-upload { display: flex; align-items: center; gap: .7rem; margin-bottom: .9rem; }
+.cm-h4 { margin: 1rem 0 .5rem; font-size: .95rem; }
+.cm-layouts { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+.cm-fig { margin: 0; }
+.cm-sheet-wrap { background: #0b1c2c; border-radius: 10px; padding: .5rem; }
+.cm-sheet { width: 100%; height: auto; display: block; }
+.cm-fig figcaption { text-align: center; font-size: .72rem; color: var(--text-3); margin-top: .35rem; line-height: 1.7; }
+.ok-cell { color: var(--success); font-weight: 700; white-space: nowrap; }
+.bad-cell { color: var(--danger); font-weight: 700; white-space: nowrap; }
+.cm-bad td { background: color-mix(in srgb, var(--danger) 8%, transparent); }
+.cm-bad td:first-child { border-inline-start: 3px solid var(--danger); }
+
+/* --- پیش‌فرض‌های جزئیات (تنظیمات) --- */
+.dp-h4 { display: flex; align-items: center; gap: .45rem; font-size: .85rem;
+  margin: 1.1rem 0 .55rem; color: var(--text-1); }
+.dp-h4:first-of-type { margin-top: 0; }
+.dp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: .6rem; }
+/* چک‌باکس‌های یک‌خطی هم‌تراز با ورودی‌های همان سطر و هم‌اندازه با برچسب‌ها */
+.dp-grid > .field:has(> label.check) { align-self: end; padding-bottom: .35rem; }
+.dp-grid > .field > label.check { font-size: .78rem; font-weight: 600; color: var(--text-2); }
 .ws-panel { display: none; }
 .ws-panel.active { display: block; }
 .sheet-badge {
@@ -2964,4 +3011,162 @@ tr.row-detail-l2 > td { background: var(--surface-2); }
   top: calc(var(--topbar-h) + var(--demo-banner-h) + var(--editor-bar-h));
   z-index: 4;
   background: var(--surface);
+}
+
+/* ==========================================================================
+   ۲۸) میزِ کارِ پروژه (Workspace)
+   --------------------------------------------------------------------------
+   سه اصلاحی که پس از بازبینیِ واقعیِ صفحه‌ی ویرایشگر انجام شد:
+   ۱) فهرستِ پروژه‌ها هنگامِ کار پنهان می‌شود تا جدولِ یونیت‌ها بالای صفحه باشد.
+   ۲) «مشخصات پروژه» پیش‌فرض بسته است و خلاصه‌ی مشتری/تماس را در سرِ کارت
+      نشان می‌دهد (افشای تدریجی) — اطلاعاتِ یک‌باره جای جدولِ روزانه را نگیرد.
+   ۳) پرشِ خودکار به ویرایشگر با فاصله‌ی نوارِ عنوان حساب می‌شود تا سرِ کارت
+      زیرِ نوارِ چسبان گم نشود.
+   ========================================================================== */
+
+#projectEditor { scroll-margin-top: calc(var(--topbar-h) + 0.55rem); }
+
+#page-projects.editing #projectsList { display: none; }
+#page-projects.editing > .editor-stack { animation: pageIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+/* کارت‌های ویرایشگر کمی به هم نزدیک‌تر: فضای جدولِ داده بیشتر می‌شود */
+.editor-stack > .card { margin-bottom: 0.75rem; }
+.editor-stack > .card:last-of-type { margin-bottom: 0; }
+
+/* خلاصه‌ی مشخصات در سرِ کارت: یک خط، با برشِ تمیز */
+#projMetaCard .card-head h3 { min-width: 0; display: flex; align-items: baseline; gap: .35rem; }
+#projMetaCard .head-peek {
+  max-width: 46rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-weight: 400; font-size: .8rem; color: var(--text-3);
+}
+#projMetaCard:not(.collapsed) .head-peek { display: none; }
+#projMetaCard .card-head:hover h3 { color: var(--accent-text); }
+
+/* نمودارِ خالی: پیامِ راهنما به‌جای محورهایِ بی‌معنا */
+.chart.chart-empty {
+  display: grid;
+  place-items: center;
+  background-image: none;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+}
+.chart.chart-empty .empty { border: 0; background: transparent; }
+
+/* جست‌وجوی نوارِ بالا در نمایشگرهای پهن کمی جاگیرتر */
+@media (min-width: 1100px) {
+  .search-wrap input { width: 15.5rem; }
+  .search-wrap input:focus { width: 18rem; }
+}
+
+/* نامِ برند در نوارِ کناری: با نامِ بلندِ کارگاه، دو خطِ آرام (نه شکستنِ بدقواره) */
+.brand h1 { font-size: 1.12rem; line-height: 1.35; letter-spacing: -0.01em; }
+.brand p { font-size: 0.66rem; line-height: 1.5; }
+
+/* در حالتِ ویرایش، دکمه‌ی «بستن» واضح‌تر است چون تنها راهِ بازگشت به فهرست است */
+#page-projects.editing #btnCloseEditor { border-color: var(--border-strong); }
+
+/* ── نوارِ باریکِ مشخصات پروژه (جای کارتِ ۲۷۰ پیکسلی) ─────────────────── */
+#projMetaCard .card-body { padding-top: .7rem; padding-bottom: .7rem; }
+.proj-slim {
+  background: transparent; border: 0; padding: 0; margin: 0;
+  gap: .5rem;
+}
+.proj-slim { align-items: flex-end; }
+.proj-slim .ps-field { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+.proj-slim .ps-field > span {
+  font-size: .66rem; font-weight: 600; color: var(--text-3);
+  padding-inline-start: .15rem;
+}
+.proj-slim input { height: 2.35rem; width: 100%; }
+.proj-slim .ps-title { flex: 2 1 18rem; }
+.proj-slim .ps-title input { font-weight: 700; }
+.proj-slim .ps-cust  { flex: 1 1 12rem; }
+.proj-slim .ps-mobile { flex: 0 1 9.5rem; }
+.proj-slim .ps-more {
+  margin-inline-start: auto;
+  display: inline-flex; align-items: center; gap: .4rem;
+  height: 2.35rem;
+}
+.proj-slim .ps-more .tb-chev { width: .9rem; height: .9rem; transition: transform .18s ease; }
+.proj-slim .ps-more.open .tb-chev { transform: rotate(180deg); }
+
+/* ── دکمه‌ی «تنظیمات بخش» در سرِ کارت (پیش‌تر سفید روی سفید بود) ──────── */
+#btnSecBar { display: inline-flex; align-items: center; gap: .4rem; }
+#btnSecBar .tb-chev { width: .85rem; height: .85rem; transition: transform .18s ease; }
+#btnSecBar[aria-expanded="true"] .tb-chev { transform: rotate(180deg); }
+#btnSecBar .sec-peek {
+  font-size: .72rem; font-weight: 400; color: var(--text-3);
+  max-width: 20rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  border-inline-start: 1px solid var(--border); padding-inline-start: .45rem;
+}
+
+/* ── چیدمانِ داشبورد: کارتِ بسته نباید به ارتفاعِ نمودار کشیده شود ────── */
+.dash-grid { align-items: start; }
+
+/* ── نوارِ متراژِ زنده، جمع‌وجورتر ───────────────────────────────────── */
+.dim-ribbon { padding: .35rem .6rem; margin: .15rem 0 .55rem; }
+.dim-cell { padding: .1rem .55rem; }
+.dim-cell b { font-size: .9rem; }
+
+/* ── فاصله‌ی جدولِ یونیت‌ها تا پنل‌های چسبان ──────────────────────────── */
+#page-projects.editing #tblUnits { min-height: 9rem; }
+
+/* فضای امنِ پایینِ جدولِ ویرایشگر تا آخرین ردیف زیر نوارِ چسبانِ «افزودن» نماند */
+@media (min-width: 721px) {
+  #projectEditor .tab-panel .table-wrap.grid-head { padding-bottom: 4.1rem; }
+}
+
+/* ── فشرده‌سازیِ عمودیِ میزِ کار برای لپ‌تاپِ ۷۶۸ پیکسلی ───────────────── */
+#projMetaCard .card-body { padding: .55rem .7rem; }
+.proj-slim .ps-code {
+  align-self: center;
+  font-size: .7rem; font-weight: 600; color: var(--text-3);
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 999px; padding: .18rem .55rem; white-space: nowrap;
+}
+/* نوارِ متراژ: یک خطِ افقی به‌جای دو خطِ برچسب/عدد */
+.dim-ribbon { padding: .3rem .55rem; margin: .1rem 0 .45rem; gap: .3rem; }
+.dim-cell { flex-direction: row; align-items: baseline; gap: .35rem; padding: .08rem .5rem; }
+.dim-cell b { font-size: .86rem; }
+.dim-gauge { min-width: 9rem; }
+/* در نمایشگرهای کوتاه، متنِ راهنمای ابزارها حذف می‌شود (در tooltip هست) */
+@media (max-height: 820px) {
+  .ut-hint { display: none; }
+  .editor-bar { padding-top: .35rem; padding-bottom: .35rem; }
+  .section-bar { padding-top: .5rem; padding-bottom: .5rem; }
+}
+
+/* ── کارتِ «شروع سریع» در داشبورد ─────────────────────────────────────── */
+.quick-card .card-body { padding: .55rem; }
+.quick-actions { display: flex; flex-direction: column; gap: .45rem; }
+.quick-act {
+  display: flex; align-items: center; gap: .65rem; width: 100%;
+  padding: .62rem .7rem; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--surface-2);
+  color: var(--text); font: inherit; text-align: start; cursor: pointer;
+  transition: background .13s ease, border-color .13s ease, transform .13s ease;
+}
+.quick-act:hover { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+.quick-act:active { transform: translateY(1px); }
+.quick-act .qa-ic {
+  width: 2.1rem; height: 2.1rem; flex-shrink: 0; border-radius: var(--radius-xs);
+  display: grid; place-items: center; color: var(--accent-text); background: var(--accent-soft);
+}
+.quick-act .qa-ic svg { width: 1.1rem; height: 1.1rem; }
+.quick-act .qa-txt { display: flex; flex-direction: column; gap: .05rem; min-width: 0; flex: 1 1 auto; }
+.quick-act .qa-txt b { font-size: .88rem; font-weight: 700; }
+.quick-act .qa-txt small { font-size: .72rem; color: var(--text-3); }
+.quick-act .kbd { opacity: .75; }
+
+/* منوی «انواع یونیت» در نوارِ افزودنِ پایینِ صفحه باز می‌شود، پس باید به سمت
+   بالا باز شود؛ بازشدن به پایین زیرِ نوارِ جمع می‌افتاد و کلیک‌ها را می‌گرفت. */
+.add-bar .split.open > .ovf-menu {
+  inset-block-start: auto;
+  inset-block-end: calc(100% + 6px);
+  inset-inline-start: 0;
+  inset-inline-end: auto;
+}
+@media print {
+  #projectEditor .tab-panel .table-wrap.grid-head { padding-bottom: 0; }
+  .quick-card, .quick-actions { display: none !important; }
 }

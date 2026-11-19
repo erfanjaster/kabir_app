@@ -273,7 +273,7 @@ class TestDataFixes(unittest.TestCase):
     def test_import_json_filters_unknown_columns(self):
         """باگ ۱۱: ستون ناشناخته باید فیلتر شود، نه استثنای خام."""
         payload = {
-            "app": "KabirCabinet", "settings": {},
+            "app": "ErfanCabinet", "settings": {},
             "tables": {"materials": [{
                 "id": 987654, "category": "hinge", "name": "قلم تست منتقد",
                 "unit": "piece", "price": 12345, "active": 1,

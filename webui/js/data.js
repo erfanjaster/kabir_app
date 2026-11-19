@@ -1,5 +1,5 @@
 /* ==========================================================================
-   کبیر ۲ — data.js
+   نسخه ۲ — data.js
    ابزارها، داده‌های نمونه (هم‌شکل با پاسخ سرور)، لایه‌ی اتصال به API
    شکل داده‌ها دقیقاً همان چیزی است که kabir/web/server.py برمی‌گرداند،
    بنابراین در حالت متصل/نمایشی فقط منبع داده فرق می‌کند.
@@ -149,6 +149,7 @@ const ICONS = {
   cart: svg('<circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.6 12.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 7H6"/>'),
   ruler: svg('<path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><line x1="3" y1="12" x2="21" y2="12"/>'),
   spark: svg('<path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/>'),
+  bp: svg('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18"/><path d="M12 3v18"/><path d="M7 7h2"/><path d="M15 15h2"/><path d="M7 17h2"/><path d="M15 7h2"/>'),
 };
 
 function iconBtn(cls, icon, title, attrs) {
@@ -197,7 +198,7 @@ function downloadBlob(bytes, filename, ctype) {
 const UNITS = { sheet: "ورق", sqm: "متر مربع", lm: "متر طول", piece: "عدد", set: "ست", kg: "کیلوگرم", job: "موردی" };
 const STATUS_LABEL = { draft: "پیش‌نویس", open: "در جریان", done: "انجام‌شده", canceled: "لغوشده" };
 const STATUS_CLASS = { draft: "b-draft", open: "b-open", done: "b-done", canceled: "b-cancel" };
-const UNIT_TYPES = { ground: "زمینی", wall: "دیواری", tall: "کمد ایستاده" };
+const UNIT_TYPES = { ground: "زمینی", wall: "دیواری", tall: "کمد ایستاده", drawer: "پکیج کشو", open: "شلف باز" };
 
 /* ابعاد پیش‌فرض یونیت‌ها به تفکیک نوع — از تنظیمات خوانده می‌شود
    (کلیدها: unit_<type>_length_cm / height_cm / depth_cm / shelves)
@@ -206,6 +207,8 @@ const UNIT_DEFAULTS_FALLBACK = {
   ground: { length_cm: 60, height_cm: 72, depth_cm: 55, shelves: 1 },
   wall: { length_cm: 60, height_cm: 70, depth_cm: 30, shelves: 1 },
   tall: { length_cm: 60, height_cm: 220, depth_cm: 58, shelves: 2 },
+  drawer: { length_cm: 60, height_cm: 72, depth_cm: 55, shelves: 0 },
+  open: { length_cm: 60, height_cm: 70, depth_cm: 30, shelves: 3 },
 };
 function unitDefaults(type) {
   const f = UNIT_DEFAULTS_FALLBACK[type] || UNIT_DEFAULTS_FALLBACK.ground;
@@ -223,11 +226,13 @@ function unitLabel(type, lengthCm) {
   const L = fmt(lengthCm);
   if (type === "tall") return `کمد ایستاده ${L}`;
   if (type === "wall") return `یونیت دیواری ${L}`;
+  if (type === "drawer") return `پکیج کشو ${L}`;
+  if (type === "open") return `شلف باز ${L}`;
   return `یونیت زمینی ${L}`;
 }
 /* آیا برچسب، همان برچسب پیش‌فرض (قابل‌جایگزینی خودکار) است؟ */
 function isDefaultUnitLabel(label) {
-  return !label || /^(یونیت زمینی|یونیت دیواری|کمد ایستاده)(\s*[\d۰-۹٬]*)?$/.test(String(label).trim());
+  return !label || /^(یونیت زمینی|یونیت دیواری|کمد ایستاده|پکیج کشو|شلف باز)(\s*[\d۰-۹٬]*)?$/.test(String(label).trim());
 }
 const SERVICE_BASIS = { fixed: "موردی (ثابت)", unit: "هر یونیت", door: "هر لنگه در", shelf: "هر طبقه", sqm: "هر م²", lm: "هر متر طول", percent: "درصدی از جمع" };
 
@@ -254,10 +259,10 @@ const GROUP_ORDER = [
    (فقط برای حالت نمایشی وقتی سرور در دسترس نیست — هم‌شکل با پاسخ API)     */
 
 const DEMO_SETTINGS = {
-  company_name: "کارگاه کابینت‌سازی کبیر", company_manager: "ارفع جاستری",
+  company_name: "کارگاه کابینت سازی عرفان", company_manager: "ارفع جاستری",
   company_phone: "۰۲۱-۸۸۷۷۶۶۵۵", company_mobile: "۰۹۱۲۳۴۵۶۷۸۹",
   company_address: "تهران، خیابان آزادی، پاساژ چوب، پلاک ۱۲",
-  company_email: "info@kabir.example", company_web: "kabir.example", company_logo: "",
+  company_email: "info@erfan-cabinet.example", company_web: "erfan-cabinet.example", company_logo: "",
   invoice_title: "پیش‌فاکتور",
   invoice_footer_note: "این پیش‌فاکتور تا تاریخ اعتبار ذکرشده معتبر است. پیش‌پرداخت: ۶۰٪ هنگام عقد قرارداد.",
   currency: "تومان", currency_scale: "1", vat_enabled: "1", vat_percent: "10",
@@ -272,69 +277,77 @@ const DEMO_SETTINGS = {
   banding_body_factor: "2.2", banding_door_factor: "1", banding_waste_percent: "8",
   theme: "light", font_size: "12", persian_digits: "1", web_font_size: "14",
   auto_backup: "1", backup_keep: "14",
+  default_door_qty: "1", default_door_w_cm: "45", default_door_h_cm: "70",
+  default_door_gas_springs_per_leaf: "0", default_door_glass: "0", default_door_from_body: "0",
+  default_door_label: "در", default_drawer_qty: "1", default_drawer_label: "کشو",
+  default_unit_qty: "1", default_unit_has_top_panel: "1", default_unit_has_bottom_panel: "1",
+  default_facade_label: "ردیف درنما", default_facade_qty: "1", default_facade_w_cm: "100",
+  default_facade_h_cm: "60", default_facade_price_per_sqm: "300000",
+  default_extra_label: "قلم جدید", default_extra_qty: "1", default_extra_unit: "piece", default_extra_price: "500000",
+  default_service_label: "خدمت جدید", default_service_basis: "fixed", default_service_qty: "1", default_service_price: "300000",
 };
 
 /* name, cat, unit, price, w, h, thick, width_cm, supplier */
 const _DM = [
-  ["ام‌دی‌اف سفید صدفی ۱۶ میل", "body_sheet", "sheet", 4850000, 183, 366, 16, 0, "بازرگانی چوب آراد"],
-  ["ام‌دی‌اف سفید برفی ۱۶ میل", "body_sheet", "sheet", 5100000, 183, 366, 16, 0, "بازرگانی چوب آراد"],
-  ["ام‌دی‌اف کرم/نسکافه‌ای ۱۶ میل", "body_sheet", "sheet", 5250000, 183, 366, 16, 0, ""],
-  ["ام‌دی‌اف طوسی ۱۶ میل", "body_sheet", "sheet", 5400000, 183, 366, 16, 0, ""],
-  ["ام‌دی‌اف طرح چوب راش ۱۶ میل", "body_sheet", "sheet", 6300000, 183, 366, 16, 0, "چوب و صنعت البرز"],
-  ["ام‌دی‌اف ضدآب (MR) ۱۶ میل", "body_sheet", "sheet", 7200000, 183, 366, 16, 0, ""],
-  ["نئوپان ملامینه ۱۶ میل (اقتصادی)", "body_sheet", "sheet", 3100000, 183, 366, 16, 0, ""],
-  ["هایگلاس ترک سفید ۱۶ میل", "door_sheet", "sheet", 9500000, 183, 366, 16, 0, "آستارا چوب"],
-  ["هایگلاس ترک طرح‌دار ۱۶ میل", "door_sheet", "sheet", 10800000, 183, 366, 16, 0, "آستارا چوب"],
-  ["هایگلاس ایرانی ۱۶ میل", "door_sheet", "sheet", 6900000, 183, 366, 16, 0, ""],
-  ["ام‌دی‌اف ملامینه (در هم‌رنگ بدنه)", "door_sheet", "sheet", 5250000, 183, 366, 16, 0, ""],
-  ["ورق پایه ممبران (خام CNC)", "door_sheet", "sheet", 5900000, 183, 366, 18, 0, ""],
-  ["ورق پایه پلی‌اورتان", "door_sheet", "sheet", 6400000, 183, 366, 18, 0, ""],
-  ["فیبر (MDF 3 میل) پشت سفید", "back_sheet", "sheet", 1650000, 122, 244, 3, 0, ""],
-  ["فیبر (MDF 3 میل) پشت طرح چوب", "back_sheet", "sheet", 1850000, 122, 244, 3, 0, ""],
-  ["ام‌دی‌اف سفید ۱۶ میل (جعبه کشو)", "drawer_sheet", "sheet", 4850000, 183, 366, 16, 0, ""],
-  ["بدنه‌ی کشو تاندم باکس آماده", "drawer_sheet", "set", 2400000, 0, 0, 0, 0, ""],
-  ["اجرت ساخت در ملامینه (هر لنگه)", "door_model", "piece", 180000, 0, 0, 0, 0, ""],
-  ["اجرت ساخت در هایگلاس (هر لنگه)", "door_model", "piece", 320000, 0, 0, 0, 0, ""],
-  ["اجرت CNC در ممبران (هر م²)", "door_model", "sqm", 1450000, 0, 0, 0, 0, ""],
-  ["اجرت رنگ پلی‌اورتان (هر م²)", "door_model", "sqm", 2600000, 0, 0, 0, 0, ""],
-  ["در شیشه‌ای قاب آلومینیوم (هر لنگه)", "door_model", "piece", 850000, 0, 0, 0, 0, ""],
-  ["صفحه ۳ سانت ایرانی (طرح‌دار)", "countertop", "lm", 1350000, 0, 0, 30, 60, ""],
-  ["صفحه ۵ سانت ایرانی", "countertop", "lm", 2150000, 0, 0, 50, 60, "صفحه‌سازی پایتخت"],
-  ["صفحه ۵ سانت ترک (ضدخش)", "countertop", "lm", 3900000, 0, 0, 50, 60, "صفحه‌سازی پایتخت"],
-  ["صفحه کورین (Corian)", "countertop", "lm", 6800000, 0, 0, 12, 60, ""],
-  ["تاج ام‌دی‌اف ساده", "crown", "lm", 185000, 0, 0, 0, 8, ""],
-  ["تاج ابزارخور (CNC)", "crown", "lm", 420000, 0, 0, 0, 12, ""],
-  ["زیرچراغ با جای SMD", "underlight", "lm", 245000, 0, 0, 0, 10, ""],
-  ["پاخور پی‌وی‌سی (PVC)", "kickboard", "lm", 135000, 0, 0, 0, 15, ""],
-  ["پاخور آلومینیومی", "kickboard", "lm", 295000, 0, 0, 0, 15, ""],
-  ["نوار PVC ۲۲ میل سفید", "banding", "lm", 18500, 0, 0, 0, 0, ""],
-  ["نوار PVC ۲۲ میل طرح چوب", "banding", "lm", 26000, 0, 0, 0, 0, ""],
-  ["نوار ABS هایگلاس", "banding", "lm", 64000, 0, 0, 0, 0, ""],
-  ["لولا آرام‌بند معمولی", "hinge", "piece", 68000, 0, 0, 0, 0, ""],
-  ["لولا آرام‌بند ترک", "hinge", "piece", 125000, 0, 0, 0, 0, "یراق‌سرای شرق"],
-  ["لولا آرام‌بند آلمانی (Blum)", "hinge", "piece", 285000, 0, 0, 0, 0, "یراق‌سرای شرق"],
-  ["گازور ساده ۱۰۰N", "gas_spring", "piece", 145000, 0, 0, 0, 0, ""],
-  ["جک آرام‌بند تاشو", "gas_spring", "piece", 680000, 0, 0, 0, 0, ""],
-  ["خار طبقه فلزی", "shelf_pin", "piece", 6500, 0, 0, 0, 0, ""],
-  ["دستگیره میله‌ای ۱۲٫۸ سانت", "handle", "piece", 85000, 0, 0, 0, 0, ""],
-  ["دستگیره میله‌ای ۱۶ سانت", "handle", "piece", 115000, 0, 0, 0, 0, ""],
-  ["دستگیره مخفی (پروفیلی)", "handle", "piece", 165000, 0, 0, 0, 0, ""],
-  ["دستگیره دکمه‌ای", "handle", "piece", 62000, 0, 0, 0, 0, ""],
-  ["پایه پلاستیکی تنظیم‌دار ۱۰ سانت", "leg", "piece", 28000, 0, 0, 0, 0, ""],
-  ["پایه فلزی تنظیم‌دار ۱۵ سانت", "leg", "piece", 65000, 0, 0, 0, 0, ""],
-  ["ریل ساچمه‌ای معمولی (جفت)", "drawer_slide", "set", 165000, 0, 0, 0, 0, ""],
-  ["ریل تاندم آرام‌بند (جفت)", "drawer_slide", "set", 890000, 0, 0, 0, 0, ""],
-  ["تاندم‌باکس کامل (ست)", "drawer_slide", "set", 2450000, 0, 0, 0, 0, ""],
-  ["سطل زباله ریلی دو مخزن", "accessory", "piece", 1980000, 0, 0, 0, 0, ""],
-  ["آبچکان استیل داخل کابینت", "accessory", "piece", 1250000, 0, 0, 0, 0, ""],
-  ["نورپردازی SMD هر متر (با ترانس)", "accessory", "lm", 385000, 0, 0, 0, 0, ""],
-  ["برش و CNC (هر ورق)", "service", "sheet", 480000, 0, 0, 0, 0, ""],
-  ["سوراخ‌کاری و مونتاژ (هر یونیت)", "service", "job", 220000, 0, 0, 0, 0, ""],
-  ["مونتاژ و رگلاژ در (هر لنگه)", "service", "job", 85000, 0, 0, 0, 0, ""],
-  ["بسته‌بندی هر لنگه در", "service", "job", 45000, 0, 0, 0, 0, ""],
-  ["حمل تا محل (سرویس)", "service", "job", 850000, 0, 0, 0, 0, ""],
-  ["طراحی سه‌بعدی", "service", "job", 1500000, 0, 0, 0, 0, ""],
-  ["بازدید و اندازه‌گیری", "service", "job", 350000, 0, 0, 0, 0, ""],
+  ["ام‌دی‌اف سفید صدفی ۱۶ میل", "body_sheet", "sheet", 12120000, 183, 366, 16, 0, "بازرگانی چوب آراد"],
+  ["ام‌دی‌اف سفید برفی ۱۶ میل", "body_sheet", "sheet", 12750000, 183, 366, 16, 0, "بازرگانی چوب آراد"],
+  ["ام‌دی‌اف کرم/نسکافه‌ای ۱۶ میل", "body_sheet", "sheet", 13120000, 183, 366, 16, 0, ""],
+  ["ام‌دی‌اف طوسی ۱۶ میل", "body_sheet", "sheet", 13500000, 183, 366, 16, 0, ""],
+  ["ام‌دی‌اف طرح چوب راش ۱۶ میل", "body_sheet", "sheet", 15750000, 183, 366, 16, 0, "چوب و صنعت البرز"],
+  ["ام‌دی‌اف ضدآب (MR) ۱۶ میل", "body_sheet", "sheet", 18000000, 183, 366, 16, 0, ""],
+  ["نئوپان ملامینه ۱۶ میل (اقتصادی)", "body_sheet", "sheet", 7750000, 183, 366, 16, 0, ""],
+  ["هایگلاس ترک سفید ۱۶ میل", "door_sheet", "sheet", 21850000, 183, 366, 16, 0, "آستارا چوب"],
+  ["هایگلاس ترک طرح‌دار ۱۶ میل", "door_sheet", "sheet", 24840000, 183, 366, 16, 0, "آستارا چوب"],
+  ["هایگلاس ایرانی ۱۶ میل", "door_sheet", "sheet", 15870000, 183, 366, 16, 0, ""],
+  ["ام‌دی‌اف ملامینه (در هم‌رنگ بدنه)", "door_sheet", "sheet", 12070000, 183, 366, 16, 0, ""],
+  ["ورق پایه ممبران (خام CNC)", "door_sheet", "sheet", 13570000, 183, 366, 18, 0, ""],
+  ["ورق پایه پلی‌اورتان", "door_sheet", "sheet", 14720000, 183, 366, 18, 0, ""],
+  ["فیبر (MDF 3 میل) پشت سفید", "back_sheet", "sheet", 3960000, 122, 244, 3, 0, ""],
+  ["فیبر (MDF 3 میل) پشت طرح چوب", "back_sheet", "sheet", 4440000, 122, 244, 3, 0, ""],
+  ["ام‌دی‌اف سفید ۱۶ میل (جعبه کشو)", "drawer_sheet", "sheet", 10670000, 183, 366, 16, 0, ""],
+  ["بدنه‌ی کشو تاندم باکس آماده", "drawer_sheet", "set", 5280000, 0, 0, 0, 0, ""],
+  ["اجرت ساخت در ملامینه (هر لنگه)", "door_model", "piece", 540000, 0, 0, 0, 0, ""],
+  ["اجرت ساخت در هایگلاس (هر لنگه)", "door_model", "piece", 960000, 0, 0, 0, 0, ""],
+  ["اجرت CNC در ممبران (هر م²)", "door_model", "sqm", 4350000, 0, 0, 0, 0, ""],
+  ["اجرت رنگ پلی‌اورتان (هر م²)", "door_model", "sqm", 7800000, 0, 0, 0, 0, ""],
+  ["در شیشه‌ای قاب آلومینیوم (هر لنگه)", "door_model", "piece", 2550000, 0, 0, 0, 0, ""],
+  ["صفحه ۳ سانت ایرانی (طرح‌دار)", "countertop", "lm", 2840000, 0, 0, 30, 60, ""],
+  ["صفحه ۵ سانت ایرانی", "countertop", "lm", 4520000, 0, 0, 50, 60, "صفحه‌سازی پایتخت"],
+  ["صفحه ۵ سانت ترک (ضدخش)", "countertop", "lm", 8190000, 0, 0, 50, 60, "صفحه‌سازی پایتخت"],
+  ["صفحه کورین (Corian)", "countertop", "lm", 14280000, 0, 0, 12, 60, ""],
+  ["تاج ام‌دی‌اف ساده", "crown", "lm", 520000, 0, 0, 0, 8, ""],
+  ["تاج ابزارخور (CNC)", "crown", "lm", 1180000, 0, 0, 0, 12, ""],
+  ["زیرچراغ با جای SMD", "underlight", "lm", 690000, 0, 0, 0, 10, ""],
+  ["پاخور پی‌وی‌سی (PVC)", "kickboard", "lm", 380000, 0, 0, 0, 15, ""],
+  ["پاخور آلومینیومی", "kickboard", "lm", 830000, 0, 0, 0, 15, ""],
+  ["نوار PVC ۲۲ میل سفید", "banding", "lm", 50000, 0, 0, 0, 0, ""],
+  ["نوار PVC ۲۲ میل طرح چوب", "banding", "lm", 70000, 0, 0, 0, 0, ""],
+  ["نوار ABS هایگلاس", "banding", "lm", 170000, 0, 0, 0, 0, ""],
+  ["لولا آرام‌بند معمولی", "hinge", "piece", 180000, 0, 0, 0, 0, ""],
+  ["لولا آرام‌بند ترک", "hinge", "piece", 320000, 0, 0, 0, 0, "یراق‌سرای شرق"],
+  ["لولا آرام‌بند آلمانی (Blum)", "hinge", "piece", 740000, 0, 0, 0, 0, "یراق‌سرای شرق"],
+  ["گازور ساده ۱۰۰N", "gas_spring", "piece", 380000, 0, 0, 0, 0, ""],
+  ["جک آرام‌بند تاشو", "gas_spring", "piece", 1770000, 0, 0, 0, 0, ""],
+  ["خار طبقه فلزی", "shelf_pin", "piece", 20000, 0, 0, 0, 0, ""],
+  ["دستگیره میله‌ای ۱۲٫۸ سانت", "handle", "piece", 220000, 0, 0, 0, 0, ""],
+  ["دستگیره میله‌ای ۱۶ سانت", "handle", "piece", 300000, 0, 0, 0, 0, ""],
+  ["دستگیره مخفی (پروفیلی)", "handle", "piece", 430000, 0, 0, 0, 0, ""],
+  ["دستگیره دکمه‌ای", "handle", "piece", 160000, 0, 0, 0, 0, ""],
+  ["پایه پلاستیکی تنظیم‌دار ۱۰ سانت", "leg", "piece", 70000, 0, 0, 0, 0, ""],
+  ["پایه فلزی تنظیم‌دار ۱۵ سانت", "leg", "piece", 170000, 0, 0, 0, 0, ""],
+  ["ریل ساچمه‌ای معمولی (جفت)", "drawer_slide", "set", 430000, 0, 0, 0, 0, ""],
+  ["ریل تاندم آرام‌بند (جفت)", "drawer_slide", "set", 2310000, 0, 0, 0, 0, ""],
+  ["تاندم‌باکس کامل (ست)", "drawer_slide", "set", 6370000, 0, 0, 0, 0, ""],
+  ["سطل زباله ریلی دو مخزن", "accessory", "piece", 5150000, 0, 0, 0, 0, ""],
+  ["آبچکان استیل داخل کابینت", "accessory", "piece", 3250000, 0, 0, 0, 0, ""],
+  ["نورپردازی SMD هر متر (با ترانس)", "accessory", "lm", 1000000, 0, 0, 0, 0, ""],
+  ["برش و CNC (هر ورق)", "service", "sheet", 1440000, 0, 0, 0, 0, ""],
+  ["سوراخ‌کاری و مونتاژ (هر یونیت)", "service", "job", 660000, 0, 0, 0, 0, ""],
+  ["مونتاژ و رگلاژ در (هر لنگه)", "service", "job", 260000, 0, 0, 0, 0, ""],
+  ["بسته‌بندی هر لنگه در", "service", "job", 140000, 0, 0, 0, 0, ""],
+  ["حمل تا محل (سرویس)", "service", "job", 2550000, 0, 0, 0, 0, ""],
+  ["طراحی سه‌بعدی", "service", "job", 4500000, 0, 0, 0, 0, ""],
+  ["بازدید و اندازه‌گیری", "service", "job", 1050000, 0, 0, 0, 0, ""],
 ];
 
 /* ============================================================== وضعیت برنامه */
@@ -390,17 +403,95 @@ function pricePerSqm(m) {
 }
 
 /* ------------------------------------------------- کارخانه‌های مدل داده */
+/* ★ شناسه‌ی قلمِ پیش‌فرض از تنظیمات — فقط اگر آن قلم واقعاً وجود داشته باشد
+   (قلمِ حذف‌شده نباید در یونیتِ تازه بنشیند و قیمت را صفر کند).              */
+function settingMat(key) {
+  const id = Number(toEn(SETTINGS[key] ?? "")) || 0;
+  if (!id) return 0;
+  return (MATERIALS || []).some((m) => Number(m.id) === id) ? id : 0;
+}
+function settingNum(key, dflt) {
+  const v = parseFloat(toEn(SETTINGS[key] ?? ""));
+  return isFinite(v) && v >= 0 ? v : dflt;
+}
+function settingStr(key, dflt) {
+  const v = SETTINGS[key];
+  return (v === undefined || v === null || v === "") ? dflt : String(v);
+}
+function settingBool(key, dflt = false) {
+  const v = SETTINGS[key];
+  if (v === undefined || v === null || v === "") return dflt;
+  return ["1", "true", "yes"].includes(String(v).toLowerCase());
+}
+
+/* ═══ اولویتِ پیش‌فرض‌های کاربر بر متریالِ سبک ═══
+   نقشه‌ی نقش ← کلید تنظیم. اگر کاربر «اولویت پیش‌فرض‌های من» را روشن کرده
+   باشد، این انتخاب‌ها بعد از اعمالِ سبک روی یونیت/در/کشو می‌نشینند.        */
+const DP_UNIT_MAP = [
+  ["body_id", "default_unit_body_id"], ["back_id", "default_unit_back_id"],
+  ["banding_id", "default_unit_banding_id"], ["countertop_id", "default_unit_countertop_id"],
+  ["crown_id", "default_unit_crown_id"], ["underlight_id", "default_unit_underlight_id"],
+  ["kickboard_id", "default_unit_kickboard_id"], ["leg_id", "default_unit_leg_id"],
+  ["shelf_pin_id", "default_unit_shelf_pin_id"], ["assembly_id", "default_unit_assembly_id"],
+];
+const DP_DOOR_MAP = [
+  ["material_id", "default_door_material_id"], ["door_model_id", "default_door_model_id"],
+  ["hinge_id", "default_door_hinge_id"], ["gas_spring_id", "default_door_gas_spring_id"],
+  ["handle_id", "default_door_handle_id"], ["banding_id", "default_door_banding_id"],
+  ["assembly_id", "default_door_assembly_id"], ["packaging_id", "default_door_packaging_id"],
+];
+const DP_DRAWER_MAP = [
+  ["slide_id", "default_drawer_slide_id"], ["sheet_id", "default_drawer_sheet_id"],
+  ["front_id", "default_drawer_front_id"], ["handle_id", "default_drawer_handle_id"],
+  ["banding_id", "default_drawer_banding_id"], ["assembly_id", "default_drawer_assembly_id"],
+];
+/* ★ اولویت با انتخاب‌های کاربر است (پیش‌فرض روشن): اگر قلمی در تنظیمات
+   انتخاب شده باشد، همان روی متریالِ سبک می‌نشیند و سبک فقط جاهای خالی را
+   پر می‌کند — نتیجه: همه‌ی بخش‌ها یک‌دست می‌مانند. اگر خاموش باشد، سبک
+   بخش اولویت دارد و پیش‌فرض‌ها فقط جاهایی را پر می‌کنند که سبک تعیین نکرده. */
+function defaultsBeatStyle() { return settingBool("defaults_beat_style", true); }
+function applyDefaultsOver(obj, map) {
+  for (const [attr, key] of map) {
+    const id = settingMat(key);
+    if (id) obj[attr] = id;
+  }
+  return obj;
+}
+
+/* ★ ادغامِ سبک بخش و پیش‌فرض‌های کاربر با رعایت اولویت:
+   روشن = پیش‌فرض‌های من روی سبک می‌نشینند (سبک فقط جاهای خالی را پر می‌کند).
+   خاموش = سبک بخش اولویت دارد و پیش‌فرض‌ها فقط جاهایی را پر می‌کنند که سبک
+   تعیین نکرده است. ترتیب اعمال تفاوت را می‌سازد؛ یک‌جا نگه می‌داریمش تا در
+   یونیت/در/کشو یکسان باشد و قابل تست. */
+function applyStyleThenDefaults(obj, setStyle, map) {
+  if (defaultsBeatStyle()) { setStyle(); applyDefaultsOver(obj, map); }
+  else { applyDefaultsOver(obj, map); setStyle(); }
+  return obj;
+}
+
 function defaultUnit(type) {
   type = UNIT_TYPES[type] ? type : "ground";
   const d = unitDefaults(type);
   return {
-    label: unitLabel(type, d.length_cm), unit_type: type, qty: 1,
+    label: unitLabel(type, d.length_cm), unit_type: type,
+    qty: Math.max(1, Math.round(settingNum("default_unit_qty", 1))),
     length_cm: d.length_cm, height_cm: d.height_cm, depth_cm: d.depth_cm, shelves: d.shelves,
-    body_id: 0, back_id: 0, countertop_id: 0, crown_id: 0, underlight_id: 0,
-    kickboard_id: 0, leg_id: 0, legs_per_unit: 4, banding_id: 0,
-    banding_mode: "auto",   /* ★ حالت نوار PVC — پیش‌فرض: قاعده‌ی نوع یونیت */
-    shelf_pin_id: 0, pins_per_shelf: 4, assembly_id: 0,
-    has_top_panel: true, has_bottom_panel: true,
+    /* ★ همه‌ی «جزئیات» از تنظیمات می‌آیند — یک‌بار تنظیم کن، هر یونیتِ تازه پر است */
+    body_id: settingMat("default_unit_body_id"),
+    back_id: settingMat("default_unit_back_id"),
+    countertop_id: settingMat("default_unit_countertop_id"),
+    crown_id: settingMat("default_unit_crown_id"),
+    underlight_id: settingMat("default_unit_underlight_id"),
+    kickboard_id: settingMat("default_unit_kickboard_id"),
+    leg_id: settingMat("default_unit_leg_id"),
+    legs_per_unit: settingNum("default_unit_legs_per_unit", 4),
+    banding_id: settingMat("default_unit_banding_id"),
+    banding_mode: settingStr("default_unit_banding_mode", "auto"),
+    shelf_pin_id: settingMat("default_unit_shelf_pin_id"),
+    pins_per_shelf: settingNum("default_unit_pins_per_shelf", 4),
+    assembly_id: settingMat("default_unit_assembly_id"),
+    has_top_panel: settingBool("default_unit_has_top_panel", true),
+    has_bottom_panel: settingBool("default_unit_has_bottom_panel", true),
     doors: [], drawers: [], note: "",
   };
 }
@@ -415,19 +506,54 @@ function applyUnitTypeDefaults(u, type) {
   if (isDefaultUnitLabel(u.label)) u.label = unitLabel(type, d.length_cm);
   return u;
 }
-function defaultDoor() {
+/* ابعاد پیش‌فرض در و کشو — از تنظیمات (صفحه‌ی تنظیمات ← «ابعاد پیش‌فرض در و کشو»)
+   خوانده می‌شود و در نبودِ مقدار معتبر به پیش‌فرضِ صنعتی برمی‌گردد.        */
+const DOOR_DRAWER_FALLBACK = {
+  door_qty: 1, door_w_cm: 45, door_h_cm: 70,
+  drawer_qty: 1, drawer_w_cm: 60, drawer_h_cm: 18, drawer_d_cm: 45,
+};
+function doorDrawerDefaults(kind) {
+  const get = (k) => {
+    const v = parseFloat(toEn(SETTINGS["default_" + kind + "_" + k]));
+    return isFinite(v) && v > 0 ? v : DOOR_DRAWER_FALLBACK[kind + "_" + k];
+  };
   return {
-    label: "در", qty: 1, w_cm: 45, h_cm: 70, model: "single",
-    material_id: 0, door_model_id: 0, hinge_id: 0, hinges_per_leaf: 2,
-    gas_spring_id: 0, gas_springs_per_leaf: 0, handle_id: 0, handles_per_leaf: 1,
-    banding_id: 0, assembly_id: 0, packaging_id: 0, glass: false, note: "",
-    from_body: false,      /* ★ در از ورق بدنه‌ی همان یونیت برش بخورد */
+    qty: get("qty"), w_cm: get("w_cm"),
+    h_cm: get("h_cm"), d_cm: get("d_cm"),
+  };
+}
+function defaultDoor() {
+  const d = doorDrawerDefaults("door");
+  return {
+    label: settingStr("default_door_label", "در"),
+    qty: Math.max(1, Math.round(d.qty)), w_cm: d.w_cm, h_cm: d.h_cm, model: "single",
+    material_id: settingMat("default_door_material_id"),
+    door_model_id: settingMat("default_door_model_id"),
+    hinge_id: settingMat("default_door_hinge_id"),
+    hinges_per_leaf: settingNum("default_door_hinges_per_leaf", 2),
+    gas_spring_id: settingMat("default_door_gas_spring_id"),
+    gas_springs_per_leaf: settingNum("default_door_gas_springs_per_leaf", 0),
+    handle_id: settingMat("default_door_handle_id"),
+    handles_per_leaf: settingNum("default_door_handles_per_leaf", 1),
+    banding_id: settingMat("default_door_banding_id"),
+    assembly_id: settingMat("default_door_assembly_id"),
+    packaging_id: settingMat("default_door_packaging_id"),
+    glass: settingBool("default_door_glass", false), note: "",
+    from_body: settingBool("default_door_from_body", false),
   };
 }
 function defaultDrawer() {
+  const d = doorDrawerDefaults("drawer");
   return {
-    label: "کشو", qty: 1, w_cm: 60, h_cm: 18, d_cm: 45,
-    slide_id: 0, handle_id: 0, sheet_id: 0, front_id: 0, banding_id: 0, assembly_id: 0, note: "",
+    label: settingStr("default_drawer_label", "کشو"),
+    qty: Math.max(1, Math.round(d.qty)), w_cm: d.w_cm, h_cm: d.h_cm, d_cm: d.d_cm,
+    slide_id: settingMat("default_drawer_slide_id"),
+    handle_id: settingMat("default_drawer_handle_id"),
+    sheet_id: settingMat("default_drawer_sheet_id"),
+    front_id: settingMat("default_drawer_front_id"),
+    banding_id: settingMat("default_drawer_banding_id"),
+    assembly_id: settingMat("default_drawer_assembly_id"),
+    note: "",
   };
 }
 function defaultPage(styleId, name) {
@@ -621,13 +747,13 @@ function setConnBadge() {
   const banner = el("demoBanner");
   const ver = el("appVer");
   if (ver) ver.textContent = KABIR_VERSION
-    ? `کبیر ${fa(KABIR_VERSION)} — رابط وب` : "کبیر — رابط وب";
+    ? `کابینت سازی عرفان ${fa(KABIR_VERSION)} — رابط وب` : "کابینت سازی عرفان — رابط وب";
   if (banner) banner.hidden = API.ok;
   if (!b) return;
   if (API.ok) {
     b.className = "conn ok";
     b.innerHTML = `<span class="dot"></span> متصل به پایگاه‌داده‌ی محلی`;
-    b.title = DATA_DIR || "سرور وب کبیر در حال اجراست";
+    b.title = DATA_DIR || "سرور وب کابینت سازی عرفان در حال اجراست";
   } else {
     b.className = "conn demo";
     b.innerHTML = `<span class="dot"></span> حالت نمایشی (سرور در دسترس نیست) <button class="conn-retry" id="btnReconnect" type="button">اتصال</button>`;
@@ -641,12 +767,12 @@ async function reconnectNow(btn) {
   if (btn) { btn.disabled = true; btn.textContent = "…"; }
   const ok = await tryConnect(true);
   if (ok) {
-    toast("به سرور کبیر متصل شد — داده‌ها واقعی هستند", "success");
+    toast("به سرور کابینت سازی عرفان متصل شد — داده‌ها واقعی هستند", "success");
     if (typeof renderAll === "function") renderAll();
   } else if (btn) {
     btn.disabled = false;
     btn.textContent = "اتصال";
-    toast("سرور در دسترس نیست. کبیر را اجرا کنید: python main.py", "warn");
+    toast("سرور در دسترس نیست. کابینت سازی عرفان را اجرا کنید: python main.py", "warn");
   }
   setConnBadge();
   return ok;
@@ -670,50 +796,102 @@ function loadDemoData() {
     {
       id: 1, name: "هایگلاس اقتصادی", note: "بدنه ام‌دی‌اف سفید + در هایگلاس ایرانی، یراق معمولی",
       data: {
-        body: "ام‌دی‌اف سفید صدفی ۱۶ میل", door: "هایگلاس ایرانی ۱۶ میل",
-        back: "فیبر (MDF 3 میل) پشت سفید", banding: "نوار PVC ۲۲ میل سفید",
-        hinge: "لولا آرام‌بند معمولی", handle: "دستگیره میله‌ای ۱۲٫۸ سانت",
-        leg: "پایه پلاستیکی تنظیم‌دار ۱۰ سانت", shelf_pin: "خار طبقه فلزی",
-        countertop: "صفحه ۳ سانت ایرانی (طرح‌دار)", door_model: "اجرت ساخت در هایگلاس (هر لنگه)",
-        slide: "ریل ساچمه‌ای معمولی (جفت)", drawer_sheet: "ام‌دی‌اف سفید ۱۶ میل (جعبه کشو)",
-        assembly_door: "مونتاژ و رگلاژ در (هر لنگه)", packaging_door: "بسته‌بندی هر لنگه در",
-        waste_percent: 8, overhead_percent: 5,
+        body: "ام‌دی‌اف سفید صدفی ۱۶ میل",
+        door: "هایگلاس ایرانی ۱۶ میل",
+        back: "فیبر (MDF 3 میل) پشت سفید",
+        banding: "نوار PVC ۲۲ میل سفید",
+        hinge: "لولا آرام‌بند معمولی",
+        handle: "دستگیره میله‌ای ۱۲٫۸ سانت",
+        leg: "پایه پلاستیکی تنظیم‌دار ۱۰ سانت",
+        slide: "ریل ساچمه‌ای معمولی (جفت)",
+        shelf_pin: "خار طبقه پلاستیکی",
+        door_model: "اجرت ساخت در هایگلاس (هر لنگه)",
+        assembly_door: "مونتاژ و رگلاژ در (هر لنگه)",
+        packaging_door: "بسته‌بندی هر لنگه در",
+        waste_percent: 10,
+        overhead_percent: 5,
+        profit_mode: "markup",
+        profit_percent: 30,
       },
     },
     {
-      id: 2, name: "هایگلاس ترک — یراق بلوم", note: "در هایگلاس ترک با لولا و ریل آرام‌بند Blum",
+      id: 2, name: "هایگلاس لوکس (یراق ترک)", note: "در هایگلاس ترک، لولا و ریل آرام‌بند ترک",
       data: {
-        body: "ام‌دی‌اف سفید برفی ۱۶ میل", door: "هایگلاس ترک سفید ۱۶ میل",
-        back: "فیبر (MDF 3 میل) پشت سفید", banding: "نوار ABS هایگلاس",
-        hinge: "لولا آرام‌بند آلمانی (Blum)", handle: "دستگیره مخفی (پروفیلی)",
-        leg: "پایه فلزی تنظیم‌دار ۱۵ سانت", shelf_pin: "خار طبقه فلزی",
-        countertop: "صفحه ۵ سانت ترک (ضدخش)", door_model: "اجرت ساخت در هایگلاس (هر لنگه)",
-        slide: "ریل تاندم آرام‌بند (جفت)", drawer_sheet: "ام‌دی‌اف سفید ۱۶ میل (جعبه کشو)",
-        assembly_door: "مونتاژ و رگلاژ در (هر لنگه)", packaging_door: "بسته‌بندی هر لنگه در",
-        waste_percent: 8, overhead_percent: 5,
+        body: "ام‌دی‌اف سفید برفی ۱۶ میل",
+        door: "هایگلاس ترک سفید ۱۶ میل",
+        back: "ام‌دی‌اف ۸ میل پشت (بدنه هم‌رنگ)",
+        banding: "نوار ABS هایگلاس",
+        hinge: "لولا آرام‌بند ترک",
+        handle: "دستگیره مخفی (پروفیلی)",
+        leg: "پایه فلزی تنظیم‌دار ۱۵ سانت",
+        slide: "ریل فول‌اکستنشن آرام‌بند",
+        shelf_pin: "خار طبقه فلزی",
+        door_model: "اجرت ساخت در هایگلاس (هر لنگه)",
+        assembly_door: "مونتاژ و رگلاژ در (هر لنگه)",
+        packaging_door: "بسته‌بندی هر لنگه در",
+        countertop: "صفحه ۵ سانت ترک (ضدخش)",
+        waste_percent: 12,
+        overhead_percent: 7,
+        profit_mode: "margin",
+        profit_percent: 30,
       },
     },
     {
       id: 3, name: "ممبران کلاسیک", note: "در CNC ممبران با تاج ابزارخور",
       data: {
-        body: "ام‌دی‌اف طرح چوب راش ۱۶ میل", door: "ورق پایه ممبران (خام CNC)",
-        back: "فیبر (MDF 3 میل) پشت طرح چوب", banding: "نوار PVC ۲۲ میل طرح چوب",
-        hinge: "لولا آرام‌بند ترک", handle: "دستگیره میله‌ای ۱۶ سانت",
-        leg: "پایه فلزی تنظیم‌دار ۱۵ سانت", countertop: "صفحه کورین (Corian)",
-        door_model: "اجرت CNC در ممبران (هر م²)", crown: "تاج ابزارخور (CNC)",
-        slide: "ریل تاندم آرام‌بند (جفت)", drawer_sheet: "ام‌دی‌اف سفید ۱۶ میل (جعبه کشو)",
-        waste_percent: 10, overhead_percent: 6,
+        body: "ام‌دی‌اف سفید صدفی ۱۶ میل",
+        door: "ورق پایه ممبران (خام CNC)",
+        back: "فیبر (MDF 3 میل) پشت سفید",
+        banding: "نوار PVC ۲۲ میل سفید",
+        hinge: "لولا آرام‌بند ترک",
+        handle: "دستگیره میله‌ای ۱۶ سانت",
+        leg: "پایه فلزی تنظیم‌دار ۱۵ سانت",
+        slide: "ریل تاندم آرام‌بند (جفت)",
+        door_model: "اجرت CNC در ممبران (هر م²)",
+        crown: "تاج ابزارخور (CNC)",
+        underlight: "زیرچراغ ام‌دی‌اف",
+        countertop: "صفحه ۵ سانت ایرانی",
+        waste_percent: 15,
+        overhead_percent: 8,
+        profit_mode: "markup",
+        profit_percent: 40,
       },
     },
     {
-      id: 4, name: "بدنه و در هم‌رنگ (ملامینه)", note: "اقتصادی، مناسب سرویس و انباری",
+      id: 4, name: "پلی‌اورتان رنگی", note: "در رنگ پلی‌اورتان با کیفیت بالا",
       data: {
-        body: "ام‌دی‌اف ضدآب (MR) ۱۶ میل", door: "ام‌دی‌اف ملامینه (در هم‌رنگ بدنه)",
-        back: "فیبر (MDF 3 میل) پشت سفید", banding: "نوار PVC ۲۲ میل سفید",
-        hinge: "لولا آرام‌بند ترک", handle: "دستگیره دکمه‌ای",
-        leg: "پایه پلاستیکی تنظیم‌دار ۱۰ سانت", countertop: "صفحه ۵ سانت ایرانی",
-        door_model: "اجرت ساخت در ملامینه (هر لنگه)", slide: "ریل ساچمه‌ای معمولی (جفت)",
-        drawer_sheet: "ام‌دی‌اف سفید ۱۶ میل (جعبه کشو)", waste_percent: 8, overhead_percent: 4,
+        body: "ام‌دی‌اف سفید برفی ۱۶ میل",
+        door: "ورق پایه پلی‌اورتان",
+        back: "ام‌دی‌اف ۸ میل پشت (بدنه هم‌رنگ)",
+        banding: "نوار هم‌رنگ (لیزری/PU)",
+        hinge: "لولا آرام‌بند آلمانی (Blum)",
+        handle: "دستگیره مخفی (پروفیلی)",
+        leg: "پایه آلومینیومی دکوراتیو",
+        slide: "تاندم‌باکس کامل (ست)",
+        door_model: "اجرت رنگ پلی‌اورتان (هر م²)",
+        countertop: "صفحه کورین (Corian)",
+        waste_percent: 15,
+        overhead_percent: 10,
+        profit_mode: "margin",
+        profit_percent: 35,
+      },
+    },
+    {
+      id: 5, name: "ملامینه کارگاهی", note: "بدنه و در هم‌رنگ — مناسب پروژه‌های اقتصادی",
+      data: {
+        body: "ام‌دی‌اف سفید صدفی ۱۶ میل",
+        door: "ام‌دی‌اف ملامینه (در هم‌رنگ بدنه)",
+        back: "هاردبورد ۳ میل",
+        banding: "نوار PVC ۲۲ میل سفید",
+        hinge: "لولا آرام‌بند معمولی",
+        handle: "دستگیره دکمه‌ای",
+        leg: "پایه پلاستیکی تنظیم‌دار ۱۰ سانت",
+        slide: "ریل ساچمه‌ای معمولی (جفت)",
+        door_model: "اجرت ساخت در ملامینه (هر لنگه)",
+        waste_percent: 10,
+        overhead_percent: 3,
+        profit_mode: "markup",
+        profit_percent: 25,
       },
     },
   ];
@@ -856,7 +1034,7 @@ function loadDemoData() {
     { id: 5, date: "۱۴۰۵/۰۷/۳۰", name: "هایگلاس ترک طرح‌دار ۱۶ میل", old: 10100000, price: 10800000, pct: 6.9, reason: "به‌روزرسانی نرخ بازار" },
     { id: 4, date: "۱۴۰۵/۰۷/۲۲", name: "لولا آرام‌بند آلمانی (Blum)", old: 265000, price: 285000, pct: 7.5, reason: "افزایش نرخ یراق وارداتی" },
     { id: 3, date: "۱۴۰۵/۰۷/۱۵", name: "نوار ABS هایگلاس", old: 60000, price: 64000, pct: 6.7, reason: "لیست جدید تأمین‌کننده" },
-    { id: 2, date: "۱۴۰۵/۰۷/۰۲", name: "ام‌دی‌اف سفید صدفی ۱۶ میل", old: 5100000, price: 4850000, pct: -4.9, reason: "تخفیف فصلی تأمین‌کننده" },
+    { id: 2, date: "۱۴۰۵/۰۷/۰۲", name: "ام‌دی‌اف سفید صدفی ۱۶ میل", old: 12750000, price: 12120000, pct: -4.9, reason: "تخفیف فصلی تأمین‌کننده" },
   ];
   ARCHIVE = [
     { id: 4, number: "PI-1405-0004", kind: "quote", kind_label: "پیش‌فاکتور", project: "کابینت آشپزخانه — واحد ۵", customer: "خانم رضایی", date: "۱۴۰۵/۰۷/۲۹", amount: 214500000 },

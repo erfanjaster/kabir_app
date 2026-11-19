@@ -56,7 +56,7 @@ print(f"  dashboard.month_amount = {dash['month_amount']:,.0f} ← «این ما
 
 print("=" * 72)
 print("باگ ۱۱: import_json با ستون ناشناخته → استثنای خام (۵۰۰) به‌جای پیام تمیز")
-payload = {"app": "KabirCabinet", "settings": {},
+payload = {"app": "ErfanCabinet", "settings": {},
            "tables": {"materials": [{"id": 999, "category": "hinge", "name": "x",
                                      "column_that_does_not_exist": 1}]}}
 tmp = Path(os.environ["KABIR_DATA_DIR"]) / "bad-import.json"

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-#  کبیر — اسکریپت به‌روزرسانی (مک) — خودبسنده
+#  کابینت سازی عرفان — اسکریپت به‌روزرسانی (مک) — خودبسنده
 # ============================================================
 #  این فایل را می‌توانید در Finder دوبار کلیک کنید.
 #  حتی اگر «تنها» همین فایل را دریافت کرده باشید کار می‌کند:
@@ -9,7 +9,7 @@
 #  را با نرخ روز بازمحاسبه می‌کند.
 #
 #  داده‌های شما خارج از پوشه‌ی برنامه نگهداری می‌شوند:
-#    ~/Library/Application Support/KabirCabinet
+#    ~/Library/Application Support/ErfanCabinet
 # ============================================================
 cd "$(dirname "$0")" || exit 1
 
@@ -54,7 +54,7 @@ status=$?
 
 echo
 if [ "$status" -eq 0 ]; then
-  echo "[OK] Update complete. Run ./run.sh to start Kabir."
+  echo "[OK] Update complete. Run ./run.sh to start Erfan Cabinet."
 else
   echo "[ERROR] Update failed with exit code $status - see the messages above."
   echo "        Your data is safe; a database backup is taken before any change."

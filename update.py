@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Kabir — به‌روزرسانِ خودبسنده و چندسکویی (ویندوز / لینوکس / مک)
+Erfan Cabinet — به‌روزرسانِ خودبسنده و چندسکویی (ویندوز / لینوکس / مک)
 ================================================================
 این فایل تنها چیزی است که کاربر برای به‌روز کردن نیاز دارد؛ حتی اگر نصبِ
 فعلی از یک ZIP استخراج شده باشد (بدون پوشه‌ی .git) کار می‌کند.
@@ -17,13 +17,13 @@ Kabir — به‌روزرسانِ خودبسنده و چندسکویی (ویند
 
 داده‌های کاربر «بیرون» از پوشه‌ی برنامه نگه داشته می‌شوند، پس به‌روزرسانیِ کد
 هرگز آن‌ها را از بین نمی‌برد:
-  ویندوز : %APPDATA%\\KabirCabinet
-  لینوکس : ~/.local/share/KabirCabinet
-  مک     : ~/Library/Application Support/KabirCabinet
+  ویندوز : %APPDATA%\\ErfanCabinet
+  لینوکس : ~/.local/share/ErfanCabinet
+  مک     : ~/Library/Application Support/ErfanCabinet
 
 اجرا:
   python update.py                        به‌روزرسانیِ همان پوشه‌ای که اسکریپت در آن است
-  python update.py --app-dir "C:\\Kabir"  به‌روزرسانیِ پوشه‌ای دیگر
+  python update.py --app-dir "C:\\Erfan Cabinet"  به‌روزرسانیِ پوشه‌ای دیگر
   python update.py --force-zip            دانلود ZIP حتی اگر گیت در دسترس است
   python update.py --no-fetch             فقط وابستگی‌ها + مهاجرت (بدون دانلود کد)
   python update.py --skip-deps            دست‌نزدن به بسته‌های pip
@@ -34,7 +34,7 @@ Kabir — به‌روزرسانِ خودبسنده و چندسکویی (ویند
   * اجرای pythonw.exe / بدون کنسول → stdout مقدار None است و هر print()
     با AttributeError می‌ترکید.
   * code page قدیمی کنسول (cp1252/cp437/…) + مسیر فارسی → UnicodeEncodeError.
-  * فایل‌های قفل‌شده توسط کبیرِ در حال اجرا → PermissionError (WinError 32/5)
+  * فایل‌های قفل‌شده توسط کابینت سازی عرفانِ در حال اجرا → PermissionError (WinError 32/5)
     وسطِ جایگذاری ZIP و نصبِ نیمه‌تمام.
   * فایل‌های فقط‌خواندنیِ استخراج‌شده از ZIP → os.replace() رد می‌کرد.
   * نوشتن در پوشه‌ی محافظت‌شده (C:\\Program Files) → traceback.
@@ -397,7 +397,7 @@ def _warn_if_server_running() -> None:
     for p in sorted(ports):
         try:
             with socket.create_connection(("127.0.0.1", p), timeout=0.4):
-                print(f"  [WARN] Port {p} is in use. If Kabir is running right now,")
+                print(f"  [WARN] Port {p} is in use. If Erfan Cabinet is running right now,")
                 print("         close it (Ctrl+C in its window) for a clean update.")
                 return
         except OSError:
@@ -508,7 +508,7 @@ def zip_update(app_dir: Path) -> List[str]:
             except PermissionError as exc:
                 print(f"  [WARN] Permission denied replacing {rel}: {exc}")
                 if IS_WINDOWS:
-                    print("           File may be locked or in use. Try closing Kabir.")
+                    print("           File may be locked or in use. Try closing Erfan Cabinet.")
                 failed.append(str(rel))
             except OSError as exc:
                 print(f"  [WARN] Could not replace {rel}: {exc}")
@@ -555,7 +555,7 @@ def step_fetch_code(app_dir: Path, no_fetch: bool, force_zip: bool) -> str:
     if failed:
         _die("\n[ERROR] The program folder is partially updated because some "
              "files are in use.\n"
-             "        Close Kabir (and any opened file inside the program "
+             "        Close Erfan Cabinet (and any opened file inside the program "
              "folder), then run\n"
              "        this updater again. Your data has not been touched.", 2)
     return "zip"
@@ -591,11 +591,11 @@ def step_deps(app_dir: Path, skip: bool) -> None:
         print("         The core app still runs; PDF/Excel exports may be limited.")
         if IS_WINDOWS:
             print("         If this folder is protected (e.g. C:\\Program Files),")
-            print("         move Kabir to a user folder such as C:\\Kabir and retry.")
+            print("         move Erfan Cabinet to a user folder such as C:\\Erfan Cabinet and retry.")
             print("         Or run this updater as Administrator.")
         else:
             print("         If this folder is protected (e.g. /opt or /usr/local),")
-            print("         try running with sudo or move Kabir to your home folder.")
+            print("         try running with sudo or move Erfan Cabinet to your home folder.")
 
 
 # ---------------------------------------------------------------------------
@@ -605,7 +605,7 @@ def step_deps(app_dir: Path, skip: bool) -> None:
 def step_migrate(app_dir: Path, no_backup: bool, no_recalc: bool) -> None:
     print("\n[3/3] Backing up and migrating the database ...")
     if not (app_dir / "kabir" / "data" / "migrate.py").is_file():
-        print("  [WARN] This copy of Kabir has no migration module - nothing to do.")
+        print("  [WARN] This copy of Erfan Cabinet has no migration module - nothing to do.")
         return
     cmd = [sys.executable, "-m", "kabir.data.migrate"]
     if no_backup:
@@ -635,9 +635,9 @@ def main(argv=None) -> int:
     _init_console()
 
     ap = argparse.ArgumentParser(
-        prog="update", description="Kabir updater (safe for user data)")
+        prog="update", description="Erfan Cabinet updater (safe for user data)")
     ap.add_argument("--app-dir", default=None,
-                    help="folder of the Kabir installation (default: this script's folder)")
+                    help="folder of the Erfan Cabinet installation (default: this script's folder)")
     ap.add_argument("--force-zip", action="store_true",
                     help="download the ZIP even if a git checkout is present")
     ap.add_argument("--no-fetch", action="store_true",
@@ -660,7 +660,7 @@ def main(argv=None) -> int:
 
     no_fetch = bool(args.no_fetch or args.no_git)
 
-    _hr("Kabir - Update")
+    _hr("Erfan Cabinet - Update")
     print(f"  App folder        : {app_dir}")
     print(f"  Version on disk   : {read_version(app_dir)}")
     print(f"  Platform          : {'Windows' if IS_WINDOWS else os.name}")
@@ -679,25 +679,25 @@ def main(argv=None) -> int:
         print("  [ERROR] Access denied while writing to the program folder.")
         print(f"          {exc}")
         if IS_WINDOWS:
-            print("          - Close Kabir / the file explorer window on that "
+            print("          - Close Erfan Cabinet / the file explorer window on that "
                   "folder and retry.")
-            print("          - Do not install Kabir under C:\\Program Files; "
-                  "use e.g. C:\\Kabir.")
+            print("          - Do not install Erfan Cabinet under C:\\Program Files; "
+                  "use e.g. C:\\Erfan Cabinet.")
             print("          - Or start this updater as Administrator "
                   "(right-click > Run as Administrator).")
         else:
             print("          - Check folder permissions (e.g. ls -ld <folder>).")
             print("          - If installed in /opt or /usr, run with sudo:")
             print(f"            sudo {sys.argv[0]}")
-            print("          - Or move Kabir to your home folder.")
+            print("          - Or move Erfan Cabinet to your home folder.")
         return 5
     except OSError as exc:
         _hr("Update failed")
         print("  [ERROR] Filesystem error - nothing else was attempted.")
         print(f"          {exc}")
         if IS_WINDOWS and "206" in str(exc):
-            print("          (Path too long - move Kabir to a shorter path "
-                  "like C:\\Kabir)")
+            print("          (Path too long - move Erfan Cabinet to a shorter path "
+                  "like C:\\Erfan Cabinet)")
         return 6
 
     print()

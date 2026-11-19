@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>کبیر — محاسبه‌گر قیمت تمام‌شده و فاکتور کابینت</title>
-<meta name="description" content="کبیر: نرم‌افزار تحت وب محاسبه‌ی قیمت تمام‌شده و صدور فاکتور حرفه‌ای برای کارگاه‌ها و فروشگاه‌های کابینت‌سازی — کاملاً فارسی و راست‌به‌چپ">
+<title>کابینت سازی عرفان — محاسبه‌گر قیمت تمام‌شده و فاکتور کابینت</title>
+<meta name="description" content="کابینت سازی عرفان: نرم‌افزار تحت وب محاسبه‌ی قیمت تمام‌شده و صدور فاکتور حرفه‌ای برای کارگاه‌ها و فروشگاه‌های کابینت‌سازی — کاملاً فارسی و راست‌به‌چپ">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#0c3b36" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0d1a18" media="(prefers-color-scheme: dark)">
@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="css/styles.css">
 <script src="js/data.js" defer></script>
 <script src="js/engine.js" defer></script>
+<script src="js/blueprint.js" defer></script>
 <script src="js/ui-modal.js" defer></script>
 <script src="js/ui.js" defer></script>
 </head>
@@ -28,7 +29,7 @@
         <line x1="9.5" y1="7" x2="9.5" y2="8"/><line x1="14.5" y1="7" x2="14.5" y2="8"/>
       </svg>
     </div>
-    <div class="splash-title">کبیر</div>
+    <div class="splash-title">کابینت سازی عرفان</div>
     <div class="splash-sub">محاسبه‌گر قیمت تمام‌شده و صدور فاکتور صنعت کابینت</div>
     <div class="splash-bar" aria-hidden="true"><i></i></div>
     <div class="splash-msg" id="splashMsg">در حال راه‌اندازی…</div>
@@ -37,7 +38,7 @@
 
 <noscript>
   <div style="padding:2rem;text-align:center;font-family:Tahoma,sans-serif">
-    کبیر برای اجرا به جاوااسکریپت نیاز دارد. لطفاً جاوااسکریپت مرورگر را فعال کنید.
+    کابینت سازی عرفان برای اجرا به جاوااسکریپت نیاز دارد. لطفاً جاوااسکریپت مرورگر را فعال کنید.
   </div>
 </noscript>
 
@@ -51,7 +52,7 @@
       </svg>
     </div>
     <div>
-      <h1>کبیر</h1>
+      <h1>کابینت سازی عرفان</h1>
       <p>محاسبه‌گر قیمت تمام‌شده‌ی کابینت</p>
     </div>
   </div>
@@ -87,7 +88,7 @@
   </nav>
 
   <div class="sidebar-foot">
-    <div class="ver"><span class="dot"></span> <span id="appVer">کبیر — رابط وب</span></div>
+    <div class="ver"><span class="dot"></span> <span id="appVer">کابینت سازی عرفان — رابط وب</span></div>
     <div id="connBadge" class="conn demo"><span class="dot"></span> در حال اتصال…</div>
     <div class="tiny" style="opacity:.7">
       میان‌بر: <b>/</b> جست‌وجو • <b>Alt+۱..۶</b> صفحه‌ها • <b>Ctrl+S</b> یا <b>Enter</b> ثبتِ فرم •
@@ -114,7 +115,7 @@
       </div>
       <div class="search-wrap">
         <svg class="search-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
-        <input type="search" id="globalSearch" placeholder="جست‌وجوی متریال، پروژه…" autocomplete="off" aria-label="جست‌وجوی سراسری">
+        <input type="search" id="globalSearch" placeholder="جست‌وجو…" autocomplete="off" aria-label="جست‌وجوی سراسری">
         <span class="search-kbd">/</span>
         <div class="search-drop" id="searchDrop" hidden></div>
       </div>
@@ -154,7 +155,7 @@
 
   <div class="demo-banner" id="demoBanner" hidden role="status">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>
-    <span><b>حالت نمایشی:</b> سرور کبیر در دسترس نیست و داده‌ها فقط در مرورگر ذخیره می‌شوند. برای کار با پایگاه‌داده‌ی واقعی، کبیر را اجرا کنید: <b class="ltr">python main.py</b></span>
+    <span><b>حالت نمایشی:</b> سرور کابینت سازی عرفان در دسترس نیست و داده‌ها فقط در مرورگر ذخیره می‌شوند. برای کار با پایگاه‌داده‌ی واقعی، کابینت سازی عرفان را اجرا کنید: <b class="ltr">python main.py</b></span>
     <button class="btn outline sm" id="btnBannerReconnect" type="button">اتصال به سرور</button>
   </div>
 
@@ -205,17 +206,35 @@
           </div>
           <div class="card-body"><div class="chart" id="salesChart" role="img" aria-label="نمودار فروش ماه‌های اخیر"></div></div>
         </div>
+
+        <!-- ستونِ کنارِ نمودار: شروعِ سریع به‌جای فضای خالی.
+             سه کنشِ واقعیِ روزِ اول، با هدف‌های بزرگ؛ کاربر برای شروعِ کار
+             لازم نیست اول منو را بگردد. -->
+        <div class="card quick-card">
+          <div class="card-head"><h3>شروع سریع</h3></div>
+          <div class="card-body quick-actions">
+            <button class="quick-act" id="qaNewProject" type="button">
+              <span class="qa-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+              <span class="qa-txt"><b>پروژه‌ی جدید</b><small>ویرایشگر با یک یونیت آماده</small></span>
+              <kbd class="kbd">Ctrl+N</kbd>
+            </button>
+            <button class="quick-act" id="qaQuickQuote" type="button">
+              <span class="qa-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+              <span class="qa-txt"><b>قیمت‌گیری تلفنی</b><small>فقط با متراژ و سبک</small></span>
+            </button>
+            <button class="quick-act" type="button" data-goto="materials">
+              <span class="qa-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 10 5.5-10 5.5L2 7.5z"/><path d="m2 12.5 10 5.5 10-5.5"/><path d="m2 17 10 5.5L22 17"/></svg></span>
+              <span class="qa-txt"><b>به‌روزرسانی قیمت متریال</b><small>نرخ روز ورق، یراق و اجرت</small></span>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <!-- ★ D3: «راهنمای سریع» پیش‌تر یک کارتِ همیشه‌باز بود که هر بارِ ورود،
-           نیمی از نمای داشبورد را می‌گرفت — ولی محتوایش آموزشیِ ثابت است و بعد
-           از هفته‌ی اول خوانده نمی‌شود. طبق اصلِ افشای تدریجی، حالا پیش‌فرض
-           **بسته** است و فقط یک خط خلاصه نشان می‌دهد؛ با یک کلیک (یا Enter)
-           باز می‌شود. محتوا حذف نشده، فقط از دیدِ روزانه بیرون رفته. -->
+      <!-- راهنمای گام‌به‌گام: تمام‌عرض و پیش‌فرض بسته تا نمای روزانه را نگیرد -->
       <div class="card collapsible collapsed" id="guideCard">
         <div class="card-head" id="guideHead" role="button" tabindex="0"
              aria-expanded="false" aria-controls="guideBody">
-          <h3>راهنمای سریع <span class="head-peek">— ۵ گام از قیمت متریال تا چاپ فاکتور</span></h3>
+          <h3>راهنمای سریع <span class="head-peek">— ۵ گام تا چاپ فاکتور</span></h3>
         </div>
         <div class="card-body" id="guideBody" style="padding-top:.4rem;padding-bottom:.6rem">
           <ol class="guide">
@@ -248,6 +267,9 @@
 
     <!-- ================= صفحه‌ی پروژه‌ها ================= -->
     <section class="page" id="page-projects">
+      <!-- فهرست پروژه‌ها فقط وقتی دیده می‌شود که ویرایشگری باز نیست؛ در حال
+           کار روی یک پروژه، تمامِ ارتفاعِ صفحه به میزِ کار (ویرایشگر) می‌رسد. -->
+      <div id="projectsList">
       <div class="toolbar no-print">
         <div class="search-wrap">
           <svg class="search-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
@@ -284,6 +306,7 @@
       <div class="card no-print">
         <div class="table-wrap sticky-head"><table class="data" id="projectsTable" aria-label="فهرست پروژه‌ها"></table></div>
       </div>
+      </div><!-- /projectsList -->
 
       <!-- ═══════════ ویرایشگر پروژه ═══════════
            نوارِ فرمانِ چسبان: کنش‌های پرتکرار (ذخیره / صدور فاکتور / برش‌نامه)
@@ -317,6 +340,14 @@
               برش‌نامه و خرید
             </button>
 
+            <!-- ★ ورودیِ آشکارِ CutMaster: پیش‌تر فقط تبِ چهارمِ مودالِ برش‌نامه
+                 بود و کاربر پیدایش نمی‌کرد. حالا یک کلیک از خودِ ویرایشگر.     -->
+            <button class="btn outline sm" id="btnCutMaster" type="button"
+                    title="فایل پروژه‌ی CutMaster 2D را انتخاب کنید تا با برش‌نامه مقایسه شود و نقشه‌ی چیده‌ماندنِ ورق‌ها را ببینید">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              کات مستر
+            </button>
+
             <!-- ★ M8/M9/M10/M11: چهار کنشِ کم‌کاربرد که پیش‌تر پراکنده بودند
                  («کپی پروژه» در نوار ویرایشگر، «مدیریت الگوها» در نوار ابزار
                  یونیت‌ها، «اعمال سبک» و «حذف بخش» در نوار بخش‌ها) در **یک** منوی
@@ -332,6 +363,10 @@
                 <div class="ovf-label" role="presentation">پروژه</div>
                 <button class="ovf-item" id="btnDupProject" type="button" role="menuitem"
                         title="یک کپیِ کامل از این پروژه بساز (ابتدا تغییرات ذخیره می‌شود)">کپی پروژه</button>
+                <div class="ovf-sep" role="none"></div>
+                <div class="ovf-label" role="presentation">کات مستر ۲D</div>
+                <button class="ovf-item" id="btnCutMaster2" type="button" role="menuitem"
+                        title="افزودن فایل CutMaster و مقایسه با برش‌نامه">مقایسه با فایل CutMaster…</button>
                 <div class="ovf-sep" role="none"></div>
                 <div class="ovf-label" role="presentation">بخشِ جاری</div>
                 <button class="ovf-item" id="btnApplyStyle" type="button" role="menuitem"
@@ -367,14 +402,35 @@
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-head">
-            <h3>مشخصات پروژه</h3>
-            <div class="card-actions"><span class="sub ltr" id="edCodeChip"></span></div>
-          </div>
-          <div class="card-body">
-            <div class="fields-grid">
-              <div class="field span2"><label for="edTitle">عنوان پروژه</label><input type="text" id="edTitle" placeholder="مثلاً کابینت آشپزخانه"></div>
+        <!-- ═══ مشخصات پروژه — نوارِ باریکِ همیشه‌باز ═══
+             عنوان و مشتری بیشترین کاربرد را دارند و همیشه دیده می‌شوند؛
+             بقیه‌ی فیلدها (وضعیت، تلفن، اعتبار، نشانی) پشتِ «بیشتر» هستند.
+             پیش‌تر این کارت ۲۷۰ پیکسل ارتفاع داشت و جدولِ یونیت‌ها را از
+             دیدِ اول بیرون می‌برد. -->
+        <div class="card" id="projMetaCard">
+          <div class="card-body" id="projMetaBody">
+            <div class="proj-slim">
+              <span class="ps-code ltr" id="edCodeChip" title="کد پروژه">—</span>
+              <label class="ps-field ps-title"><span>عنوان پروژه</span>
+                <input type="text" id="edTitle" placeholder="مثلاً کابینت آشپزخانه"
+                       aria-label="عنوان پروژه" autocomplete="off">
+              </label>
+              <label class="ps-field ps-cust"><span>نام مشتری</span>
+                <input type="text" id="edCustomer" placeholder="مثلاً آقای رضایی"
+                       aria-label="نام مشتری" autocomplete="off">
+              </label>
+              <label class="ps-field ps-mobile"><span>همراه</span>
+                <input type="tel" id="edMobile" class="ltr" placeholder="۰۹۱۲…"
+                       aria-label="همراه" autocomplete="off">
+              </label>
+              <button class="btn ghost sm ps-more" id="btnProjMore" type="button"
+                      aria-expanded="false" aria-controls="projMoreFields"
+                      title="وضعیت، تلفن ثابت، اعتبار پیش‌فاکتور و نشانی">
+                <span>جزئیات بیشتر</span>
+                <svg class="tb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </div>
+            <div class="fields-grid" id="projMoreFields" hidden style="margin-top:.7rem">
               <div class="field"><label for="edStatus">وضعیت</label>
                 <select id="edStatus">
                   <option value="draft">پیش‌نویس</option>
@@ -383,37 +439,30 @@
                   <option value="canceled">لغوشده</option>
                 </select>
               </div>
-              <div class="field"><label for="edCustomer">نام مشتری</label><input type="text" id="edCustomer"></div>
-              <div class="field"><label for="edMobile">همراه</label><input type="tel" id="edMobile" placeholder="۰۹۱۲…" class="ltr" style="text-align:right"></div>
-              <div class="field"><label for="edPhone">تلفن</label><input type="tel" id="edPhone" class="ltr" style="text-align:right"></div>
+              <div class="field"><label for="edPhone">تلفن ثابت</label><input type="tel" id="edPhone" class="ltr" style="text-align:right"></div>
               <div class="field"><label for="edValid">اعتبار تا</label><input type="text" id="edValid" placeholder="۱۴۰۵/۰۸/۱۵"></div>
-              <div class="field span4"><label for="edAddress">نشانی</label><input type="text" id="edAddress"></div>
+              <div class="field span2"><label for="edAddress">نشانی</label><input type="text" id="edAddress"></div>
             </div>
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-head">
-            <h3>بخش‌ها (سبک‌ها) <span class="sub">در یک پروژه چند بخش با سبک‌های متفاوت بسازید</span></h3>
+        <div class="card" id="edSecCard">
+          <!-- ★ نوارِ فشرده‌ی بخش‌ها: عنوانِ بزرگ و دکمه‌ی تکراریِ «افزودن بخش»
+               حذف شد — همه‌چیز در یک ردیف: قرصِ بخش‌ها (+ بخش) و «تنظیمات بخش».
+               فضای عمودیِ کارگاه‌ای مهم‌ترین سرمایه‌ی صفحه است.                -->
+          <div class="sec-strip">
+            <div class="sec-pills" id="secPills"></div>
             <div class="card-actions">
-              <!-- ★ M10: «حذف بخش» از این‌جا برداشته شد و به منوی ⋯ نوارِ
-                   ویرایشگر رفت. نشستنِ «حذف» دقیقاً کنارِ «افزودن» — دو کنش
-                   متضاد با فاصله‌ی چند پیکسل — منبعِ اصلیِ حذفِ اشتباه بود. -->
-              <button class="btn ghost sm" id="btnAddSection" type="button" title="یک بخش (سبک) تازه به این پروژه اضافه کنید">＋ افزودن بخش</button>
+              <button class="btn ghost sm" id="btnSecBar" type="button"
+                      aria-expanded="false" aria-controls="secBarWrap"
+                      title="نام بخش، سبک، پرت ورق، سربار، صفحه و طول دیوار">
+                <svg class="tb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                تنظیمات بخش
+                <span class="sec-peek" id="secBarPeek">—</span>
+              </button>
             </div>
           </div>
           <div class="card-body">
-            <div class="sec-pills" id="secPills"></div>
-            <!-- ★ افشای تدریجی: این نوار «یک‌بار برای هر بخش» تنظیم می‌شود
-                 (نام، سبک، پرت ورق، سربار) ولی پیش‌تر همیشه باز بود و فضای
-                 بالای جدولِ یونیت‌ها — سطحِ اصلیِ کار — را می‌گرفت. حالا پشتِ
-                 یک کلیک است و خلاصه‌اش در همان خط دیده می‌شود. -->
-            <button class="tb-drawer-toggle" id="btnSecBar" type="button"
-                    aria-expanded="false" aria-controls="secBarWrap" style="margin-bottom:.5rem">
-              <svg class="tb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-              <span class="tb-drawer-title">تنظیمات بخش</span>
-              <span class="tb-summary" id="secBarPeek">—</span>
-            </button>
             <div class="section-bar" id="secBarWrap" hidden>
               <label>نام بخش:
                 <input type="text" id="secName" style="width:8rem">
@@ -476,7 +525,7 @@
                 <button class="btn ghost sm" id="btnUseTpl" type="button" title="الگوی انتخاب‌شده را به این بخش اضافه می‌کند">＋ از الگو</button>
                 <!-- ★ M8: «مدیریت الگوها» به منوی ⋯ نوار ویرایشگر رفت. ذخیره‌ی
                      الگو همچنان از دکمه‌ی «الگو» در همان ردیف انجام می‌شود. -->
-                <span class="tiny muted ut-hint">برای ذخیره‌ی یک یونیت به‌عنوان الگو، از دکمه‌ی «الگو» در همان ردیف استفاده کنید.</span>
+
               </div>
               <div class="table-wrap grid-head"><table class="data center" id="tblUnits"></table></div>
               <!-- ═══════════ ★ P3: نوارِ افزودنِ چسبان (قانونِ فیتز) ═══════════
@@ -507,6 +556,12 @@
                             title="یونیت دیواری با ابعاد پیش‌فرض (⇧N)">یونیت دیواری <kbd class="kbd">⇧N</kbd></button>
                     <button class="ovf-item add-row" data-add="unit:tall" type="button" role="menuitem"
                             title="کمد ایستاده با ابعاد پیش‌فرض">کمد ایستاده</button>
+                    <button class="ovf-item add-row" data-add="unit:drawer" type="button" role="menuitem"
+                            title="پکیج کشو (چند کشوی آماده) با ابعاد پیش‌فرض">پکیج کشو</button>
+                    <button class="ovf-item add-row" data-add="unit:open" type="button" role="menuitem"
+                            title="شلف / قفسهٔ باز با ابعاد پیش‌فرض">شلف باز</button>
+                    <button class="ovf-item add-row" data-add="unit:corner" type="button" role="menuitem"
+                            title="یونیت گوشه‌ی L (۹۰×۹۰×۷۲) — عمق را با اندازه‌ی واقعی گوشه تنظیم کنید">یونیت گوشه (بلایند)</button>
                   </div>
                 </div>
                 <span class="add-hint">
@@ -939,6 +994,119 @@
         </div>
 
         <div class="card">
+          <div class="card-head"><h3>ابعاد پیش‌فرض در و کشو</h3>
+            <div class="card-actions"><span class="badge b-draft">جدید</span></div>
+          </div>
+          <div class="card-body">
+            <p class="tiny muted" style="margin-bottom:.9rem">
+              هنگام «افزودن در» یا «افزودن کشو» در ویرایشگر، این ابعاد به‌عنوان نقطه‌ی شروع اعمال می‌شوند
+              (بعداً برای هر ردیف قابل ویرایش است). مقادیر بر حسب سانتی‌متر است.
+            </p>
+            <div class="unit-def-grid">
+              <div class="unit-def-col">
+                <h4><span class="ud-dot wall"></span>در</h4>
+                <div class="field"><label for="setDoorQty">لنگه در هر ردیف</label><input type="text" id="setDoorQty" inputmode="numeric"></div>
+                <div class="field"><label for="setDoorW">عرض هر لنگه</label><input type="text" id="setDoorW" inputmode="numeric"></div>
+                <div class="field"><label for="setDoorH">ارتفاع در</label><input type="text" id="setDoorH" inputmode="numeric"></div>
+              </div>
+              <div class="unit-def-col">
+                <h4><span class="ud-dot ground"></span>کشو</h4>
+                <div class="field"><label for="setDrawerW">عرض</label><input type="text" id="setDrawerW" inputmode="numeric"></div>
+                <div class="field"><label for="setDrawerH">ارتفاع جبهه</label><input type="text" id="setDrawerH" inputmode="numeric"></div>
+                <div class="field"><label for="setDrawerD">عمق</label><input type="text" id="setDrawerD" inputmode="numeric"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card span2">
+          <div class="card-head"><h3>پیش‌فرض‌های جزئیات یونیت، در و کشو</h3>
+            <div class="card-actions"><span class="badge b-draft">جدید</span></div>
+          </div>
+          <div class="card-body">
+            <p class="tiny muted" style="margin-bottom:.9rem">
+              این مقادیر هنگام افزودن یونیت/در/کشوی تازه خودکار پر می‌شوند و بعداً در همان ردیف قابل تغییرند.
+              «— بدون پیش‌فرض —» یعنی از متریال سبک بخش استفاده شود.
+            </p>
+            <h4 class="dp-h4"><span class="ud-dot ground"></span>یونیت</h4>
+            <div class="dp-grid">
+              <div class="field"><label for="dpUnitBody">ورق بدنه</label><select data-dp="default_unit_body_id" data-dpcat="body_sheet" id="dpUnitBody"></select></div>
+              <div class="field"><label for="dpUnitBack">فیبر پشت</label><select data-dp="default_unit_back_id" data-dpcat="back_sheet" id="dpUnitBack"></select></div>
+              <div class="field"><label for="dpUnitBanding">نوار PVC</label><select data-dp="default_unit_banding_id" data-dpcat="banding" id="dpUnitBanding"></select></div>
+              <div class="field"><label for="dpUnitCounter">صفحه کابینت</label><select data-dp="default_unit_countertop_id" data-dpcat="countertop" id="dpUnitCounter"></select></div>
+              <div class="field"><label for="dpUnitCrown">تاج</label><select data-dp="default_unit_crown_id" data-dpcat="crown" id="dpUnitCrown"></select></div>
+              <div class="field"><label for="dpUnitUnder">زیرچراغ</label><select data-dp="default_unit_underlight_id" data-dpcat="underlight" id="dpUnitUnder"></select></div>
+              <div class="field"><label for="dpUnitKick">پاخور</label><select data-dp="default_unit_kickboard_id" data-dpcat="kickboard" id="dpUnitKick"></select></div>
+              <div class="field"><label for="dpUnitLeg">پایه</label><select data-dp="default_unit_leg_id" data-dpcat="leg" id="dpUnitLeg"></select></div>
+              <div class="field"><label for="dpUnitPin">خار طبقه</label><select data-dp="default_unit_shelf_pin_id" data-dpcat="shelf_pin" id="dpUnitPin"></select></div>
+              <div class="field"><label for="dpUnitAsm">مونتاژ یونیت</label><select data-dp="default_unit_assembly_id" data-dpcat="service" id="dpUnitAsm"></select></div>
+              <div class="field"><label for="dpUnitBandMode">حالت نوار PVC</label>
+                <select id="dpUnitBandMode" data-dp-mode="default_unit_banding_mode"><option value="auto">خودکار (قاعده‌ی نوع یونیت)</option></select>
+              </div>
+              <div class="field"><label for="dpUnitLegs">پایه در هر یونیت</label><input type="text" id="dpUnitLegs" data-dp-num="default_unit_legs_per_unit" inputmode="numeric"></div>
+              <div class="field"><label for="dpUnitPins">خار در هر طبقه</label><input type="text" id="dpUnitPins" data-dp-num="default_unit_pins_per_shelf" inputmode="numeric"></div>
+              <div class="field"><label for="dpUnitQty">تعداد پیش‌فرض یونیت</label><input type="text" id="dpUnitQty" data-dp-num="default_unit_qty" inputmode="numeric"></div>
+              <div class="field"><label class="check"><input type="checkbox" data-dp-bool="default_unit_has_top_panel" data-dp-default="1"> سقف یونیت داشته باشد</label></div>
+              <div class="field"><label class="check"><input type="checkbox" data-dp-bool="default_unit_has_bottom_panel" data-dp-default="1"> کف یونیت داشته باشد</label></div>
+            </div>
+            <h4 class="dp-h4"><span class="ud-dot wall"></span>در</h4>
+            <div class="dp-grid">
+              <div class="field"><label for="dpDoorMat">ورق در</label><select data-dp="default_door_material_id" data-dpcat="door_sheet" id="dpDoorMat"></select></div>
+              <div class="field"><label for="dpDoorModel">مدل / اجرت در</label><select data-dp="default_door_model_id" data-dpcat="door_model" id="dpDoorModel"></select></div>
+              <div class="field"><label for="dpDoorHinge">لولا</label><select data-dp="default_door_hinge_id" data-dpcat="hinge" id="dpDoorHinge"></select></div>
+              <div class="field"><label for="dpDoorGas">گازور / جک</label><select data-dp="default_door_gas_spring_id" data-dpcat="gas_spring" id="dpDoorGas"></select></div>
+              <div class="field"><label for="dpDoorHandle">دستگیره</label><select data-dp="default_door_handle_id" data-dpcat="handle" id="dpDoorHandle"></select></div>
+              <div class="field"><label for="dpDoorBanding">نوار در</label><select data-dp="default_door_banding_id" data-dpcat="banding" id="dpDoorBanding"></select></div>
+              <div class="field"><label for="dpDoorAsm">مونتاژ در</label><select data-dp="default_door_assembly_id" data-dpcat="service" id="dpDoorAsm"></select></div>
+              <div class="field"><label for="dpDoorPack">بسته‌بندی در</label><select data-dp="default_door_packaging_id" data-dpcat="service" id="dpDoorPack"></select></div>
+              <div class="field"><label for="dpDoorHinges">لولا در هر لنگه</label><input type="text" id="dpDoorHinges" data-dp-num="default_door_hinges_per_leaf" inputmode="numeric"></div>
+              <div class="field"><label for="dpDoorHandles">دستگیره در هر لنگه</label><input type="text" id="dpDoorHandles" data-dp-num="default_door_handles_per_leaf" inputmode="numeric"></div>
+              <div class="field"><label for="dpDoorGasCount">جک در هر لنگه</label><input type="text" id="dpDoorGasCount" data-dp-num="default_door_gas_springs_per_leaf" inputmode="numeric"></div>
+              <div class="field"><label class="check"><input type="checkbox" data-dp-bool="default_door_glass"> در شیشه‌دار باشد</label></div>
+              <div class="field"><label class="check"><input type="checkbox" data-dp-bool="default_door_from_body"> در از ورق بدنه باشد</label></div>
+            </div>
+            <h4 class="dp-h4"><span class="ud-dot tall"></span>کشو</h4>
+            <div class="dp-grid">
+              <div class="field"><label for="dpDrwSlide">ریل کشو</label><select data-dp="default_drawer_slide_id" data-dpcat="drawer_slide" id="dpDrwSlide"></select></div>
+              <div class="field"><label for="dpDrwSheet">ورق جعبه کشو</label><select data-dp="default_drawer_sheet_id" data-dpcat="drawer_sheet" id="dpDrwSheet"></select></div>
+              <div class="field"><label for="dpDrwFront">جبهه‌ی کشو</label><select data-dp="default_drawer_front_id" data-dpcat="door_sheet" id="dpDrwFront"></select></div>
+              <div class="field"><label for="dpDrwHandle">دستگیره کشو</label><select data-dp="default_drawer_handle_id" data-dpcat="handle" id="dpDrwHandle"></select></div>
+              <div class="field"><label for="dpDrwBanding">نوار کشو</label><select data-dp="default_drawer_banding_id" data-dpcat="banding" id="dpDrwBanding"></select></div>
+              <div class="field"><label for="dpDrwAsm">مونتاژ کشو</label><select data-dp="default_drawer_assembly_id" data-dpcat="service" id="dpDrwAsm"></select></div>
+              <div class="field"><label for="dpDrawerQty">تعداد پیش‌فرض کشو</label><input type="text" id="dpDrawerQty" data-dp-num="default_drawer_qty" inputmode="numeric"></div>
+            </div>
+            <h4 class="dp-h4"><span class="ud-dot ground"></span>درنما، اضافات و خدمات</h4>
+            <div class="dp-grid">
+              <div class="field"><label for="dpFacadeLabel">عنوان ردیف درنما</label><input id="dpFacadeLabel" data-dp-str="default_facade_label" type="text"></div>
+              <div class="field"><label for="dpFacadeQty">تعداد درنما</label><input id="dpFacadeQty" data-dp-num="default_facade_qty" inputmode="numeric"></div>
+              <div class="field"><label for="dpFacadeW">عرض درنما (سم)</label><input id="dpFacadeW" data-dp-num="default_facade_w_cm" inputmode="numeric"></div>
+              <div class="field"><label for="dpFacadeH">ارتفاع درنما (سم)</label><input id="dpFacadeH" data-dp-num="default_facade_h_cm" inputmode="numeric"></div>
+              <div class="field"><label for="dpFacadePrice">قیمت هر مترمربع درنما</label><input id="dpFacadePrice" data-dp-num="default_facade_price_per_sqm" inputmode="numeric"></div>
+              <div class="field"><label for="dpExtraLabel">عنوان قلم اضافه</label><input id="dpExtraLabel" data-dp-str="default_extra_label" type="text"></div>
+              <div class="field"><label for="dpExtraQty">تعداد قلم اضافه</label><input id="dpExtraQty" data-dp-num="default_extra_qty" inputmode="numeric"></div>
+              <div class="field"><label for="dpExtraUnit">واحد قلم اضافه</label><select id="dpExtraUnit" data-dp-str="default_extra_unit"><option value="piece">عدد</option><option value="set">ست</option><option value="lm">متر طول</option><option value="sqm">متر مربع</option><option value="sheet">ورق</option><option value="kg">کیلوگرم</option><option value="job">موردی</option></select></div>
+              <div class="field"><label for="dpExtraPrice">قیمت قلم اضافه</label><input id="dpExtraPrice" data-dp-num="default_extra_price" inputmode="numeric"></div>
+              <div class="field"><label for="dpServiceLabel">عنوان خدمت</label><input id="dpServiceLabel" data-dp-str="default_service_label" type="text"></div>
+              <div class="field"><label for="dpServiceBasis">مبنای خدمت</label><select id="dpServiceBasis" data-dp-str="default_service_basis"><option value="fixed">موردی (ثابت)</option><option value="unit">هر یونیت</option><option value="door">هر لنگه در</option><option value="shelf">هر طبقه</option><option value="sqm">هر مترمربع</option><option value="lm">هر متر طول</option><option value="percent">درصدی از جمع</option></select></div>
+              <div class="field"><label for="dpServiceQty">تعداد خدمت</label><input id="dpServiceQty" data-dp-num="default_service_qty" inputmode="numeric"></div>
+              <div class="field"><label for="dpServicePrice">نرخ خدمت</label><input id="dpServicePrice" data-dp-num="default_service_price" inputmode="numeric"></div>
+            </div>
+
+            <hr style="border:none;border-top:1px solid var(--border);margin:1.1rem 0">
+            <label class="switch">
+              <input type="checkbox" data-dp-bool="defaults_beat_style" data-dp-default="1">
+              <span class="track"></span>
+              <span class="sw-label">اولویت با پیش‌فرض‌های من (نه متریالِ سبک)</span>
+            </label>
+            <p class="tiny muted" style="margin-top:.5rem">
+              روشن = متریالی که بالا انتخاب کرده‌اید بر متریالِ سبکِ بخش مقدم است؛ سبک فقط
+              جاهای خالی را پر می‌کند (همه‌ی بخش‌ها یک‌دست می‌مانند).<br>
+              خاموش = سبک بخش اولویت دارد و این پیش‌فرض‌ها فقط جایی اعمال می‌شوند که سبک چیزی تعیین نکرده.
+            </p>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-head"><h3>پول، مالیات و نمایش</h3></div>
           <div class="card-body">
             <div class="grid2">
@@ -1166,10 +1334,27 @@
         <button class="tab active" data-wstab="cut" type="button" role="tab">برش‌نامه <span class="cnt" id="wsCntCut"></span></button>
         <button class="tab" data-wstab="sheets" type="button" role="tab">خلاصه‌ی ورق <span class="cnt" id="wsCntSheets"></span></button>
         <button class="tab" data-wstab="shop" type="button" role="tab">لیست خرید <span class="cnt" id="wsCntShop"></span></button>
+        <button class="tab" data-wstab="cm" type="button" role="tab">کات مستر ۲D <span class="cnt" id="wsCntCm">📄</span></button>
       </div>
       <div class="ws-panel active" id="ws-cut"></div>
       <div class="ws-panel" id="ws-sheets"></div>
       <div class="ws-panel" id="ws-shop"></div>
+      <div class="ws-panel" id="ws-cm">
+        <p class="tiny muted" style="margin-bottom:.7rem">
+          فایلِ ذخیره‌شده‌ی پروژه‌ی CutMaster 2D (فرمت <b dir="ltr">.xml</b>) را انتخاب کنید تا
+          با برش‌نامه‌ی همین پروژه مقایسه شود: قطعاتِ جاافتاده/اضافه با قرمز مشخص می‌شود و
+          نقشه‌ی واقعیِ چیده‌ماندنِ هر ورق با پرت‌ها رسم می‌شود.
+        </p>
+        <div class="cm-upload">
+          <input type="file" id="cmFile" accept=".xml,text/xml" hidden>
+          <button class="btn primary" id="btnCmPick" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            انتخاب فایل CutMaster…
+          </button>
+          <span class="tiny muted" id="cmFileName"></span>
+        </div>
+        <div id="cmResult"></div>
+      </div>
       <p class="tiny muted" style="margin-top:.7rem">
         ابعاد برش‌نامه بر حسب <b>میلی‌متر</b> است و «طول» همیشه بُعد بزرگ‌تر نوشته می‌شود —
         همان قراردادی که اپراتور ارّه‌ی پنل‌بر و دستگاه CNC انتظار دارد.
@@ -1190,6 +1375,26 @@
     </div>
   </div>
 
+  <!-- ═══════════ نمای فنی ۲D (کاغذ آبی) ═══════════ -->
+  <div class="modal wide" id="modal-blueprint" role="dialog" aria-modal="true" aria-labelledby="bpTitle">
+    <div class="modal-head">
+      <h3>📐 نمای فنی <span class="sub" id="bpTitle"></span></h3>
+      <button class="icon-btn" data-close type="button" aria-label="بستن">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="bp-meta" id="bpMeta"></div>
+      <div class="bp-views" id="bpViews"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn outline" id="btnBpPrint" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        چاپ نقشه
+      </button>
+      <div class="spacer"></div>
+      <button class="btn ghost" data-close type="button">بستن</button>
+    </div>
+  </div>
+
   <!-- ═══════════ قیمت‌گیری سریع ═══════════ -->
   <div class="modal" id="modal-quick" role="dialog" aria-modal="true">
     <div class="modal-head">
@@ -1198,7 +1403,7 @@
     </div>
     <div class="modal-body">
       <p class="tiny muted" style="margin-bottom:.9rem">
-        مشتری زنگ زده و قیمت می‌خواهد؟ فقط متراژ و سبک را بدهید؛ کبیر یک پروژه‌ی
+        مشتری زنگ زده و قیمت می‌خواهد؟ فقط متراژ و سبک را بدهید؛ کابینت سازی عرفان یک پروژه‌ی
         <b>واقعی</b> با یونیت‌های استاندارد و درهای هم‌اندازه می‌سازد که بعداً
         می‌توانید دقیقش کنید. دیگر لازم نیست حدس بزنید.
       </p>

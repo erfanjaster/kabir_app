@@ -11,7 +11,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 
 css = (HERE / "css/styles.css").read_text(encoding="utf-8")
-JS_FILES = ("data", "engine", "ui-modal", "ui")   # ترتیب بارگذاری مهم است
+JS_FILES = ("data", "engine", "blueprint", "ui-modal", "ui")   # ترتیب بارگذاری مهم است
 js = "".join(
     (HERE / f"js/{name}.js").read_text(encoding="utf-8") + "\n"
     for name in JS_FILES

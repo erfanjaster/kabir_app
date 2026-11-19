@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>کبیر — محاسبه‌گر قیمت تمام‌شده و فاکتور کابینت</title>
-<meta name="description" content="کبیر: نرم‌افزار تحت وب محاسبه‌ی قیمت تمام‌شده و صدور فاکتور حرفه‌ای برای کارگاه‌ها و فروشگاه‌های کابینت‌سازی — کاملاً فارسی و راست‌به‌چپ">
+<title>کابینت سازی عرفان — محاسبه‌گر قیمت تمام‌شده و فاکتور کابینت</title>
+<meta name="description" content="کابینت سازی عرفان: نرم‌افزار تحت وب محاسبه‌ی قیمت تمام‌شده و صدور فاکتور حرفه‌ای برای کارگاه‌ها و فروشگاه‌های کابینت‌سازی — کاملاً فارسی و راست‌به‌چپ">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#0c3b36" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0d1a18" media="(prefers-color-scheme: dark)">
@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <style>
 /* ==========================================================================
-   کبیر — سیستم طراحی رابط وب (نسخهٔ ۳٫۰)
+   کابینت سازی عرفان — سیستم طراحی رابط وب (نسخهٔ ۳٫۰)
    پژوهش و مرجع: docs/DESIGN.md
    پوستهٔ روشن «کاغذِ کارگاه» / پوستهٔ تاریک «شبِ کارگاه» — فارسی، راست‌به‌چپ
    ========================================================================== */
@@ -911,6 +911,11 @@ table.data.center th, table.data.center td { text-align: center; }
 .field > label, .lbl { font-size: 0.77rem; font-weight: 600; color: var(--text-2); line-height: 1.6; }
 .field .hint { font-size: 0.69rem; color: var(--text-3); line-height: 1.6; }
 
+/* ★ نشانِ «الزامی» روی برچسبِ فیلدهای ابعاد ورق برای قلمِ ورقی */
+.req-star { color: var(--danger); font-weight: 700; }
+input:required { border-color: var(--border); }
+input:required:placeholder-shown { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warning, #d97706) 45%, transparent); }
+
 input[type="text"], input[type="number"], input[type="tel"], input[type="date"],
 input[type="search"], select, textarea {
   padding: 0.5rem 0.8rem;
@@ -1721,6 +1726,10 @@ input[type="range"]::-moz-range-thumb {
 .conn-retry:hover { background: rgba(255, 255, 255, 0.16); }
 .conn-retry:disabled { opacity: 0.5; cursor: wait; }
 
+.sec-strip { display: flex; align-items: center; justify-content: space-between;
+  gap: .7rem; flex-wrap: wrap; padding: .5rem .7rem;
+  border-bottom: 1px solid var(--border); }
+.sec-strip .sec-pills { margin-bottom: 0; }
 .sec-pills { display: flex; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
 .sec-pill {
   display: inline-flex;
@@ -2080,6 +2089,44 @@ table.data th.sorted.desc .sort-ic { transform: scaleY(-1); }
 .ws-stats { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .8rem;
   padding: .5rem .7rem; background: var(--surface-2);
   border: 1px solid var(--border); border-radius: var(--r-sm, 10px); }
+
+/* --- نمای فنی ۲D (کاغذ آبی) --- رنگ‌ها داخلِ خودِ SVG است؛ اینجا فقط چیدمان */
+.bp-meta { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .8rem; }
+.bp-chip { padding: .25rem .6rem; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 999px; font-size: .78rem; }
+.bp-chip b { color: var(--text-1); }
+.bp-chip.warn { border-color: color-mix(in srgb, var(--warning, #d97706) 55%, transparent);
+  background: color-mix(in srgb, var(--warning, #d97706) 12%, var(--surface-2)); }
+.bp-views { display: flex; flex-direction: column; gap: .9rem; }
+.bp-fig { margin: 0; }
+.bp-fig svg { width: 100%; height: auto; display: block; }
+.bp-fig figcaption { text-align: center; font-size: .75rem; color: var(--text-3); margin-top: .35rem; }
+.bp-front { max-width: 40rem; margin-inline: auto; }
+.bp-pair { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; }
+.bp-note { margin-top: .2rem; line-height: 1.9; }
+@media (max-width: 720px) { .bp-pair { grid-template-columns: 1fr; } }
+
+/* --- پل CutMaster 2D (تب مقایسه) --- رنگِ نقشه‌ها داخلِ خودِ SVG است */
+.cm-upload { display: flex; align-items: center; gap: .7rem; margin-bottom: .9rem; }
+.cm-h4 { margin: 1rem 0 .5rem; font-size: .95rem; }
+.cm-layouts { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+.cm-fig { margin: 0; }
+.cm-sheet-wrap { background: #0b1c2c; border-radius: 10px; padding: .5rem; }
+.cm-sheet { width: 100%; height: auto; display: block; }
+.cm-fig figcaption { text-align: center; font-size: .72rem; color: var(--text-3); margin-top: .35rem; line-height: 1.7; }
+.ok-cell { color: var(--success); font-weight: 700; white-space: nowrap; }
+.bad-cell { color: var(--danger); font-weight: 700; white-space: nowrap; }
+.cm-bad td { background: color-mix(in srgb, var(--danger) 8%, transparent); }
+.cm-bad td:first-child { border-inline-start: 3px solid var(--danger); }
+
+/* --- پیش‌فرض‌های جزئیات (تنظیمات) --- */
+.dp-h4 { display: flex; align-items: center; gap: .45rem; font-size: .85rem;
+  margin: 1.1rem 0 .55rem; color: var(--text-1); }
+.dp-h4:first-of-type { margin-top: 0; }
+.dp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: .6rem; }
+/* چک‌باکس‌های یک‌خطی هم‌تراز با ورودی‌های همان سطر و هم‌اندازه با برچسب‌ها */
+.dp-grid > .field:has(> label.check) { align-self: end; padding-bottom: .35rem; }
+.dp-grid > .field > label.check { font-size: .78rem; font-weight: 600; color: var(--text-2); }
 .ws-panel { display: none; }
 .ws-panel.active { display: block; }
 .sheet-badge {
@@ -2944,10 +2991,197 @@ tr.row-detail-l2 > td { background: var(--surface-2); }
   .cell-input.w-qty { min-width: 4rem; }
 }
 
+
+/* ==========================================================================
+   ★ PATCH P0 — زنجیره‌ی «نوارهای چسبان» و سرستونِ کارت‌های ویرایشگر
+   --------------------------------------------------------------------------
+   مشکل: سرستونِ کارت‌های ویرایشگر (همان نوارِ «بخش‌ها (سبک‌ها)» + «افزودن بخش»)
+   `position: static` بود، پس هنگام اسکرول زیرِ نوارِ جمعِ پایین و نوارِ «افزودن»
+   می‌رفت و از دید خارج می‌شد؛ و بنرِ «حالتِ نمایشی» که بالای ویرایشگر است،
+   نوارِ فرمانِ چسبان را جابه‌جا می‌کرد بدونِ این‌که آفست‌ها به‌روز شوند.
+   ========================================================================== */
+:root { --demo-banner-h: 0px; --editor-bar-h: 0px; }
+
+/* بنرِ حالتِ نمایشی هم چسبان شود تا با اسکرول نرود و شکاف نسازد */
+.demo-banner { position: sticky; top: var(--topbar-h); z-index: 29; }
+
+/* نوارِ فرمان: زیرِ نوارِ عنوان + بنر */
+.editor-bar { top: calc(var(--topbar-h) + var(--demo-banner-h)); }
+
+/* ★ نکته‌ی حیاتی: .card با overflow:hidden یک «ظرفِ اسکرول» می‌سازد و
+   position:sticky داخلش هرگز نمی‌چسبد. clip همان برش را می‌دهد بدونِ ظرفِ اسکرول. */
+#page-projects .card { overflow: clip; }
+
+/* سرستونِ کارت‌های ویرایشگر: چسبان، زیرِ همه‌ی نوارهای بالایی */
+#page-projects .card-head {
+  position: sticky;
+  top: calc(var(--topbar-h) + var(--demo-banner-h) + var(--editor-bar-h));
+  z-index: 4;
+  background: var(--surface);
+}
+
+/* ==========================================================================
+   ۲۸) میزِ کارِ پروژه (Workspace)
+   --------------------------------------------------------------------------
+   سه اصلاحی که پس از بازبینیِ واقعیِ صفحه‌ی ویرایشگر انجام شد:
+   ۱) فهرستِ پروژه‌ها هنگامِ کار پنهان می‌شود تا جدولِ یونیت‌ها بالای صفحه باشد.
+   ۲) «مشخصات پروژه» پیش‌فرض بسته است و خلاصه‌ی مشتری/تماس را در سرِ کارت
+      نشان می‌دهد (افشای تدریجی) — اطلاعاتِ یک‌باره جای جدولِ روزانه را نگیرد.
+   ۳) پرشِ خودکار به ویرایشگر با فاصله‌ی نوارِ عنوان حساب می‌شود تا سرِ کارت
+      زیرِ نوارِ چسبان گم نشود.
+   ========================================================================== */
+
+#projectEditor { scroll-margin-top: calc(var(--topbar-h) + 0.55rem); }
+
+#page-projects.editing #projectsList { display: none; }
+#page-projects.editing > .editor-stack { animation: pageIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+/* کارت‌های ویرایشگر کمی به هم نزدیک‌تر: فضای جدولِ داده بیشتر می‌شود */
+.editor-stack > .card { margin-bottom: 0.75rem; }
+.editor-stack > .card:last-of-type { margin-bottom: 0; }
+
+/* خلاصه‌ی مشخصات در سرِ کارت: یک خط، با برشِ تمیز */
+#projMetaCard .card-head h3 { min-width: 0; display: flex; align-items: baseline; gap: .35rem; }
+#projMetaCard .head-peek {
+  max-width: 46rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-weight: 400; font-size: .8rem; color: var(--text-3);
+}
+#projMetaCard:not(.collapsed) .head-peek { display: none; }
+#projMetaCard .card-head:hover h3 { color: var(--accent-text); }
+
+/* نمودارِ خالی: پیامِ راهنما به‌جای محورهایِ بی‌معنا */
+.chart.chart-empty {
+  display: grid;
+  place-items: center;
+  background-image: none;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+}
+.chart.chart-empty .empty { border: 0; background: transparent; }
+
+/* جست‌وجوی نوارِ بالا در نمایشگرهای پهن کمی جاگیرتر */
+@media (min-width: 1100px) {
+  .search-wrap input { width: 15.5rem; }
+  .search-wrap input:focus { width: 18rem; }
+}
+
+/* نامِ برند در نوارِ کناری: با نامِ بلندِ کارگاه، دو خطِ آرام (نه شکستنِ بدقواره) */
+.brand h1 { font-size: 1.12rem; line-height: 1.35; letter-spacing: -0.01em; }
+.brand p { font-size: 0.66rem; line-height: 1.5; }
+
+/* در حالتِ ویرایش، دکمه‌ی «بستن» واضح‌تر است چون تنها راهِ بازگشت به فهرست است */
+#page-projects.editing #btnCloseEditor { border-color: var(--border-strong); }
+
+/* ── نوارِ باریکِ مشخصات پروژه (جای کارتِ ۲۷۰ پیکسلی) ─────────────────── */
+#projMetaCard .card-body { padding-top: .7rem; padding-bottom: .7rem; }
+.proj-slim {
+  background: transparent; border: 0; padding: 0; margin: 0;
+  gap: .5rem;
+}
+.proj-slim { align-items: flex-end; }
+.proj-slim .ps-field { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+.proj-slim .ps-field > span {
+  font-size: .66rem; font-weight: 600; color: var(--text-3);
+  padding-inline-start: .15rem;
+}
+.proj-slim input { height: 2.35rem; width: 100%; }
+.proj-slim .ps-title { flex: 2 1 18rem; }
+.proj-slim .ps-title input { font-weight: 700; }
+.proj-slim .ps-cust  { flex: 1 1 12rem; }
+.proj-slim .ps-mobile { flex: 0 1 9.5rem; }
+.proj-slim .ps-more {
+  margin-inline-start: auto;
+  display: inline-flex; align-items: center; gap: .4rem;
+  height: 2.35rem;
+}
+.proj-slim .ps-more .tb-chev { width: .9rem; height: .9rem; transition: transform .18s ease; }
+.proj-slim .ps-more.open .tb-chev { transform: rotate(180deg); }
+
+/* ── دکمه‌ی «تنظیمات بخش» در سرِ کارت (پیش‌تر سفید روی سفید بود) ──────── */
+#btnSecBar { display: inline-flex; align-items: center; gap: .4rem; }
+#btnSecBar .tb-chev { width: .85rem; height: .85rem; transition: transform .18s ease; }
+#btnSecBar[aria-expanded="true"] .tb-chev { transform: rotate(180deg); }
+#btnSecBar .sec-peek {
+  font-size: .72rem; font-weight: 400; color: var(--text-3);
+  max-width: 20rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  border-inline-start: 1px solid var(--border); padding-inline-start: .45rem;
+}
+
+/* ── چیدمانِ داشبورد: کارتِ بسته نباید به ارتفاعِ نمودار کشیده شود ────── */
+.dash-grid { align-items: start; }
+
+/* ── نوارِ متراژِ زنده، جمع‌وجورتر ───────────────────────────────────── */
+.dim-ribbon { padding: .35rem .6rem; margin: .15rem 0 .55rem; }
+.dim-cell { padding: .1rem .55rem; }
+.dim-cell b { font-size: .9rem; }
+
+/* ── فاصله‌ی جدولِ یونیت‌ها تا پنل‌های چسبان ──────────────────────────── */
+#page-projects.editing #tblUnits { min-height: 9rem; }
+
+/* فضای امنِ پایینِ جدولِ ویرایشگر تا آخرین ردیف زیر نوارِ چسبانِ «افزودن» نماند */
+@media (min-width: 721px) {
+  #projectEditor .tab-panel .table-wrap.grid-head { padding-bottom: 4.1rem; }
+}
+
+/* ── فشرده‌سازیِ عمودیِ میزِ کار برای لپ‌تاپِ ۷۶۸ پیکسلی ───────────────── */
+#projMetaCard .card-body { padding: .55rem .7rem; }
+.proj-slim .ps-code {
+  align-self: center;
+  font-size: .7rem; font-weight: 600; color: var(--text-3);
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 999px; padding: .18rem .55rem; white-space: nowrap;
+}
+/* نوارِ متراژ: یک خطِ افقی به‌جای دو خطِ برچسب/عدد */
+.dim-ribbon { padding: .3rem .55rem; margin: .1rem 0 .45rem; gap: .3rem; }
+.dim-cell { flex-direction: row; align-items: baseline; gap: .35rem; padding: .08rem .5rem; }
+.dim-cell b { font-size: .86rem; }
+.dim-gauge { min-width: 9rem; }
+/* در نمایشگرهای کوتاه، متنِ راهنمای ابزارها حذف می‌شود (در tooltip هست) */
+@media (max-height: 820px) {
+  .ut-hint { display: none; }
+  .editor-bar { padding-top: .35rem; padding-bottom: .35rem; }
+  .section-bar { padding-top: .5rem; padding-bottom: .5rem; }
+}
+
+/* ── کارتِ «شروع سریع» در داشبورد ─────────────────────────────────────── */
+.quick-card .card-body { padding: .55rem; }
+.quick-actions { display: flex; flex-direction: column; gap: .45rem; }
+.quick-act {
+  display: flex; align-items: center; gap: .65rem; width: 100%;
+  padding: .62rem .7rem; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--surface-2);
+  color: var(--text); font: inherit; text-align: start; cursor: pointer;
+  transition: background .13s ease, border-color .13s ease, transform .13s ease;
+}
+.quick-act:hover { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+.quick-act:active { transform: translateY(1px); }
+.quick-act .qa-ic {
+  width: 2.1rem; height: 2.1rem; flex-shrink: 0; border-radius: var(--radius-xs);
+  display: grid; place-items: center; color: var(--accent-text); background: var(--accent-soft);
+}
+.quick-act .qa-ic svg { width: 1.1rem; height: 1.1rem; }
+.quick-act .qa-txt { display: flex; flex-direction: column; gap: .05rem; min-width: 0; flex: 1 1 auto; }
+.quick-act .qa-txt b { font-size: .88rem; font-weight: 700; }
+.quick-act .qa-txt small { font-size: .72rem; color: var(--text-3); }
+.quick-act .kbd { opacity: .75; }
+
+/* منوی «انواع یونیت» در نوارِ افزودنِ پایینِ صفحه باز می‌شود، پس باید به سمت
+   بالا باز شود؛ بازشدن به پایین زیرِ نوارِ جمع می‌افتاد و کلیک‌ها را می‌گرفت. */
+.add-bar .split.open > .ovf-menu {
+  inset-block-start: auto;
+  inset-block-end: calc(100% + 6px);
+  inset-inline-start: 0;
+  inset-inline-end: auto;
+}
+@media print {
+  #projectEditor .tab-panel .table-wrap.grid-head { padding-bottom: 0; }
+  .quick-card, .quick-actions { display: none !important; }
+}
+
 </style>
 <script>
 /* ==========================================================================
-   کبیر ۲ — data.js
+   نسخه ۲ — data.js
    ابزارها، داده‌های نمونه (هم‌شکل با پاسخ سرور)، لایه‌ی اتصال به API
    شکل داده‌ها دقیقاً همان چیزی است که kabir/web/server.py برمی‌گرداند،
    بنابراین در حالت متصل/نمایشی فقط منبع داده فرق می‌کند.
@@ -3097,6 +3331,7 @@ const ICONS = {
   cart: svg('<circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.6 12.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 7H6"/>'),
   ruler: svg('<path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><line x1="3" y1="12" x2="21" y2="12"/>'),
   spark: svg('<path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/>'),
+  bp: svg('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18"/><path d="M12 3v18"/><path d="M7 7h2"/><path d="M15 15h2"/><path d="M7 17h2"/><path d="M15 7h2"/>'),
 };
 
 function iconBtn(cls, icon, title, attrs) {
@@ -3145,7 +3380,7 @@ function downloadBlob(bytes, filename, ctype) {
 const UNITS = { sheet: "ورق", sqm: "متر مربع", lm: "متر طول", piece: "عدد", set: "ست", kg: "کیلوگرم", job: "موردی" };
 const STATUS_LABEL = { draft: "پیش‌نویس", open: "در جریان", done: "انجام‌شده", canceled: "لغوشده" };
 const STATUS_CLASS = { draft: "b-draft", open: "b-open", done: "b-done", canceled: "b-cancel" };
-const UNIT_TYPES = { ground: "زمینی", wall: "دیواری", tall: "کمد ایستاده" };
+const UNIT_TYPES = { ground: "زمینی", wall: "دیواری", tall: "کمد ایستاده", drawer: "پکیج کشو", open: "شلف باز" };
 
 /* ابعاد پیش‌فرض یونیت‌ها به تفکیک نوع — از تنظیمات خوانده می‌شود
    (کلیدها: unit_<type>_length_cm / height_cm / depth_cm / shelves)
@@ -3154,6 +3389,8 @@ const UNIT_DEFAULTS_FALLBACK = {
   ground: { length_cm: 60, height_cm: 72, depth_cm: 55, shelves: 1 },
   wall: { length_cm: 60, height_cm: 70, depth_cm: 30, shelves: 1 },
   tall: { length_cm: 60, height_cm: 220, depth_cm: 58, shelves: 2 },
+  drawer: { length_cm: 60, height_cm: 72, depth_cm: 55, shelves: 0 },
+  open: { length_cm: 60, height_cm: 70, depth_cm: 30, shelves: 3 },
 };
 function unitDefaults(type) {
   const f = UNIT_DEFAULTS_FALLBACK[type] || UNIT_DEFAULTS_FALLBACK.ground;
@@ -3171,11 +3408,13 @@ function unitLabel(type, lengthCm) {
   const L = fmt(lengthCm);
   if (type === "tall") return `کمد ایستاده ${L}`;
   if (type === "wall") return `یونیت دیواری ${L}`;
+  if (type === "drawer") return `پکیج کشو ${L}`;
+  if (type === "open") return `شلف باز ${L}`;
   return `یونیت زمینی ${L}`;
 }
 /* آیا برچسب، همان برچسب پیش‌فرض (قابل‌جایگزینی خودکار) است؟ */
 function isDefaultUnitLabel(label) {
-  return !label || /^(یونیت زمینی|یونیت دیواری|کمد ایستاده)(\s*[\d۰-۹٬]*)?$/.test(String(label).trim());
+  return !label || /^(یونیت زمینی|یونیت دیواری|کمد ایستاده|پکیج کشو|شلف باز)(\s*[\d۰-۹٬]*)?$/.test(String(label).trim());
 }
 const SERVICE_BASIS = { fixed: "موردی (ثابت)", unit: "هر یونیت", door: "هر لنگه در", shelf: "هر طبقه", sqm: "هر م²", lm: "هر متر طول", percent: "درصدی از جمع" };
 
@@ -3202,10 +3441,10 @@ const GROUP_ORDER = [
    (فقط برای حالت نمایشی وقتی سرور در دسترس نیست — هم‌شکل با پاسخ API)     */
 
 const DEMO_SETTINGS = {
-  company_name: "کارگاه کابینت‌سازی کبیر", company_manager: "ارفع جاستری",
+  company_name: "کارگاه کابینت سازی عرفان", company_manager: "ارفع جاستری",
   company_phone: "۰۲۱-۸۸۷۷۶۶۵۵", company_mobile: "۰۹۱۲۳۴۵۶۷۸۹",
   company_address: "تهران، خیابان آزادی، پاساژ چوب، پلاک ۱۲",
-  company_email: "info@kabir.example", company_web: "kabir.example", company_logo: "",
+  company_email: "info@erfan-cabinet.example", company_web: "erfan-cabinet.example", company_logo: "",
   invoice_title: "پیش‌فاکتور",
   invoice_footer_note: "این پیش‌فاکتور تا تاریخ اعتبار ذکرشده معتبر است. پیش‌پرداخت: ۶۰٪ هنگام عقد قرارداد.",
   currency: "تومان", currency_scale: "1", vat_enabled: "1", vat_percent: "10",
@@ -3220,69 +3459,77 @@ const DEMO_SETTINGS = {
   banding_body_factor: "2.2", banding_door_factor: "1", banding_waste_percent: "8",
   theme: "light", font_size: "12", persian_digits: "1", web_font_size: "14",
   auto_backup: "1", backup_keep: "14",
+  default_door_qty: "1", default_door_w_cm: "45", default_door_h_cm: "70",
+  default_door_gas_springs_per_leaf: "0", default_door_glass: "0", default_door_from_body: "0",
+  default_door_label: "در", default_drawer_qty: "1", default_drawer_label: "کشو",
+  default_unit_qty: "1", default_unit_has_top_panel: "1", default_unit_has_bottom_panel: "1",
+  default_facade_label: "ردیف درنما", default_facade_qty: "1", default_facade_w_cm: "100",
+  default_facade_h_cm: "60", default_facade_price_per_sqm: "300000",
+  default_extra_label: "قلم جدید", default_extra_qty: "1", default_extra_unit: "piece", default_extra_price: "500000",
+  default_service_label: "خدمت جدید", default_service_basis: "fixed", default_service_qty: "1", default_service_price: "300000",
 };
 
 /* name, cat, unit, price, w, h, thick, width_cm, supplier */
 const _DM = [
-  ["ام‌دی‌اف سفید صدفی ۱۶ میل", "body_sheet", "sheet", 4850000, 183, 366, 16, 0, "بازرگانی چوب آراد"],
-  ["ام‌دی‌اف سفید برفی ۱۶ میل", "body_sheet", "sheet", 5100000, 183, 366, 16, 0, "بازرگانی چوب آراد"],
-  ["ام‌دی‌اف کرم/نسکافه‌ای ۱۶ میل", "body_sheet", "sheet", 5250000, 183, 366, 16, 0, ""],
-  ["ام‌دی‌اف طوسی ۱۶ میل", "body_sheet", "sheet", 5400000, 183, 366, 16, 0, ""],
-  ["ام‌دی‌اف طرح چوب راش ۱۶ میل", "body_sheet", "sheet", 6300000, 183, 366, 16, 0, "چوب و صنعت البرز"],
-  ["ام‌دی‌اف ضدآب (MR) ۱۶ میل", "body_sheet", "sheet", 7200000, 183, 366, 16, 0, ""],
-  ["نئوپان ملامینه ۱۶ میل (اقتصادی)", "body_sheet", "sheet", 3100000, 183, 366, 16, 0, ""],
-  ["هایگلاس ترک سفید ۱۶ میل", "door_sheet", "sheet", 9500000, 183, 366, 16, 0, "آستارا چوب"],
-  ["هایگلاس ترک طرح‌دار ۱۶ میل", "door_sheet", "sheet", 10800000, 183, 366, 16, 0, "آستارا چوب"],
-  ["هایگلاس ایرانی ۱۶ میل", "door_sheet", "sheet", 6900000, 183, 366, 16, 0, ""],
-  ["ام‌دی‌اف ملامینه (در هم‌رنگ بدنه)", "door_sheet", "sheet", 5250000, 183, 366, 16, 0, ""],
-  ["ورق پایه ممبران (خام CNC)", "door_sheet", "sheet", 5900000, 183, 366, 18, 0, ""],
-  ["ورق پایه پلی‌اورتان", "door_sheet", "sheet", 6400000, 183, 366, 18, 0, ""],
-  ["فیبر (MDF 3 میل) پشت سفید", "back_sheet", "sheet", 1650000, 122, 244, 3, 0, ""],
-  ["فیبر (MDF 3 میل) پشت طرح چوب", "back_sheet", "sheet", 1850000, 122, 244, 3, 0, ""],
-  ["ام‌دی‌اف سفید ۱۶ میل (جعبه کشو)", "drawer_sheet", "sheet", 4850000, 183, 366, 16, 0, ""],
-  ["بدنه‌ی کشو تاندم باکس آماده", "drawer_sheet", "set", 2400000, 0, 0, 0, 0, ""],
-  ["اجرت ساخت در ملامینه (هر لنگه)", "door_model", "piece", 180000, 0, 0, 0, 0, ""],
-  ["اجرت ساخت در هایگلاس (هر لنگه)", "door_model", "piece", 320000, 0, 0, 0, 0, ""],
-  ["اجرت CNC در ممبران (هر م²)", "door_model", "sqm", 1450000, 0, 0, 0, 0, ""],
-  ["اجرت رنگ پلی‌اورتان (هر م²)", "door_model", "sqm", 2600000, 0, 0, 0, 0, ""],
-  ["در شیشه‌ای قاب آلومینیوم (هر لنگه)", "door_model", "piece", 850000, 0, 0, 0, 0, ""],
-  ["صفحه ۳ سانت ایرانی (طرح‌دار)", "countertop", "lm", 1350000, 0, 0, 30, 60, ""],
-  ["صفحه ۵ سانت ایرانی", "countertop", "lm", 2150000, 0, 0, 50, 60, "صفحه‌سازی پایتخت"],
-  ["صفحه ۵ سانت ترک (ضدخش)", "countertop", "lm", 3900000, 0, 0, 50, 60, "صفحه‌سازی پایتخت"],
-  ["صفحه کورین (Corian)", "countertop", "lm", 6800000, 0, 0, 12, 60, ""],
-  ["تاج ام‌دی‌اف ساده", "crown", "lm", 185000, 0, 0, 0, 8, ""],
-  ["تاج ابزارخور (CNC)", "crown", "lm", 420000, 0, 0, 0, 12, ""],
-  ["زیرچراغ با جای SMD", "underlight", "lm", 245000, 0, 0, 0, 10, ""],
-  ["پاخور پی‌وی‌سی (PVC)", "kickboard", "lm", 135000, 0, 0, 0, 15, ""],
-  ["پاخور آلومینیومی", "kickboard", "lm", 295000, 0, 0, 0, 15, ""],
-  ["نوار PVC ۲۲ میل سفید", "banding", "lm", 18500, 0, 0, 0, 0, ""],
-  ["نوار PVC ۲۲ میل طرح چوب", "banding", "lm", 26000, 0, 0, 0, 0, ""],
-  ["نوار ABS هایگلاس", "banding", "lm", 64000, 0, 0, 0, 0, ""],
-  ["لولا آرام‌بند معمولی", "hinge", "piece", 68000, 0, 0, 0, 0, ""],
-  ["لولا آرام‌بند ترک", "hinge", "piece", 125000, 0, 0, 0, 0, "یراق‌سرای شرق"],
-  ["لولا آرام‌بند آلمانی (Blum)", "hinge", "piece", 285000, 0, 0, 0, 0, "یراق‌سرای شرق"],
-  ["گازور ساده ۱۰۰N", "gas_spring", "piece", 145000, 0, 0, 0, 0, ""],
-  ["جک آرام‌بند تاشو", "gas_spring", "piece", 680000, 0, 0, 0, 0, ""],
-  ["خار طبقه فلزی", "shelf_pin", "piece", 6500, 0, 0, 0, 0, ""],
-  ["دستگیره میله‌ای ۱۲٫۸ سانت", "handle", "piece", 85000, 0, 0, 0, 0, ""],
-  ["دستگیره میله‌ای ۱۶ سانت", "handle", "piece", 115000, 0, 0, 0, 0, ""],
-  ["دستگیره مخفی (پروفیلی)", "handle", "piece", 165000, 0, 0, 0, 0, ""],
-  ["دستگیره دکمه‌ای", "handle", "piece", 62000, 0, 0, 0, 0, ""],
-  ["پایه پلاستیکی تنظیم‌دار ۱۰ سانت", "leg", "piece", 28000, 0, 0, 0, 0, ""],
-  ["پایه فلزی تنظیم‌دار ۱۵ سانت", "leg", "piece", 65000, 0, 0, 0, 0, ""],
-  ["ریل ساچمه‌ای معمولی (جفت)", "drawer_slide", "set", 165000, 0, 0, 0, 0, ""],
-  ["ریل تاندم آرام‌بند (جفت)", "drawer_slide", "set", 890000, 0, 0, 0, 0, ""],
-  ["تاندم‌باکس کامل (ست)", "drawer_slide", "set", 2450000, 0, 0, 0, 0, ""],
-  ["سطل زباله ریلی دو مخزن", "accessory", "piece", 1980000, 0, 0, 0, 0, ""],
-  ["آبچکان استیل داخل کابینت", "accessory", "piece", 1250000, 0, 0, 0, 0, ""],
-  ["نورپردازی SMD هر متر (با ترانس)", "accessory", "lm", 385000, 0, 0, 0, 0, ""],
-  ["برش و CNC (هر ورق)", "service", "sheet", 480000, 0, 0, 0, 0, ""],
-  ["سوراخ‌کاری و مونتاژ (هر یونیت)", "service", "job", 220000, 0, 0, 0, 0, ""],
-  ["مونتاژ و رگلاژ در (هر لنگه)", "service", "job", 85000, 0, 0, 0, 0, ""],
-  ["بسته‌بندی هر لنگه در", "service", "job", 45000, 0, 0, 0, 0, ""],
-  ["حمل تا محل (سرویس)", "service", "job", 850000, 0, 0, 0, 0, ""],
-  ["طراحی سه‌بعدی", "service", "job", 1500000, 0, 0, 0, 0, ""],
-  ["بازدید و اندازه‌گیری", "service", "job", 350000, 0, 0, 0, 0, ""],
+  ["ام‌دی‌اف سفید صدفی ۱۶ میل", "body_sheet", "sheet", 12120000, 183, 366, 16, 0, "بازرگانی چوب آراد"],
+  ["ام‌دی‌اف سفید برفی ۱۶ میل", "body_sheet", "sheet", 12750000, 183, 366, 16, 0, "بازرگانی چوب آراد"],
+  ["ام‌دی‌اف کرم/نسکافه‌ای ۱۶ میل", "body_sheet", "sheet", 13120000, 183, 366, 16, 0, ""],
+  ["ام‌دی‌اف طوسی ۱۶ میل", "body_sheet", "sheet", 13500000, 183, 366, 16, 0, ""],
+  ["ام‌دی‌اف طرح چوب راش ۱۶ میل", "body_sheet", "sheet", 15750000, 183, 366, 16, 0, "چوب و صنعت البرز"],
+  ["ام‌دی‌اف ضدآب (MR) ۱۶ میل", "body_sheet", "sheet", 18000000, 183, 366, 16, 0, ""],
+  ["نئوپان ملامینه ۱۶ میل (اقتصادی)", "body_sheet", "sheet", 7750000, 183, 366, 16, 0, ""],
+  ["هایگلاس ترک سفید ۱۶ میل", "door_sheet", "sheet", 21850000, 183, 366, 16, 0, "آستارا چوب"],
+  ["هایگلاس ترک طرح‌دار ۱۶ میل", "door_sheet", "sheet", 24840000, 183, 366, 16, 0, "آستارا چوب"],
+  ["هایگلاس ایرانی ۱۶ میل", "door_sheet", "sheet", 15870000, 183, 366, 16, 0, ""],
+  ["ام‌دی‌اف ملامینه (در هم‌رنگ بدنه)", "door_sheet", "sheet", 12070000, 183, 366, 16, 0, ""],
+  ["ورق پایه ممبران (خام CNC)", "door_sheet", "sheet", 13570000, 183, 366, 18, 0, ""],
+  ["ورق پایه پلی‌اورتان", "door_sheet", "sheet", 14720000, 183, 366, 18, 0, ""],
+  ["فیبر (MDF 3 میل) پشت سفید", "back_sheet", "sheet", 3960000, 122, 244, 3, 0, ""],
+  ["فیبر (MDF 3 میل) پشت طرح چوب", "back_sheet", "sheet", 4440000, 122, 244, 3, 0, ""],
+  ["ام‌دی‌اف سفید ۱۶ میل (جعبه کشو)", "drawer_sheet", "sheet", 10670000, 183, 366, 16, 0, ""],
+  ["بدنه‌ی کشو تاندم باکس آماده", "drawer_sheet", "set", 5280000, 0, 0, 0, 0, ""],
+  ["اجرت ساخت در ملامینه (هر لنگه)", "door_model", "piece", 540000, 0, 0, 0, 0, ""],
+  ["اجرت ساخت در هایگلاس (هر لنگه)", "door_model", "piece", 960000, 0, 0, 0, 0, ""],
+  ["اجرت CNC در ممبران (هر م²)", "door_model", "sqm", 4350000, 0, 0, 0, 0, ""],
+  ["اجرت رنگ پلی‌اورتان (هر م²)", "door_model", "sqm", 7800000, 0, 0, 0, 0, ""],
+  ["در شیشه‌ای قاب آلومینیوم (هر لنگه)", "door_model", "piece", 2550000, 0, 0, 0, 0, ""],
+  ["صفحه ۳ سانت ایرانی (طرح‌دار)", "countertop", "lm", 2840000, 0, 0, 30, 60, ""],
+  ["صفحه ۵ سانت ایرانی", "countertop", "lm", 4520000, 0, 0, 50, 60, "صفحه‌سازی پایتخت"],
+  ["صفحه ۵ سانت ترک (ضدخش)", "countertop", "lm", 8190000, 0, 0, 50, 60, "صفحه‌سازی پایتخت"],
+  ["صفحه کورین (Corian)", "countertop", "lm", 14280000, 0, 0, 12, 60, ""],
+  ["تاج ام‌دی‌اف ساده", "crown", "lm", 520000, 0, 0, 0, 8, ""],
+  ["تاج ابزارخور (CNC)", "crown", "lm", 1180000, 0, 0, 0, 12, ""],
+  ["زیرچراغ با جای SMD", "underlight", "lm", 690000, 0, 0, 0, 10, ""],
+  ["پاخور پی‌وی‌سی (PVC)", "kickboard", "lm", 380000, 0, 0, 0, 15, ""],
+  ["پاخور آلومینیومی", "kickboard", "lm", 830000, 0, 0, 0, 15, ""],
+  ["نوار PVC ۲۲ میل سفید", "banding", "lm", 50000, 0, 0, 0, 0, ""],
+  ["نوار PVC ۲۲ میل طرح چوب", "banding", "lm", 70000, 0, 0, 0, 0, ""],
+  ["نوار ABS هایگلاس", "banding", "lm", 170000, 0, 0, 0, 0, ""],
+  ["لولا آرام‌بند معمولی", "hinge", "piece", 180000, 0, 0, 0, 0, ""],
+  ["لولا آرام‌بند ترک", "hinge", "piece", 320000, 0, 0, 0, 0, "یراق‌سرای شرق"],
+  ["لولا آرام‌بند آلمانی (Blum)", "hinge", "piece", 740000, 0, 0, 0, 0, "یراق‌سرای شرق"],
+  ["گازور ساده ۱۰۰N", "gas_spring", "piece", 380000, 0, 0, 0, 0, ""],
+  ["جک آرام‌بند تاشو", "gas_spring", "piece", 1770000, 0, 0, 0, 0, ""],
+  ["خار طبقه فلزی", "shelf_pin", "piece", 20000, 0, 0, 0, 0, ""],
+  ["دستگیره میله‌ای ۱۲٫۸ سانت", "handle", "piece", 220000, 0, 0, 0, 0, ""],
+  ["دستگیره میله‌ای ۱۶ سانت", "handle", "piece", 300000, 0, 0, 0, 0, ""],
+  ["دستگیره مخفی (پروفیلی)", "handle", "piece", 430000, 0, 0, 0, 0, ""],
+  ["دستگیره دکمه‌ای", "handle", "piece", 160000, 0, 0, 0, 0, ""],
+  ["پایه پلاستیکی تنظیم‌دار ۱۰ سانت", "leg", "piece", 70000, 0, 0, 0, 0, ""],
+  ["پایه فلزی تنظیم‌دار ۱۵ سانت", "leg", "piece", 170000, 0, 0, 0, 0, ""],
+  ["ریل ساچمه‌ای معمولی (جفت)", "drawer_slide", "set", 430000, 0, 0, 0, 0, ""],
+  ["ریل تاندم آرام‌بند (جفت)", "drawer_slide", "set", 2310000, 0, 0, 0, 0, ""],
+  ["تاندم‌باکس کامل (ست)", "drawer_slide", "set", 6370000, 0, 0, 0, 0, ""],
+  ["سطل زباله ریلی دو مخزن", "accessory", "piece", 5150000, 0, 0, 0, 0, ""],
+  ["آبچکان استیل داخل کابینت", "accessory", "piece", 3250000, 0, 0, 0, 0, ""],
+  ["نورپردازی SMD هر متر (با ترانس)", "accessory", "lm", 1000000, 0, 0, 0, 0, ""],
+  ["برش و CNC (هر ورق)", "service", "sheet", 1440000, 0, 0, 0, 0, ""],
+  ["سوراخ‌کاری و مونتاژ (هر یونیت)", "service", "job", 660000, 0, 0, 0, 0, ""],
+  ["مونتاژ و رگلاژ در (هر لنگه)", "service", "job", 260000, 0, 0, 0, 0, ""],
+  ["بسته‌بندی هر لنگه در", "service", "job", 140000, 0, 0, 0, 0, ""],
+  ["حمل تا محل (سرویس)", "service", "job", 2550000, 0, 0, 0, 0, ""],
+  ["طراحی سه‌بعدی", "service", "job", 4500000, 0, 0, 0, 0, ""],
+  ["بازدید و اندازه‌گیری", "service", "job", 1050000, 0, 0, 0, 0, ""],
 ];
 
 /* ============================================================== وضعیت برنامه */
@@ -3338,17 +3585,95 @@ function pricePerSqm(m) {
 }
 
 /* ------------------------------------------------- کارخانه‌های مدل داده */
+/* ★ شناسه‌ی قلمِ پیش‌فرض از تنظیمات — فقط اگر آن قلم واقعاً وجود داشته باشد
+   (قلمِ حذف‌شده نباید در یونیتِ تازه بنشیند و قیمت را صفر کند).              */
+function settingMat(key) {
+  const id = Number(toEn(SETTINGS[key] ?? "")) || 0;
+  if (!id) return 0;
+  return (MATERIALS || []).some((m) => Number(m.id) === id) ? id : 0;
+}
+function settingNum(key, dflt) {
+  const v = parseFloat(toEn(SETTINGS[key] ?? ""));
+  return isFinite(v) && v >= 0 ? v : dflt;
+}
+function settingStr(key, dflt) {
+  const v = SETTINGS[key];
+  return (v === undefined || v === null || v === "") ? dflt : String(v);
+}
+function settingBool(key, dflt = false) {
+  const v = SETTINGS[key];
+  if (v === undefined || v === null || v === "") return dflt;
+  return ["1", "true", "yes"].includes(String(v).toLowerCase());
+}
+
+/* ═══ اولویتِ پیش‌فرض‌های کاربر بر متریالِ سبک ═══
+   نقشه‌ی نقش ← کلید تنظیم. اگر کاربر «اولویت پیش‌فرض‌های من» را روشن کرده
+   باشد، این انتخاب‌ها بعد از اعمالِ سبک روی یونیت/در/کشو می‌نشینند.        */
+const DP_UNIT_MAP = [
+  ["body_id", "default_unit_body_id"], ["back_id", "default_unit_back_id"],
+  ["banding_id", "default_unit_banding_id"], ["countertop_id", "default_unit_countertop_id"],
+  ["crown_id", "default_unit_crown_id"], ["underlight_id", "default_unit_underlight_id"],
+  ["kickboard_id", "default_unit_kickboard_id"], ["leg_id", "default_unit_leg_id"],
+  ["shelf_pin_id", "default_unit_shelf_pin_id"], ["assembly_id", "default_unit_assembly_id"],
+];
+const DP_DOOR_MAP = [
+  ["material_id", "default_door_material_id"], ["door_model_id", "default_door_model_id"],
+  ["hinge_id", "default_door_hinge_id"], ["gas_spring_id", "default_door_gas_spring_id"],
+  ["handle_id", "default_door_handle_id"], ["banding_id", "default_door_banding_id"],
+  ["assembly_id", "default_door_assembly_id"], ["packaging_id", "default_door_packaging_id"],
+];
+const DP_DRAWER_MAP = [
+  ["slide_id", "default_drawer_slide_id"], ["sheet_id", "default_drawer_sheet_id"],
+  ["front_id", "default_drawer_front_id"], ["handle_id", "default_drawer_handle_id"],
+  ["banding_id", "default_drawer_banding_id"], ["assembly_id", "default_drawer_assembly_id"],
+];
+/* ★ اولویت با انتخاب‌های کاربر است (پیش‌فرض روشن): اگر قلمی در تنظیمات
+   انتخاب شده باشد، همان روی متریالِ سبک می‌نشیند و سبک فقط جاهای خالی را
+   پر می‌کند — نتیجه: همه‌ی بخش‌ها یک‌دست می‌مانند. اگر خاموش باشد، سبک
+   بخش اولویت دارد و پیش‌فرض‌ها فقط جاهایی را پر می‌کنند که سبک تعیین نکرده. */
+function defaultsBeatStyle() { return settingBool("defaults_beat_style", true); }
+function applyDefaultsOver(obj, map) {
+  for (const [attr, key] of map) {
+    const id = settingMat(key);
+    if (id) obj[attr] = id;
+  }
+  return obj;
+}
+
+/* ★ ادغامِ سبک بخش و پیش‌فرض‌های کاربر با رعایت اولویت:
+   روشن = پیش‌فرض‌های من روی سبک می‌نشینند (سبک فقط جاهای خالی را پر می‌کند).
+   خاموش = سبک بخش اولویت دارد و پیش‌فرض‌ها فقط جاهایی را پر می‌کنند که سبک
+   تعیین نکرده است. ترتیب اعمال تفاوت را می‌سازد؛ یک‌جا نگه می‌داریمش تا در
+   یونیت/در/کشو یکسان باشد و قابل تست. */
+function applyStyleThenDefaults(obj, setStyle, map) {
+  if (defaultsBeatStyle()) { setStyle(); applyDefaultsOver(obj, map); }
+  else { applyDefaultsOver(obj, map); setStyle(); }
+  return obj;
+}
+
 function defaultUnit(type) {
   type = UNIT_TYPES[type] ? type : "ground";
   const d = unitDefaults(type);
   return {
-    label: unitLabel(type, d.length_cm), unit_type: type, qty: 1,
+    label: unitLabel(type, d.length_cm), unit_type: type,
+    qty: Math.max(1, Math.round(settingNum("default_unit_qty", 1))),
     length_cm: d.length_cm, height_cm: d.height_cm, depth_cm: d.depth_cm, shelves: d.shelves,
-    body_id: 0, back_id: 0, countertop_id: 0, crown_id: 0, underlight_id: 0,
-    kickboard_id: 0, leg_id: 0, legs_per_unit: 4, banding_id: 0,
-    banding_mode: "auto",   /* ★ حالت نوار PVC — پیش‌فرض: قاعده‌ی نوع یونیت */
-    shelf_pin_id: 0, pins_per_shelf: 4, assembly_id: 0,
-    has_top_panel: true, has_bottom_panel: true,
+    /* ★ همه‌ی «جزئیات» از تنظیمات می‌آیند — یک‌بار تنظیم کن، هر یونیتِ تازه پر است */
+    body_id: settingMat("default_unit_body_id"),
+    back_id: settingMat("default_unit_back_id"),
+    countertop_id: settingMat("default_unit_countertop_id"),
+    crown_id: settingMat("default_unit_crown_id"),
+    underlight_id: settingMat("default_unit_underlight_id"),
+    kickboard_id: settingMat("default_unit_kickboard_id"),
+    leg_id: settingMat("default_unit_leg_id"),
+    legs_per_unit: settingNum("default_unit_legs_per_unit", 4),
+    banding_id: settingMat("default_unit_banding_id"),
+    banding_mode: settingStr("default_unit_banding_mode", "auto"),
+    shelf_pin_id: settingMat("default_unit_shelf_pin_id"),
+    pins_per_shelf: settingNum("default_unit_pins_per_shelf", 4),
+    assembly_id: settingMat("default_unit_assembly_id"),
+    has_top_panel: settingBool("default_unit_has_top_panel", true),
+    has_bottom_panel: settingBool("default_unit_has_bottom_panel", true),
     doors: [], drawers: [], note: "",
   };
 }
@@ -3363,19 +3688,54 @@ function applyUnitTypeDefaults(u, type) {
   if (isDefaultUnitLabel(u.label)) u.label = unitLabel(type, d.length_cm);
   return u;
 }
-function defaultDoor() {
+/* ابعاد پیش‌فرض در و کشو — از تنظیمات (صفحه‌ی تنظیمات ← «ابعاد پیش‌فرض در و کشو»)
+   خوانده می‌شود و در نبودِ مقدار معتبر به پیش‌فرضِ صنعتی برمی‌گردد.        */
+const DOOR_DRAWER_FALLBACK = {
+  door_qty: 1, door_w_cm: 45, door_h_cm: 70,
+  drawer_qty: 1, drawer_w_cm: 60, drawer_h_cm: 18, drawer_d_cm: 45,
+};
+function doorDrawerDefaults(kind) {
+  const get = (k) => {
+    const v = parseFloat(toEn(SETTINGS["default_" + kind + "_" + k]));
+    return isFinite(v) && v > 0 ? v : DOOR_DRAWER_FALLBACK[kind + "_" + k];
+  };
   return {
-    label: "در", qty: 1, w_cm: 45, h_cm: 70, model: "single",
-    material_id: 0, door_model_id: 0, hinge_id: 0, hinges_per_leaf: 2,
-    gas_spring_id: 0, gas_springs_per_leaf: 0, handle_id: 0, handles_per_leaf: 1,
-    banding_id: 0, assembly_id: 0, packaging_id: 0, glass: false, note: "",
-    from_body: false,      /* ★ در از ورق بدنه‌ی همان یونیت برش بخورد */
+    qty: get("qty"), w_cm: get("w_cm"),
+    h_cm: get("h_cm"), d_cm: get("d_cm"),
+  };
+}
+function defaultDoor() {
+  const d = doorDrawerDefaults("door");
+  return {
+    label: settingStr("default_door_label", "در"),
+    qty: Math.max(1, Math.round(d.qty)), w_cm: d.w_cm, h_cm: d.h_cm, model: "single",
+    material_id: settingMat("default_door_material_id"),
+    door_model_id: settingMat("default_door_model_id"),
+    hinge_id: settingMat("default_door_hinge_id"),
+    hinges_per_leaf: settingNum("default_door_hinges_per_leaf", 2),
+    gas_spring_id: settingMat("default_door_gas_spring_id"),
+    gas_springs_per_leaf: settingNum("default_door_gas_springs_per_leaf", 0),
+    handle_id: settingMat("default_door_handle_id"),
+    handles_per_leaf: settingNum("default_door_handles_per_leaf", 1),
+    banding_id: settingMat("default_door_banding_id"),
+    assembly_id: settingMat("default_door_assembly_id"),
+    packaging_id: settingMat("default_door_packaging_id"),
+    glass: settingBool("default_door_glass", false), note: "",
+    from_body: settingBool("default_door_from_body", false),
   };
 }
 function defaultDrawer() {
+  const d = doorDrawerDefaults("drawer");
   return {
-    label: "کشو", qty: 1, w_cm: 60, h_cm: 18, d_cm: 45,
-    slide_id: 0, handle_id: 0, sheet_id: 0, front_id: 0, banding_id: 0, assembly_id: 0, note: "",
+    label: settingStr("default_drawer_label", "کشو"),
+    qty: Math.max(1, Math.round(d.qty)), w_cm: d.w_cm, h_cm: d.h_cm, d_cm: d.d_cm,
+    slide_id: settingMat("default_drawer_slide_id"),
+    handle_id: settingMat("default_drawer_handle_id"),
+    sheet_id: settingMat("default_drawer_sheet_id"),
+    front_id: settingMat("default_drawer_front_id"),
+    banding_id: settingMat("default_drawer_banding_id"),
+    assembly_id: settingMat("default_drawer_assembly_id"),
+    note: "",
   };
 }
 function defaultPage(styleId, name) {
@@ -3569,13 +3929,13 @@ function setConnBadge() {
   const banner = el("demoBanner");
   const ver = el("appVer");
   if (ver) ver.textContent = KABIR_VERSION
-    ? `کبیر ${fa(KABIR_VERSION)} — رابط وب` : "کبیر — رابط وب";
+    ? `کابینت سازی عرفان ${fa(KABIR_VERSION)} — رابط وب` : "کابینت سازی عرفان — رابط وب";
   if (banner) banner.hidden = API.ok;
   if (!b) return;
   if (API.ok) {
     b.className = "conn ok";
     b.innerHTML = `<span class="dot"></span> متصل به پایگاه‌داده‌ی محلی`;
-    b.title = DATA_DIR || "سرور وب کبیر در حال اجراست";
+    b.title = DATA_DIR || "سرور وب کابینت سازی عرفان در حال اجراست";
   } else {
     b.className = "conn demo";
     b.innerHTML = `<span class="dot"></span> حالت نمایشی (سرور در دسترس نیست) <button class="conn-retry" id="btnReconnect" type="button">اتصال</button>`;
@@ -3589,12 +3949,12 @@ async function reconnectNow(btn) {
   if (btn) { btn.disabled = true; btn.textContent = "…"; }
   const ok = await tryConnect(true);
   if (ok) {
-    toast("به سرور کبیر متصل شد — داده‌ها واقعی هستند", "success");
+    toast("به سرور کابینت سازی عرفان متصل شد — داده‌ها واقعی هستند", "success");
     if (typeof renderAll === "function") renderAll();
   } else if (btn) {
     btn.disabled = false;
     btn.textContent = "اتصال";
-    toast("سرور در دسترس نیست. کبیر را اجرا کنید: python main.py", "warn");
+    toast("سرور در دسترس نیست. کابینت سازی عرفان را اجرا کنید: python main.py", "warn");
   }
   setConnBadge();
   return ok;
@@ -3618,50 +3978,102 @@ function loadDemoData() {
     {
       id: 1, name: "هایگلاس اقتصادی", note: "بدنه ام‌دی‌اف سفید + در هایگلاس ایرانی، یراق معمولی",
       data: {
-        body: "ام‌دی‌اف سفید صدفی ۱۶ میل", door: "هایگلاس ایرانی ۱۶ میل",
-        back: "فیبر (MDF 3 میل) پشت سفید", banding: "نوار PVC ۲۲ میل سفید",
-        hinge: "لولا آرام‌بند معمولی", handle: "دستگیره میله‌ای ۱۲٫۸ سانت",
-        leg: "پایه پلاستیکی تنظیم‌دار ۱۰ سانت", shelf_pin: "خار طبقه فلزی",
-        countertop: "صفحه ۳ سانت ایرانی (طرح‌دار)", door_model: "اجرت ساخت در هایگلاس (هر لنگه)",
-        slide: "ریل ساچمه‌ای معمولی (جفت)", drawer_sheet: "ام‌دی‌اف سفید ۱۶ میل (جعبه کشو)",
-        assembly_door: "مونتاژ و رگلاژ در (هر لنگه)", packaging_door: "بسته‌بندی هر لنگه در",
-        waste_percent: 8, overhead_percent: 5,
+        body: "ام‌دی‌اف سفید صدفی ۱۶ میل",
+        door: "هایگلاس ایرانی ۱۶ میل",
+        back: "فیبر (MDF 3 میل) پشت سفید",
+        banding: "نوار PVC ۲۲ میل سفید",
+        hinge: "لولا آرام‌بند معمولی",
+        handle: "دستگیره میله‌ای ۱۲٫۸ سانت",
+        leg: "پایه پلاستیکی تنظیم‌دار ۱۰ سانت",
+        slide: "ریل ساچمه‌ای معمولی (جفت)",
+        shelf_pin: "خار طبقه پلاستیکی",
+        door_model: "اجرت ساخت در هایگلاس (هر لنگه)",
+        assembly_door: "مونتاژ و رگلاژ در (هر لنگه)",
+        packaging_door: "بسته‌بندی هر لنگه در",
+        waste_percent: 10,
+        overhead_percent: 5,
+        profit_mode: "markup",
+        profit_percent: 30,
       },
     },
     {
-      id: 2, name: "هایگلاس ترک — یراق بلوم", note: "در هایگلاس ترک با لولا و ریل آرام‌بند Blum",
+      id: 2, name: "هایگلاس لوکس (یراق ترک)", note: "در هایگلاس ترک، لولا و ریل آرام‌بند ترک",
       data: {
-        body: "ام‌دی‌اف سفید برفی ۱۶ میل", door: "هایگلاس ترک سفید ۱۶ میل",
-        back: "فیبر (MDF 3 میل) پشت سفید", banding: "نوار ABS هایگلاس",
-        hinge: "لولا آرام‌بند آلمانی (Blum)", handle: "دستگیره مخفی (پروفیلی)",
-        leg: "پایه فلزی تنظیم‌دار ۱۵ سانت", shelf_pin: "خار طبقه فلزی",
-        countertop: "صفحه ۵ سانت ترک (ضدخش)", door_model: "اجرت ساخت در هایگلاس (هر لنگه)",
-        slide: "ریل تاندم آرام‌بند (جفت)", drawer_sheet: "ام‌دی‌اف سفید ۱۶ میل (جعبه کشو)",
-        assembly_door: "مونتاژ و رگلاژ در (هر لنگه)", packaging_door: "بسته‌بندی هر لنگه در",
-        waste_percent: 8, overhead_percent: 5,
+        body: "ام‌دی‌اف سفید برفی ۱۶ میل",
+        door: "هایگلاس ترک سفید ۱۶ میل",
+        back: "ام‌دی‌اف ۸ میل پشت (بدنه هم‌رنگ)",
+        banding: "نوار ABS هایگلاس",
+        hinge: "لولا آرام‌بند ترک",
+        handle: "دستگیره مخفی (پروفیلی)",
+        leg: "پایه فلزی تنظیم‌دار ۱۵ سانت",
+        slide: "ریل فول‌اکستنشن آرام‌بند",
+        shelf_pin: "خار طبقه فلزی",
+        door_model: "اجرت ساخت در هایگلاس (هر لنگه)",
+        assembly_door: "مونتاژ و رگلاژ در (هر لنگه)",
+        packaging_door: "بسته‌بندی هر لنگه در",
+        countertop: "صفحه ۵ سانت ترک (ضدخش)",
+        waste_percent: 12,
+        overhead_percent: 7,
+        profit_mode: "margin",
+        profit_percent: 30,
       },
     },
     {
       id: 3, name: "ممبران کلاسیک", note: "در CNC ممبران با تاج ابزارخور",
       data: {
-        body: "ام‌دی‌اف طرح چوب راش ۱۶ میل", door: "ورق پایه ممبران (خام CNC)",
-        back: "فیبر (MDF 3 میل) پشت طرح چوب", banding: "نوار PVC ۲۲ میل طرح چوب",
-        hinge: "لولا آرام‌بند ترک", handle: "دستگیره میله‌ای ۱۶ سانت",
-        leg: "پایه فلزی تنظیم‌دار ۱۵ سانت", countertop: "صفحه کورین (Corian)",
-        door_model: "اجرت CNC در ممبران (هر م²)", crown: "تاج ابزارخور (CNC)",
-        slide: "ریل تاندم آرام‌بند (جفت)", drawer_sheet: "ام‌دی‌اف سفید ۱۶ میل (جعبه کشو)",
-        waste_percent: 10, overhead_percent: 6,
+        body: "ام‌دی‌اف سفید صدفی ۱۶ میل",
+        door: "ورق پایه ممبران (خام CNC)",
+        back: "فیبر (MDF 3 میل) پشت سفید",
+        banding: "نوار PVC ۲۲ میل سفید",
+        hinge: "لولا آرام‌بند ترک",
+        handle: "دستگیره میله‌ای ۱۶ سانت",
+        leg: "پایه فلزی تنظیم‌دار ۱۵ سانت",
+        slide: "ریل تاندم آرام‌بند (جفت)",
+        door_model: "اجرت CNC در ممبران (هر م²)",
+        crown: "تاج ابزارخور (CNC)",
+        underlight: "زیرچراغ ام‌دی‌اف",
+        countertop: "صفحه ۵ سانت ایرانی",
+        waste_percent: 15,
+        overhead_percent: 8,
+        profit_mode: "markup",
+        profit_percent: 40,
       },
     },
     {
-      id: 4, name: "بدنه و در هم‌رنگ (ملامینه)", note: "اقتصادی، مناسب سرویس و انباری",
+      id: 4, name: "پلی‌اورتان رنگی", note: "در رنگ پلی‌اورتان با کیفیت بالا",
       data: {
-        body: "ام‌دی‌اف ضدآب (MR) ۱۶ میل", door: "ام‌دی‌اف ملامینه (در هم‌رنگ بدنه)",
-        back: "فیبر (MDF 3 میل) پشت سفید", banding: "نوار PVC ۲۲ میل سفید",
-        hinge: "لولا آرام‌بند ترک", handle: "دستگیره دکمه‌ای",
-        leg: "پایه پلاستیکی تنظیم‌دار ۱۰ سانت", countertop: "صفحه ۵ سانت ایرانی",
-        door_model: "اجرت ساخت در ملامینه (هر لنگه)", slide: "ریل ساچمه‌ای معمولی (جفت)",
-        drawer_sheet: "ام‌دی‌اف سفید ۱۶ میل (جعبه کشو)", waste_percent: 8, overhead_percent: 4,
+        body: "ام‌دی‌اف سفید برفی ۱۶ میل",
+        door: "ورق پایه پلی‌اورتان",
+        back: "ام‌دی‌اف ۸ میل پشت (بدنه هم‌رنگ)",
+        banding: "نوار هم‌رنگ (لیزری/PU)",
+        hinge: "لولا آرام‌بند آلمانی (Blum)",
+        handle: "دستگیره مخفی (پروفیلی)",
+        leg: "پایه آلومینیومی دکوراتیو",
+        slide: "تاندم‌باکس کامل (ست)",
+        door_model: "اجرت رنگ پلی‌اورتان (هر م²)",
+        countertop: "صفحه کورین (Corian)",
+        waste_percent: 15,
+        overhead_percent: 10,
+        profit_mode: "margin",
+        profit_percent: 35,
+      },
+    },
+    {
+      id: 5, name: "ملامینه کارگاهی", note: "بدنه و در هم‌رنگ — مناسب پروژه‌های اقتصادی",
+      data: {
+        body: "ام‌دی‌اف سفید صدفی ۱۶ میل",
+        door: "ام‌دی‌اف ملامینه (در هم‌رنگ بدنه)",
+        back: "هاردبورد ۳ میل",
+        banding: "نوار PVC ۲۲ میل سفید",
+        hinge: "لولا آرام‌بند معمولی",
+        handle: "دستگیره دکمه‌ای",
+        leg: "پایه پلاستیکی تنظیم‌دار ۱۰ سانت",
+        slide: "ریل ساچمه‌ای معمولی (جفت)",
+        door_model: "اجرت ساخت در ملامینه (هر لنگه)",
+        waste_percent: 10,
+        overhead_percent: 3,
+        profit_mode: "markup",
+        profit_percent: 25,
       },
     },
   ];
@@ -3804,7 +4216,7 @@ function loadDemoData() {
     { id: 5, date: "۱۴۰۵/۰۷/۳۰", name: "هایگلاس ترک طرح‌دار ۱۶ میل", old: 10100000, price: 10800000, pct: 6.9, reason: "به‌روزرسانی نرخ بازار" },
     { id: 4, date: "۱۴۰۵/۰۷/۲۲", name: "لولا آرام‌بند آلمانی (Blum)", old: 265000, price: 285000, pct: 7.5, reason: "افزایش نرخ یراق وارداتی" },
     { id: 3, date: "۱۴۰۵/۰۷/۱۵", name: "نوار ABS هایگلاس", old: 60000, price: 64000, pct: 6.7, reason: "لیست جدید تأمین‌کننده" },
-    { id: 2, date: "۱۴۰۵/۰۷/۰۲", name: "ام‌دی‌اف سفید صدفی ۱۶ میل", old: 5100000, price: 4850000, pct: -4.9, reason: "تخفیف فصلی تأمین‌کننده" },
+    { id: 2, date: "۱۴۰۵/۰۷/۰۲", name: "ام‌دی‌اف سفید صدفی ۱۶ میل", old: 12750000, price: 12120000, pct: -4.9, reason: "تخفیف فصلی تأمین‌کننده" },
   ];
   ARCHIVE = [
     { id: 4, number: "PI-1405-0004", kind: "quote", kind_label: "پیش‌فاکتور", project: "کابینت آشپزخانه — واحد ۵", customer: "خانم رضایی", date: "۱۴۰۵/۰۷/۲۹", amount: 214500000 },
@@ -3846,7 +4258,7 @@ function loadDemoData() {
 }
 
 /* ==========================================================================
-   کبیر ۲ — engine.js
+   نسخه ۲ — engine.js
    موتور محاسبه‌ی محلی (آینه‌ی kabir/core/costing.py) برای:
      ۱) حالت نمایشی (بدون سرور)
      ۲) بازخورد فوری تا رسیدن پاسخ سرور
@@ -4747,7 +5159,7 @@ function renderInvoiceSheet(data) {
     </div>
     <div class="foot">
       <span style="max-width:70%">${esc(data.footer_note)}</span>
-      <span>این سند توسط نرم‌افزار <b>کبیر</b> تولید شده است.</span>
+      <span>این سند توسط نرم‌افزار <b>کابینت سازی عرفان</b> تولید شده است.</span>
     </div>`;
 }
 
@@ -5217,8 +5629,382 @@ function quickUnitsLocal(opts) {
   return units;
 }
 
+"use strict";
 /* ==========================================================================
-   کبیر — ui-modal.js
+   نمای فنی ۲D یونیت (کاغذ آبی)
+   ==========================================================================
+   هدف: کارگاه قبل از ارّه، «تصویرِ بزرگِ ذهنی» از همان یونیتِ تعریف‌شده
+   ببیند — درها، کشوها، طبقات، پاخور و ابعاد، همان‌طور که موتور محاسبه
+   فاکتور را روی آن‌ها بسته است. هیچ عددی از خودمان نمی‌سازیم؛ همه‌چیز از
+   ردیف‌های یونیتِ ویرایشگر می‌آید.
+
+   این فایل عمداً «بدون DOM» نوشته شده (تولیدِ رشته‌ی SVG خالص) تا در
+   تست‌های Node (tests/blueprint_check.js) هم بدون مرورگر قابل بررسی باشد.
+   فقط در انتهای فایل سه تابعِ DOM-دار (بازکردن مودال، پرکردنش، چاپ) آمده
+   که در Node بی‌اثرند.                                                     */
+
+/* رنگ‌های کاغذِ آبی — ثابت و مستقل از تم؛ «کاغذِ آبی» باید همیشه آبی بماند */
+const BP = {
+  paper: "#123a5c",
+  paperDeep: "#0d2c47",
+  grid: "rgba(255,255,255,0.07)",
+  ink: "#dcecff",
+  inkThin: "rgba(220,236,255,0.55)",
+  inkFaint: "rgba(220,236,255,0.28)",
+  fill: "rgba(255,255,255,0.055)",
+  fillDeep: "rgba(255,255,255,0.11)",
+  dim: "#ffd98a",
+  accent: "#7fd8c4",
+};
+
+const BP_LEG_H = 10;          /* ارتفاعِ فرضِ پاخور/پایه (سانتی‌متر)      */
+const BP_GAP = 0.25;          /* فاصله‌ی بین لنگه‌ها (سانتی‌متر)           */
+const BP_WALL = 1.8;          /* ضخامتِ صفحه‌ی در (سانتی‌متر) — نمایی      */
+
+let _bpUid = 0;
+
+/* ابزارهای عددی محلی — از fa() و esc() داده‌بارگذاری‌شده‌ی data.js استفاده می‌کنیم */
+function _bpN(v, dflt) {
+  const n = Number(v);
+  return isFinite(n) && n > 0 ? n : (dflt || 0);
+}
+function _bpFmt(v) {
+  /* بدون جداکننده‌ی هزارگان — ابعاد است، نه قیمت */
+  const n = Number(v);
+  const s = isFinite(n) ? String(Math.round(n * 10) / 10) : "۰";
+  return (typeof fa === "function" ? fa(s) : s);
+}
+function _bpEsc(s) { return typeof esc === "function" ? esc(s) : String(s); }
+
+function _bpClampDims(u) {
+  return {
+    L: _bpN(u.length_cm, 60),
+    H: _bpN(u.height_cm, 72),
+    D: _bpN(u.depth_cm, 55),
+    shelves: Math.max(0, Math.round(_bpN(u.shelves, 0))),
+    qty: Math.max(1, Math.round(_bpN(u.qty, 1))),
+    legs: (u.unit_type === "ground" || u.unit_type === "tall" || u.unit_type === "drawer"),
+  };
+}
+
+/* --------------------------- اجزای مشترکِ SVG --------------------------- */
+
+function _bpDefs(uid) {
+  /* پترنِ نقطه‌چینِ کاغذ آبی + سرِ فلشِ خطوط اندازه */
+  return `<defs>
+    <pattern id="bpgrid-${uid}" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="${BP.grid}" stroke-width="1"/>
+    </pattern>
+    <marker id="bpar-${uid}" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="${BP.dim}"/>
+    </marker>
+  </defs>`;
+}
+
+function _bpDimH(uid, x1, x2, y, label) {
+  const a = Math.min(x1, x2), b = Math.max(x1, x2);
+  const cw = label.length * 7 + 14;
+  return `<g>
+    <line x1="${a}" y1="${y}" x2="${b}" y2="${y}" stroke="${BP.dim}" stroke-width="1.3"
+          marker-start="url(#bpar-${uid})" marker-end="url(#bpar-${uid})"/>
+    <line x1="${a}" y1="${y - 5}" x2="${a}" y2="${y + 5}" stroke="${BP.dim}" stroke-width="1"/>
+    <line x1="${b}" y1="${y - 5}" x2="${b}" y2="${y + 5}" stroke="${BP.dim}" stroke-width="1"/>
+    <rect x="${(a + b) / 2 - cw / 2}" y="${y - 9}" width="${cw}" height="18"
+          rx="3" fill="${BP.paper}"/>
+    <text x="${(a + b) / 2}" y="${y + 4}" text-anchor="middle" fill="${BP.dim}"
+          font-size="12" font-weight="600">${label}</text>
+  </g>`;
+}
+
+function _bpDimV(uid, y1, y2, x, label) {
+  const a = Math.min(y1, y2), b = Math.max(y1, y2);
+  const mid = (a + b) / 2;
+  const cw = label.length * 7.6 + 12;
+  /* خطِ عمودی با فلش — برچسب فقط چرخیده، قراردادِ نقشه‌کشی */
+  return `<g>
+    <line x1="${x}" y1="${a}" x2="${x}" y2="${b}" stroke="${BP.dim}" stroke-width="1.3"
+          marker-start="url(#bpar-${uid})" marker-end="url(#bpar-${uid})"/>
+    <line x1="${x - 5}" y1="${a}" x2="${x + 5}" y2="${a}" stroke="${BP.dim}" stroke-width="1"/>
+    <line x1="${x - 5}" y1="${b}" x2="${x + 5}" y2="${b}" stroke="${BP.dim}" stroke-width="1"/>
+    <g transform="rotate(-90 ${x} ${mid})">
+      <rect x="${x - cw / 2}" y="${mid - 9}" width="${cw}" height="18"
+            rx="3" fill="${BP.paper}"/>
+      <text x="${x}" y="${mid + 4}" text-anchor="middle" fill="${BP.dim}"
+            font-size="12" font-weight="600">${label}</text>
+    </g>
+  </g>`;
+}
+
+function _bpSvgOpen(w, h, uid, title) {
+  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${_bpEsc(title || "")}"
+    font-family="Vazirmatn, Tahoma, sans-serif" style="background:${BP.paper};border-radius:10px">
+    ${_bpDefs(uid)}
+    <rect x="0" y="0" width="${w}" height="${h}" fill="url(#bpgrid-${uid})"/>`;
+}
+
+/* یک مستطیلِ قطعه با گوشه‌ی صاف و پرکننده‌ی ملایم */
+function _bpRect(x, y, w, h, opts) {
+  opts = opts || {};
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${opts.rx || 0}"
+    fill="${opts.fill || BP.fill}" stroke="${opts.stroke || BP.ink}" stroke-width="${opts.sw || 1.6}"/>`;
+}
+
+/* --------------------------- نمای روبه‌رو --------------------------- */
+/**
+ * نمای روبه‌روی یونیت: درها/کشوها/طبقات/پاخور + اندازه‌های طول و ارتفاع.
+ * @param {object} u ردیف یونیت (UnitRow شکل JS)
+ * @returns {string} رشته‌ی SVG
+ */
+function bpFrontSVG(u) {
+  const { L, H, shelves, legs } = _bpClampDims(u);
+  const uid = ++_bpUid;
+  const s = Math.max(1.1, Math.min(4.6, 330 / H, 560 / L));
+  const w = L * s, h = H * s;
+  const DIM = 30;                       /* نوارِ خطوط اندازه */
+  const MLEFT = 26, MRIGHT = 12;        /* چپ برای خطِ ارتفاع */
+  const W = MLEFT + w + MRIGHT, Ht = y0pad() + h + DIM;
+  const x0 = MLEFT, y0 = y0pad();
+  let g = _bpSvgOpen(W, Ht, uid, "نمای روبه‌رو");
+
+  /* جعبه‌ی اصلی — کامل از بالا */
+  const boxH = legs ? h - BP_LEG_H * s : h;
+  g += _bpRect(x0, y0, w, boxH, { fill: "none", stroke: BP.ink, sw: 2 });
+
+  /* پاخورِ فرورفته و پایه‌ها — زیرِ جعبه (زمینی/کمد/پکیج کشو) */
+  if (legs) {
+    const kbY = y0 + boxH;
+    g += _bpRect(x0 + 2.5 * s, kbY, w - 5 * s, BP_LEG_H * s, { fill: BP.fillDeep, stroke: BP.inkThin, sw: 1.2 });
+    const legW = Math.max(3, 5 * s);
+    g += _bpRect(x0 + 1, kbY + 1, legW, BP_LEG_H * s - 2, { fill: BP.fill, stroke: BP.inkThin, sw: 1 });
+    g += _bpRect(x0 + w - legW - 1, kbY + 1, legW, BP_LEG_H * s - 2, { fill: BP.fill, stroke: BP.inkThin, sw: 1 });
+  }
+
+  const drawers = (u.drawers || []).map((d) => ({ qty: Math.max(0, Math.round(_bpN(d.qty, 0))), h_cm: _bpN(d.h_cm, 15) })).filter((d) => d.qty > 0);
+  const doors = (u.doors || []).map((d) => ({
+    qty: Math.max(0, Math.round(_bpN(d.qty, 0))),
+    w_cm: _bpN(d.w_cm, 45),
+    h_cm: _bpN(d.h_cm, 60),
+    glass: !!d.glass,
+  })).filter((d) => d.qty > 0);
+  const boxY = y0;
+
+  /* کشوها از بالا */
+  let cursorY = boxY;
+  let drawerZoneH = 0;
+  drawers.forEach((d) => {
+    const rowH = Math.min(d.h_cm * s, Math.max(4, boxH - drawerZoneH));
+    for (let k = 0; k < d.qty; k++) {
+      if (drawerZoneH + rowH > boxH) break;
+      g += _bpRect(x0 + 0.6 * s, cursorY, w - 1.2 * s, rowH - BP_GAP * s, { fill: BP.fill, stroke: BP.ink, sw: 1.4, rx: 2 });
+      /* دستگیره‌ی افقی وسطِ کشو */
+      const hw = Math.min(w * 0.3, 24);
+      g += `<rect x="${x0 + (w - hw) / 2}" y="${cursorY + rowH / 2 - 2}" width="${hw}" height="4" rx="2" fill="${BP.inkThin}"/>`;
+      cursorY += rowH;
+      drawerZoneH += rowH;
+    }
+  });
+
+  /* درها زیرِ کشوها — لنگه‌ها از راست (RTL) چیده می‌شوند */
+  let doorZoneTop = boxY + drawerZoneH;
+  let doorZoneH = boxH - drawerZoneH;
+  doors.forEach((d) => {
+    const rowH = Math.min(d.h_cm * s, Math.max(4, doorZoneH));
+    const total = d.qty * d.w_cm * s + (d.qty - 1) * BP_GAP * s;
+    const startX = x0 + Math.max(0, (w - total) / 2);   /* وسط‌چین */
+    let cx = startX + total;                            /* از راست شروع */
+    for (let k = 0; k < d.qty; k++) {
+      const lw = d.w_cm * s;
+      cx -= lw;
+      if (cx < x0 - 0.5 || doorZoneH < 1) break;
+      g += _bpRect(cx, doorZoneTop, lw, rowH - BP_GAP * s, { fill: BP.fill, stroke: BP.ink, sw: 1.4, rx: 2 });
+      if (d.glass) {
+        /* درِ شیشه‌دار: دو خطِ قطریِ کوتاه در گوشه — رسمِ متداولِ شیشه */
+        g += `<line x1="${cx + lw * 0.12}" y1="${doorZoneTop + (rowH - BP_GAP * s) * 0.85}" x2="${cx + lw * 0.35}" y2="${doorZoneTop + (rowH - BP_GAP * s) * 0.6}" stroke="${BP.inkThin}" stroke-width="1.4"/>`;
+      }
+      /* دستگیره‌ی عمودی سمتِ داخل (سمتِ لولا مقابل) */
+      const hx = (k === 0 && d.qty > 1) ? cx + lw - 3 : (k === d.qty - 1 && d.qty > 1) ? cx + 3 : cx + lw - 3;
+      g += `<rect x="${hx}" y="${doorZoneTop + rowH * 0.3}" width="3" height="${Math.min(rowH * 0.4, 14)}" rx="1.5" fill="${BP.inkThin}"/>`;
+      cx -= BP_GAP * s;
+    }
+    doorZoneTop += rowH;
+    doorZoneH -= rowH;
+  });
+
+  /* بدونِ در: شلفِ باز — خطوط طبقات روی خودِ نما */
+  if (!doors.length && !drawers.length && shelves > 0) {
+    for (let k = 1; k <= shelves; k++) {
+      const sy = boxY + (boxH * k) / (shelves + 1);
+      g += `<line x1="${x0}" y1="${sy}" x2="${x0 + w}" y2="${sy}" stroke="${BP.inkThin}" stroke-width="1.2"/>`;
+    }
+  }
+
+  /* برچسبِ نوع یونیت گوشه‌ی بالا-راست */
+  const typeLbl = (typeof UNIT_TYPES !== "undefined" && UNIT_TYPES[u.unit_type]) || u.unit_type || "";
+  g += `<text x="${W - 10}" y="${y0 + 16}" text-anchor="end" fill="${BP.accent}" font-size="12" font-weight="700">${_bpEsc(typeLbl)}</text>`;
+
+  /* اندازه‌ها */
+  g += _bpDimH(uid, x0, x0 + w, y0 + h + 14, `طول ${_bpFmt(L)} سم`);
+  g += _bpDimV(uid, y0, y0 + h, 14, `ارتفاع ${_bpFmt(H)} سم`);
+
+  g += `</svg>`;
+  return g;
+}
+
+function y0pad() { return 6; }
+
+/* --------------------------- نمای جانبی --------------------------- */
+function bpSideSVG(u) {
+  const { H, D, shelves, legs } = _bpClampDims(u);
+  const uid = ++_bpUid;
+  const s = Math.max(1.1, Math.min(4.6, 300 / H, 300 / Math.max(D, 20)));
+  const w = Math.max(D, 20) * s, h = H * s;
+  const MLEFT = 26, MRIGHT = 26;
+  const W = MLEFT + w + MRIGHT, Ht = y0pad() + h + 34;
+  const x0 = MLEFT, y0 = y0pad();
+  const boxY = y0;
+  const boxH = legs ? h - BP_LEG_H * s : h;
+  let g = _bpSvgOpen(W, Ht, uid, "نمای جانبی");
+
+  g += _bpRect(x0, boxY, w, boxH, { fill: "none", stroke: BP.ink, sw: 2 });
+  /* پاخورِ فرورفته — زیرِ جعبه */
+  if (legs) {
+    const kbY = boxY + boxH;
+    g += _bpRect(x0 + w * 0.3, kbY, w * 0.55, BP_LEG_H * s - 1, { fill: BP.fillDeep, stroke: BP.inkThin, sw: 1.2 });
+  }
+
+  /* صفحه‌ی در — نوارِ ضخیم جلو */
+  g += _bpRect(x0 + w - BP_WALL * s, boxY, BP_WALL * s, boxH, { fill: BP.fillDeep, stroke: BP.inkThin, sw: 1 });
+  /* دستگیره — بیرون‌زدگی جلو */
+  g += `<rect x="${x0 + w - 2}" y="${boxY + boxH * 0.3}" width="4" height="${Math.min(boxH * 0.4, 14)}" rx="2" fill="${BP.inkThin}"/>`;
+
+  /* طبقات: خطوطِ خط‌چین (پشتِ در دیده نمی‌شوند ولی نقشه باید بداند) */
+  if (shelves > 0) {
+    for (let k = 1; k <= shelves; k++) {
+      const sy = boxY + (boxH * k) / (shelves + 1);
+      g += `<line x1="${x0 + 2}" y1="${sy}" x2="${x0 + w - BP_WALL * s - 2}" y2="${sy}" stroke="${BP.inkFaint}" stroke-width="1.2" stroke-dasharray="5 4"/>`;
+    }
+  }
+  /* فیبر پشت */
+  g += _bpRect(x0, boxY, Math.max(2, 0.3 * s), boxH, { fill: BP.fill, stroke: BP.inkFaint, sw: 1 });
+
+  g += `<text x="${W - 8}" y="${y0 + 16}" text-anchor="end" fill="${BP.accent}" font-size="12" font-weight="700">جانبی</text>`;
+  g += _bpDimH(uid, x0, x0 + w, y0 + h + 14, `عمق ${_bpFmt(D)} سم`);
+  g += `</svg>`;
+  return g;
+}
+
+/* --------------------------- نمای از بالا --------------------------- */
+function bpTopSVG(u) {
+  const { L, D, legs } = _bpClampDims(u);
+  const uid = ++_bpUid;
+  const s = Math.max(1.1, Math.min(4.6, 220 / Math.max(D, 20), 460 / L));
+  const w = L * s, h = Math.max(D, 20) * s;
+  const MLEFT = 26, MRIGHT = 12;
+  const W = MLEFT + w + MRIGHT, Ht = y0pad() + h + 34;
+  const x0 = MLEFT, y0 = y0pad();
+  let g = _bpSvgOpen(W, Ht, uid, "نمای از بالا");
+
+  g += _bpRect(x0, y0, w, h, { fill: "none", stroke: BP.ink, sw: 2 });
+  /* جلوِ یونیت = پایینِ نقشه؛ صفحه‌ی در جلو */
+  g += _bpRect(x0, y0 + h - BP_WALL * s, w, BP_WALL * s, { fill: BP.fillDeep, stroke: BP.inkThin, sw: 1 });
+  /* دیوار (پشت) هشورِ خطی */
+  g += `<line x1="${x0}" y1="${y0}" x2="${x0 + w}" y2="${y0}" stroke="${BP.inkFaint}" stroke-width="3" stroke-dasharray="2 3"/>`;
+
+  g += `<text x="${W - 8}" y="${y0 + 15}" text-anchor="end" fill="${BP.accent}" font-size="12" font-weight="700">از بالا</text>`;
+  g += _bpDimH(uid, x0, x0 + w, y0 + h + 14, `طول ${_bpFmt(L)} سم`);
+  g += _bpDimV(uid, y0, y0 + h, 14, `عمق ${_bpFmt(D)} سم`);
+  g += `</svg>`;
+  return g;
+}
+
+/* --------------------------- کلاهکِ DOM --------------------------- */
+
+/** عنوانِ خوانا برای هدرِ مودال */
+function bpUnitTitle(u) {
+  const type = (typeof UNIT_TYPES !== "undefined" && UNIT_TYPES[u.unit_type]) || u.unit_type || "یونیت";
+  const qty = Math.max(1, Math.round(_bpN(u.qty, 1)));
+  const label = (u.label || "").trim() || type;
+  return `${_bpEsc(label)} — ${_bpEsc(type)}${qty > 1 ? ` × ${fa(qty)}` : ""}`;
+}
+
+/**
+ * پرکردن مودال نمای فنی برای یونیتِ شاخصِ ui از بخشِ جاریِ ویرایشگر.
+ * مقادیرِ هنوز ذخیره‌نشده هم دیده می‌شوند (readEditorFieldsInto قبلش صدا زده می‌شود).
+ */
+function openBlueprintModal(ui) {
+  if (typeof openModal !== "function" || typeof curPage !== "function") return;
+  const pg = curPage();
+  const u = pg && pg.units ? pg.units[ui] : null;
+  if (!u) return;
+  if (typeof readEditorFieldsInto === "function") {
+    try { readEditorFieldsInto(state.editingProject); } catch (e) { /* بی‌خطر */ }
+  }
+  const unit = curPage().units[ui];            /* پس از خواندنِ فیلدها، مقدارِ زنده */
+  if (!unit) return;
+
+  const front = bpFrontSVG(unit);
+  const side = bpSideSVG(unit);
+  const top = bpTopSVG(unit);
+
+  el("bpTitle").innerHTML = bpUnitTitle(unit);
+  const { shelves, qty } = _bpClampDims(unit);
+  const doorsN = (unit.doors || []).reduce((a, d) => a + Math.round(_bpN(d.qty, 0)), 0);
+  const drawersN = (unit.drawers || []).reduce((a, d) => a + Math.round(_bpN(d.qty, 0)), 0);
+  el("bpMeta").innerHTML = `
+    <span class="bp-chip">درها: <b>${fa(doorsN * qty)}</b></span>
+    <span class="bp-chip">کشوها: <b>${fa(drawersN * qty)}</b></span>
+    <span class="bp-chip">طبقات: <b>${fa(shelves)}</b></span>
+    ${qty > 1 ? `<span class="bp-chip warn">تعداد: <b>${fa(qty)} نسخه</b> — هر نسخه همین نقشه را دارد</span>` : ""}`;
+  el("bpViews").innerHTML = `
+    <figure class="bp-fig bp-front">${front}<figcaption>نمای روبه‌رو</figcaption></figure>
+    <div class="bp-pair">
+      <figure class="bp-fig">${side}<figcaption>نمای جانبی</figcaption></figure>
+      <figure class="bp-fig">${top}<figcaption>نمای از بالا</figcaption></figure>
+    </div>
+    <p class="tiny muted bp-note">
+      این نقشه از همان ردیف‌هایی ساخته می‌شود که فاکتور از روی آن‌ها حساب شده است —
+      درها و کشوها به‌ترتیبِ تب «درها/کشوها» چیده شده‌اند. برای تغییر ظاهر، همان‌جا
+      ابعاد و تعداد را عوض کنید؛ این نقشه بلافاصله عوض می‌شود.
+      خطِ خط‌چین در نمای جانبی = طبقه؛ ابعاد به سانتی‌متر است.
+    </p>`;
+
+  openModal("blueprint");
+}
+
+/** چاپِ فقط نقشه — پنجره‌ی جدید با خودِ SVGها */
+function printBlueprint() {
+  const views = el("bpViews");
+  const title = el("bpTitle") ? el("bpTitle").textContent : "نمای فنی";
+  if (!views) return;
+  const w = window.open("", "_blank", "width=980,height=720");
+  if (!w) { toast("مرورگر اجازه‌ی پنجره‌ی جدید نداد — از تنظیمات مرورگر اجازه بدهید.", "warn"); return; }
+  w.document.write(`<!doctype html><html dir="rtl" lang="fa"><head><meta charset="utf-8">
+<title>${_bpEsc(title)} — نمای فنی</title>
+<style>
+  body{font-family:Vazirmatn,Tahoma,sans-serif;margin:1.2rem;color:#123}
+  h2{margin:0 0 .8rem}
+  .bp-fig{margin:0 0 1rem;page-break-inside:avoid}
+  .bp-fig svg{width:100%;height:auto}
+  figcaption{font-size:.85rem;color:#567;margin-top:.3rem}
+  .bp-pair{display:flex;gap:1rem}.bp-pair figure{flex:1}
+  @media print{.bp-pair{display:flex}}
+</style></head><body>
+<h2>${_bpEsc(title)}</h2>
+${views.querySelector(".bp-front") ? views.querySelector(".bp-front").outerHTML : ""}
+${views.querySelector(".bp-pair") ? views.querySelector(".bp-pair").outerHTML : ""}
+</body></html>`);
+  w.document.close();
+  try { w.focus(); w.print(); } catch (e) { /* کاربر خودش Ctrl+P می‌زند */ }
+}
+
+/* export برای تست‌های Node — در مرورگر بی‌اثر */
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { bpFrontSVG, bpSideSVG, bpTopSVG, bpUnitTitle, BP };
+}
+
+/* ==========================================================================
+   کابینت سازی عرفان — ui-modal.js
    --------------------------------------------------------------------------
    لایه‌ی مشترک «مودال و فرم» برای کل نرم‌افزار.
 
@@ -5521,6 +6307,9 @@ function openModal(id, opts) {
   if (id !== MODAL_GUARD_ID) markModalDirty(id, !!opts.dirty);
   syncInert();
   lockScroll(true);
+  /* ★ PATCH P0: کلاسِ stacked-* قبلاً فقط اضافه می‌شد و پاک نمی‌شد؛
+     پس یک‌بار بازکردنِ دو مودال، پرده را برای همیشه تیره‌تر می‌کرد. */
+  back.classList.remove("stacked-1", "stacked-2", "stacked-3");
   back.classList.add("stacked-" + Math.min(3, MODALS.stack.length));
   /* فوکوس پس از یک فریم تا انیمیشنِ باز شدن پرش نداشته باشد */
   setTimeout(() => { if (topModalId() === id) focusFirst(node); }, 50);
@@ -5971,7 +6760,7 @@ if (typeof module !== "undefined" && module.exports) {
 }
 
 /* ==========================================================================
-   کبیر ۲ — ui.js
+   نسخه ۲ — ui.js
    رندرها، ویرایشگر پروژه، فاکتور، تنظیمات و سیم‌کشی رویدادها.
    حالت متصل: داده از API (kabir/web/server.py) و محاسبه با موتور واقعی.
    حالت نمایشی: داده‌های نمونه و موتور محلی (engine.js) — بدون سرور.
@@ -6177,6 +6966,7 @@ function forceCloseEditor() {
   state.dirty = false;
   paintDirtyState2();
   el("projectEditor").hidden = true;
+  setEditingMode(false);
   syncStickyOffsets();
   undoReset();
 }
@@ -6193,6 +6983,17 @@ async function navigate(page, sub, silentScroll) {
 }
 
 /* ============================================================== داشبورد */
+/** پس از هر تغییر در پروژه‌ها، آمارِ داشبورد را از سرور تازه می‌کند.
+ *  (پیش‌تر DASH فقط یک‌بار هنگام bootstrap خوانده می‌شد و بعد از ساخت/حذف
+ *  یا ذخیره‌ی پروژه، آمار و نمودار تا رفرشِ صفحه قدیمی می‌ماند.) */
+async function refreshDashboard() {
+  if (!API.ok) return;
+  try {
+    const r = await API.req("GET", "/api/dashboard");
+    if (r && r.dashboard) { DASH = r.dashboard; renderDashboard(); }
+  } catch (e) { /* اتصال قطع است؛ نمایشِ فعلی حفظ می‌شود */ }
+}
+
 function buildDash() {
   if (API.ok && DASH) {
     const b = DASH.by_status || {};
@@ -6211,7 +7012,8 @@ function buildDash() {
   const arr = SALES_DEMO;
   const last = arr[arr.length - 1] || { amount: 0 };
   const prev = arr[arr.length - 2] || { amount: 0 };
-  const growth = prev.amount ? ((last.amount - prev.amount) / prev.amount) * 100 : 0;
+  /* ★ بدونِ ماهِ قبل، «رشد» معنا ندارد — badge صفر درصده نشان داده نمی‌شود */
+  const growth = prev.amount ? ((last.amount - prev.amount) / prev.amount) * 100 : null;
   const profit = PROJECTS.filter((p) => p.status !== "canceled")
     .reduce((a, p) => a + (p.final_price - p.total_cost), 0);
   return {
@@ -6233,17 +7035,28 @@ function renderDashboard() {
   el("statProjectsSub").textContent = d.sub;
   countUp(el("statSales"), d.sales, (v) => `${fmt(scaled(v) / 1e6)} <small>میلیون ${CUR.name}</small>`);
   const tr = el("statSalesTrend");
-  tr.className = "stat-trend " + (d.growth >= 0 ? "up" : "down");
-  tr.textContent = (d.growth >= 0 ? "▲ +" : "▼ ") + fmt(Math.abs(d.growth), true) + "٪";
+  /* ★ badge رشد فقط وقتی معنا دارد که ماهِ قبلِ دارای فروش وجود داشته باشد؛
+     «▲ +۰٫۰٪» برای ماهِ اولِ کارگاه فقط سر و صدا بود.                    */
+  if (d.growth === null || d.growth === undefined) {
+    tr.className = "stat-trend";
+    tr.textContent = "";
+    tr.hidden = true;
+  } else {
+    tr.hidden = false;
+    tr.className = "stat-trend " + (d.growth >= 0 ? "up" : "down");
+    tr.textContent = d.growth === 0 ? "— بدون تغییر" : (d.growth > 0 ? "▲ +" : "▼ ") + fmt(Math.abs(d.growth), true) + "٪";
+  }
   countUp(el("statProfit"), d.profit, (v) => `${fmt(scaled(v) / 1e6)} <small>میلیون ${CUR.name}</small>`);
   countUp(el("statMaterials"), d.materials, (v) => fa(Math.round(v)));
   const act = MATERIALS.filter((m) => m.active).length;
   el("statMaterialsSub").textContent = `در ${fa(CATS.length)} دسته‌بندی • ${fa(act)} قلم فعال`;
   el("chartUnit").textContent = `میلیون ${CUR.name}`;
 
-  const chart = d.chart.length ? d.chart : [{ label: "—", v: 0 }];
+  const chart = d.chart.length ? d.chart : [];
+  const hasData = chart.some((c) => c.v > 0);
   const max = Math.max(...chart.map((c) => c.v), 1);
-  el("salesChart").innerHTML = chart.map((c, i) => `
+  el("salesChart").classList.toggle("chart-empty", !hasData);
+  el("salesChart").innerHTML = hasData ? chart.map((c, i) => `
     <div class="chart-col${i === chart.length - 1 ? " hl" : ""}">
       <div class="chart-bar-wrap">
         <div class="chart-bar" style="height:${Math.max(4, (c.v / max) * 100)}%;animation-delay:${i * 60}ms">
@@ -6251,8 +7064,9 @@ function renderDashboard() {
         </div>
       </div>
       <span class="chart-label">${esc(c.label)}</span>
-    </div>`).join("");
-  el("chartBadge").textContent = chart.length > 1
+    </div>`).join("")
+    : `<div class="empty">${ICONS.inbox}<div>هنوز فروشی ثبت نشده است — با ثبت اولین پروژه، نمودار فروش ماهانه همین‌جا ساخته می‌شود.</div></div>`;
+  el("chartBadge").textContent = hasData && chart.length > 1 && d.growth
     ? `رشد ${fmt(d.growth, true)}٪ نسبت به ماه قبل` : "";
 
   el("recentProjects").innerHTML = d.recent.length ? d.recent.map((p) => `
@@ -6639,6 +7453,12 @@ function renderDimRibbon() {
   const warnCell = warns.length
     ? `<button class="dim-cell warn-chip" type="button" id="dimWarnChip" title="${esc(warns.slice(0, 3).join("\n"))}${warns.length > 3 ? "\n…" : ""}">⚠ <b>${fa(warns.length)}</b> هشدار محاسبه — ببینید</button>`
     : "";
+  /* ★ صفحه‌ی L: اگر متر طول صفحه از طول دیوارِ همین بخش بیشتر شود، یعنی
+     احتمالاً گوشه دوبار حساب شده است. در آشپزخانه‌ی L، طول صفحه = مجموع
+     دیوارها منهای عمق یک یونیت در هر گوشه (معمولاً ۵۵–۶۰ سم). */
+  const ctWarn = wallCm > 0 && (+pg.countertop_lm || 0) > wallCm / 100 + 0.01
+    ? `<span class="dim-cell warn-chip" title="طول صفحه‌ی واردشده از طول دیوار این بخش بیشتر است. در گوشه‌ی L/U، عمق یک یونیت (۵۵–۶۰ سم) را از جمع طول دیوارها کم کنید.">⚠ طول صفحه از دیوار بیشتر است — گوشه را کم کنید</span>`
+    : "";
 
   host.innerHTML =
     cell("متر طول زمینی", fmt(ground, true), "", "جمع طول یونیت‌های زمینی و کمد ایستاده") +
@@ -6648,6 +7468,7 @@ function renderDimRibbon() {
     cell("کشو", fa(drawers)) +
     (sheets ? cell("ورق لازم", fa(sheets), "accent", "تعداد ورق کاملی که باید بخرید — با تجمیع قطعات هم‌جنس محاسبه شده") : "") +
     warnCell +
+    ctWarn +
     diffCell;
 }
 
@@ -6729,7 +7550,10 @@ function autoDoorsForUnit(u, styleData) {
   dr.qty = leaves;
   dr.w_cm = leafWidth(u.length_cm, leaves);
   dr.h_cm = r1((+u.height_cm || 0) - DOOR_REVEAL_CM);
-  dr.hinges_per_leaf = (+u.height_cm || 0) >= 150 ? 4 : 2;
+  /* ★ تعداد لولا: درِ بلندتر از ۱٫۵ متر حداقل ۴ لولا می‌خواهد؛ تنظیمات می‌تواند
+     بیشترش کند ولی کمتر از حدِ ایمن نمی‌شود (درِ ۲۲۰ با ۲ لولا آویزان می‌ماند). */
+  dr.hinges_per_leaf = Math.max(settingNum("default_door_hinges_per_leaf", 2),
+    (+u.height_cm || 0) >= 150 ? 4 : 2);
   if (d.door) dr.material_id = midByName(d.door);
   if (d.door_model) dr.door_model_id = midByName(d.door_model);
   if (d.hinge) dr.hinge_id = midByName(d.hinge);
@@ -6737,6 +7561,7 @@ function autoDoorsForUnit(u, styleData) {
   if (d.banding) dr.banding_id = midByName(d.banding);
   if (d.assembly_door) dr.assembly_id = midByName(d.assembly_door);
   if (d.packaging_door) dr.packaging_id = midByName(d.packaging_door);
+  applyDefaultsOver(dr, DP_DOOR_MAP);
   u.doors = u.doors || [];
   u.doors.push(dr);
   return dr;
@@ -6886,11 +7711,13 @@ function renderEditorTables() {
   pg.units.forEach((u, i) => {
     const open = state.expanded.has(`${p.id}:${state.pageIdx}:${i}`);
     const a = (extra) => withRow(extra, "unit", i);
+    const bpBtn = (ui) =>
+      actBtn("", "bp", "نمای فنی ۲D", `data-bp="${ui}"`);
     uRows += `
       <tr${rowAttrs("unit", i)}>
         <td><div class="row-id-cell">
           ${inpT("unit", "label", u.label, a(`data-ui="${i}"`))}
-          ${acts(`${tplBtn(i)}${dupBtn("unit", i)}${SEP}${delBtn("unit", i)}`)}
+          ${acts(`${bpBtn(i)}${tplBtn(i)}${dupBtn("unit", i)}${SEP}${delBtn("unit", i)}`)}
         </div></td>
         <td><select class="cell-select" data-scope="unit" data-k="unit_type" data-ui="${i}" ${a("")}>
           ${Object.entries(UNIT_TYPES).map(([k, l]) => `<option value="${k}"${u.unit_type === k ? " selected" : ""}>${l}</option>`).join("")}
@@ -6972,9 +7799,14 @@ function renderEditorTables() {
           <div class="field"><label>ورق در</label>${doorSheetCell(u, dr, ui, di)}</div>
           <div class="field"><label>مدل / اجرت در</label>${matSelect("door_model", dr.door_model_id, `data-scope="door" data-k="door_model_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
           <div class="field"><label>لولا</label>${matSelect("hinge", dr.hinge_id, `data-scope="door" data-k="hinge_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
+          <div class="field"><label>گازور / جک</label>${matSelect("gas_spring", dr.gas_spring_id, `data-scope="door" data-k="gas_spring_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
           <div class="field"><label>دستگیره</label>${matSelect("handle", dr.handle_id, `data-scope="door" data-k="handle_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
           <div class="field"><label>مونتاژ</label>${matSelect("service", dr.assembly_id, `data-scope="door" data-k="assembly_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
           <div class="field"><label>بسته‌بندی</label>${matSelect("service", dr.packaging_id, `data-scope="door" data-k="packaging_id" data-ui="${ui}" data-di="${di}" ${a("")}`)}</div>
+          <div class="field"><label>لولا (عدد در هر لنگه)</label>${inp("door", "hinges_per_leaf", dr.hinges_per_leaf, a(`data-ui="${ui}" data-di="${di}"`), U_QTY, "w-qty")}</div>
+          <div class="field"><label>دستگیره (عدد در هر لنگه)</label>${inp("door", "handles_per_leaf", dr.handles_per_leaf, a(`data-ui="${ui}" data-di="${di}"`), U_QTY, "w-qty")}</div>
+          <div class="field"><label>گاز/پیستون (عدد در هر لنگه)</label>${inp("door", "gas_springs_per_leaf", dr.gas_springs_per_leaf, a(`data-ui="${ui}" data-di="${di}"`), U_QTY, "w-qty")}</div>
+          <div class="field"><label class="check" style="margin-top:1.35rem"><input type="checkbox" data-scope="door" data-k="glass" data-ui="${ui}" data-di="${di}" ${a("")}${dr.glass ? " checked" : ""}> در شیشه‌دار</label></div>
         </div>
       </td></tr>`;
     }
@@ -7147,12 +7979,81 @@ function refreshTbUnits() {
 }
 
 /* راهنمای واحدِ قیمت در مودال متریال */
+/* ═══ پیش‌فرض‌های جزئیات: پرکردن، خواندن و ذخیره ═══ */
+function populateDefaultPicks() {
+  $$("[data-dp]").forEach((sel) => {
+    const cat = sel.dataset.dpcat;
+    const cur = String(SETTINGS[sel.dataset.dp] ?? "");
+    const rows = (MATERIALS || []).filter((m) => m.cat === cat);
+    sel.innerHTML = `<option value="">— بدون پیش‌فرض —</option>` +
+      rows.map((m) => `<option value="${m.id}"${String(m.id) === cur ? " selected" : ""}>${esc(m.name)}</option>`).join("");
+    /* اگر قلمِ ذخیره‌شده دیگر وجود ندارد، به «بدون پیش‌فرض» برگردد */
+    sel.value = cur && rows.some((m) => String(m.id) === cur) ? cur : "";
+  });
+  /* حالت نوار PVC */
+  const bp = el("dpUnitBandMode");
+  if (bp) {
+    const cur = String(SETTINGS.default_unit_banding_mode || "auto");
+    bp.innerHTML = Object.keys(BANDING_MODES)
+      .map((v) => `<option value="${v}"${v === cur ? " selected" : ""}>${esc(BANDING_MODES[v])}</option>`).join("");
+    bp.value = BANDING_MODES[cur] ? cur : "auto";
+  }
+  /* اعداد */
+  $$("[data-dp-num]").forEach((inp) => {
+    const v = SETTINGS[inp.dataset.dpNum];
+    inp.value = v === undefined || v === "" ? "" : fmtInp(v);
+  });
+  $$('[data-dp-bool]').forEach((inp) => {
+    inp.checked = settingBool(inp.dataset.dpBool, inp.dataset.dpDefault === "1");
+  });
+  $$('[data-dp-str]').forEach((inp) => {
+    inp.value = SETTINGS[inp.dataset.dpStr] ?? inp.dataset.dpDefault ?? "";
+  });
+}
+
+function collectDefaultPicks(out) {
+  $$("[data-dp]").forEach((sel) => { out[sel.dataset.dp] = sel.value || ""; });
+  if (el("dpUnitBandMode")) out.default_unit_banding_mode = el("dpUnitBandMode").value || "auto";
+  $$("[data-dp-num]").forEach((inp) => {
+    out[inp.dataset.dpNum] = toEn(inp.value).replace(/[^\d.]/g, "");
+  });
+  $$('[data-dp-bool]').forEach((inp) => {
+    out[inp.dataset.dpBool] = inp.checked ? "1" : "0";
+  });
+  $$('[data-dp-str]').forEach((inp) => {
+    out[inp.dataset.dpStr] = inp.value;
+  });
+  return out;
+}
+
 function setMfPriceHint() {
   const h = el("mfPriceHint");
   if (!h) return;
   const uSel = el("mfUnit");
   const uLbl = uSel && uSel.selectedOptions[0] ? uSel.selectedOptions[0].textContent : "";
   h.textContent = `قیمت به «${CUR.name}» به ازای هر «${uLbl}»`;
+  /* ★ قلمِ ورقیِ واقعی: فیلدهای ابعاد ورق را «الزامی» نشان بده تا کاربر
+     پیش از ذخیره بفهمد، نه بعد از اینکه فاکتورِ ارزان صادر شد.            */
+  const SHEET_CATS = ["body_sheet", "door_sheet", "back_sheet", "drawer_sheet"];
+  const cat = el("mfCat") ? el("mfCat").value : "";
+  const unit = uSel ? uSel.value : "";
+  const needsDims = unit === "sheet" && SHEET_CATS.includes(cat);
+  ["mfSheetW", "mfSheetH"].forEach((id) => {
+    const inp = el(id);
+    if (!inp) return;
+    inp.required = needsDims;
+    const label = inp.parentElement && inp.parentElement.querySelector("label");
+    if (label) {
+      const star = label.querySelector(".req-star");
+      if (needsDims && !star) {
+        const s = document.createElement("span");
+        s.className = "req-star";
+        s.textContent = " *";
+        s.title = "برای قلمِ ورقی الزامی است";
+        label.appendChild(s);
+      } else if (!needsDims && star) star.remove();
+    }
+  });
 }
 
 /* ---------------------------------------------------------- محاسبه‌ی زنده */
@@ -7430,6 +8331,15 @@ function syncStickyOffsets() {
   const stickyAb = ab && ab.offsetParent && getComputedStyle(ab).position === "sticky";
   const ah = stickyAb ? Math.ceil(ab.getBoundingClientRect().height) + 8 : 0;
   document.documentElement.style.setProperty("--addbar-h", ah + "px");
+  /* ★ PATCH P0: ارتفاعِ زنده‌ی نوارِ فرمانِ چسبان و بنرِ «حالتِ نمایشی».
+     بدونِ این دو، سرستونِ کارت‌ها و نوارِ «افزودن» زیرشان پنهان می‌شدند. */
+  const eb = document.getElementById("editorBar");
+  const ebSticky = eb && !eb.hidden && eb.offsetParent && getComputedStyle(eb).position === "sticky";
+  document.documentElement.style.setProperty("--editor-bar-h",
+    (ebSticky ? Math.ceil(eb.getBoundingClientRect().height) + 8 : 0) + "px");
+  const db = document.getElementById("demoBanner");
+  document.documentElement.style.setProperty("--demo-banner-h",
+    (db && !db.hidden ? Math.ceil(db.getBoundingClientRect().height) : 0) + "px");
 }
 function readTotalbarInto(p) {
   p.profit_mode = el("tbProfitMode").value;
@@ -7519,6 +8429,7 @@ function openProjectEditor(id, withDraft) {
   if (!withDraft) state.pageIdx = 0;
   state.expanded.clear();
   el("projectEditor").hidden = false;
+  setEditingMode(true);
   /* کد و عنوانِ پروژه حالا در نوارِ فرمانِ چسبان دیده می‌شوند تا کاربر هنگام
      اسکرول در جدولِ بلند همیشه بداند «روی کدام پروژه» کار می‌کند.             */
   if (el("edCodeChip")) el("edCodeChip").textContent = p.code || "—";
@@ -7581,6 +8492,29 @@ function openProjectEditor(id, withDraft) {
   el("projectEditor").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+/** حالتِ «میزِ کار»: فهرستِ پروژه‌ها پنهان می‌شود تا ویرایشگر تمامِ ارتفاع بگیرد */
+function setEditingMode(on) {
+  const page = el("page-projects");
+  if (page) page.classList.toggle("editing", !!on);
+}
+
+/** فوکوسِ نرم روی عنوانِ پروژه — برای شروعِ فوریِ تایپ در پروژه‌ی تازه */
+function focusTitleSoon() {
+  requestAnimationFrame(() => {
+    const t = el("edTitle");
+    if (t && !el("projectEditor").hidden) { t.focus(); t.select(); }
+  });
+}
+
+/** «جزئیات بیشتر»ِ مشخصات پروژه: وضعیت، تلفن، اعتبار و نشانی */
+function setProjMoreOpen(open) {
+  const box = el("projMoreFields"), btn = el("btnProjMore");
+  if (!box) return;
+  box.hidden = !open;
+  if (btn) btn.setAttribute("aria-expanded", open ? "true" : "false");
+  if (btn) btn.classList.toggle("open", !!open);
+}
+
 function closeProjectEditor() {
   /* سه کنشِ ثابت (همان قراردادِ لایه‌ی مودال): ذخیره و بستن / ماندن / دور ریختن.
      کنشِ خطرناک عمداً قرمز و در کنارِ کنشِ امنِ سبز است تا انتخابِ درست آسان باشد. */
@@ -7623,6 +8557,7 @@ async function saveProject(silentToast) {
       clearDraft(p.id);
       undoReset();
       renderSectionPills(); renderSectionBar(); renderEditorTables();
+      refreshDashboard();
       renderProjects(); renderDashboard(); fillInvoiceProjects();
       if (!silentToast) toast("تغییرات پروژه در پایگاه‌داده ذخیره شد", "success");
       return true;
@@ -7632,6 +8567,7 @@ async function saveProject(silentToast) {
     }
   }
   clearDirty();
+  refreshDashboard();
   renderProjects(); renderDashboard(); fillInvoiceProjects();
   demoSave();
   if (!silentToast) toast("تغییرات ذخیره شد (حالت نمایشی)", "success");
@@ -7838,19 +8774,25 @@ const SETTING_MAP = {
   setWallD: "unit_wall_depth_cm", setWallS: "unit_wall_shelves",
   setTallL: "unit_tall_length_cm", setTallH: "unit_tall_height_cm",
   setTallD: "unit_tall_depth_cm", setTallS: "unit_tall_shelves",
+  /* ابعاد پیش‌فرض در و کشو */
+  setDoorQty: "default_door_qty", setDoorW: "default_door_w_cm", setDoorH: "default_door_h_cm",
+  setDrawerW: "default_drawer_w_cm", setDrawerH: "default_drawer_h_cm", setDrawerD: "default_drawer_d_cm",
 };
 const NUMERIC_SETTINGS = new Set(["setProfitPct", "setOverhead", "setWaste", "setInstallVal",
   "setSheetW", "setSheetH", "setFiberW", "setFiberH", "setBandBody", "setBandDoor",
   "setVatPct", "setBackupKeep",
   "setGroundL", "setGroundH", "setGroundD", "setGroundS",
   "setWallL", "setWallH", "setWallD", "setWallS",
-  "setTallL", "setTallH", "setTallD", "setTallS"]);
+  "setTallL", "setTallH", "setTallD", "setTallS",
+  "setDoorQty", "setDoorW", "setDoorH", "setDrawerW", "setDrawerH", "setDrawerD"]);
 /* مقادیر پیش‌فرض کارخانه — برای دکمه‌ی «بازنشانی پیش‌فرض‌ها» */
 const FACTORY_NUM_SETTINGS = {
   setProfitPct: "30", setOverhead: "0", setWaste: "10", setInstallVal: "0", setVatPct: "10",
   setGroundL: "60", setGroundH: "72", setGroundD: "55", setGroundS: "1",
   setWallL: "60", setWallH: "70", setWallD: "30", setWallS: "1",
   setTallL: "60", setTallH: "220", setTallD: "58", setTallS: "2",
+  setDoorQty: "1", setDoorW: "45", setDoorH: "70",
+  setDrawerW: "60", setDrawerH: "18", setDrawerD: "45",
 };
 
 function fillSettings() {
@@ -7860,6 +8802,7 @@ function fillSettings() {
     if (NUMERIC_SETTINGS.has(id)) el(id).value = fmtInp(v);
     else el(id).value = String(v);
   }
+  populateDefaultPicks();   /* پیش‌فرض‌های جزئیات (متریال/یراق) */
   el("swVatSet").checked = String(SETTINGS.vat_enabled) === "1";
   el("swFaDigits").checked = String(SETTINGS.persian_digits ?? "1") === "1";
   el("swAutoBackup").checked = String(SETTINGS.auto_backup ?? "1") === "1";
@@ -7884,6 +8827,7 @@ function collectSettings() {
   out.backup_keep = toEn(el("setBackupKeep").value);
   out.theme = document.documentElement.dataset.theme;
   out.web_font_size = String(el("setFontSize").value);
+  collectDefaultPicks(out);   /* پیش‌فرض‌های جزئیات (متریال/یراق) */
   return out;
 }
 
@@ -8077,16 +9021,131 @@ async function deleteTemplate(id) {
    همان چیزی که اپراتور ارّه و دستگاه نوارچسبان لازم دارد + برگه‌ی خرید. */
 let _wsData = null;
 let _wsTab = "cut";
+let _cmData = null;
 
-async function openWorkshopModal() {
+/* ═══════════════════════ پل CutMaster 2D ═══════════════════════
+   فایلِ ذخیره‌شده‌ی CutMaster را می‌خوانیم، با برش‌نامه‌ی همین پروژه
+   مقایسه می‌کنیم و نقشه‌ی واقعیِ چیده‌ماندنِ هر ورق را رسم می‌کنیم.        */
+async function compareCutMasterFile(file) {
+  const host = el("cmResult"), nameEl = el("cmFileName");
+  if (!host) return;
+  if (!API.ok) {
+    host.innerHTML = `<div class="empty">مقایسه با CutMaster به سرور نیاز دارد — کابینت سازی عرفان را اجرا کنید: python main.py</div>`;
+    return;
+  }
   const p = state.editingProject;
   if (!p) return;
   readEditorFieldsInto(p);
+  nameEl.textContent = "";
+  host.innerHTML = `<div class="empty">در حال خواندن فایل…</div>`;
+  let xmlText;
+  try { xmlText = await file.text(); }
+  catch (e) { host.innerHTML = `<div class="empty">خواندن فایل ناموفق بود: ${esc(e.message)}</div>`; return; }
+  try {
+    const resp = await API.req("POST", "/api/cutmaster/compare",
+      { xml: xmlText, project: calcFields(p), pages: p.pages });
+    _cmData = resp;
+    nameEl.textContent = file.name;
+    renderCutMasterCompare();
+  } catch (e) {
+    host.innerHTML = `<div class="empty">⚠ ${esc(e.message)}</div>`;
+  }
+}
+
+function renderCutMasterCompare() {
+  const host = el("cmResult");
+  if (!host || !_cmData) return;
+  const cm = _cmData.cm || {}, cmp = _cmData.compare || {};
+  const st = cm.stats || {};
+
+  /* --- آمارِ واقعی CutMaster --- */
+  const statHtml = `
+    <div class="ws-stats">
+      <span class="dim-cell accent"><b>${fa(st.used_sheets || 0)}</b>ورق مصرف‌شده در CutMaster</span>
+      <span class="dim-cell"><b>${fa(Math.round(st.average_yield || 0))}٪</b>بازده چیدمان</span>
+      <span class="dim-cell"><b>${fmt(st.part_area_sqm || 0, true)}</b>مترمربع قطعه</span>
+      <span class="dim-cell"><b>${fmt(st.cut_length_m || 0, true)}</b>متر برش</span>
+      <span class="dim-cell"><b>${fa(cmp.total_cm || 0)}</b>قطعه در CutMaster</span>
+      <span class="dim-cell"><b>${fa(cmp.total_ours || 0)}</b>قطعه در برش‌نامه‌ی ما</span>
+    </div>`;
+
+  /* --- جدولِ مغایرت --- */
+  const okRow = (c) => `
+    <tr><td>${esc(c.part)}</td><td class="sub">${esc(c.unit)}</td>
+        <td class="num ltr">${fa(Math.round(c.length_mm))}×${fa(Math.round(c.width_mm))}</td>
+        <td class="num">${fa(c.our_qty)}</td>
+        <td class="ok-cell">${c.diff === 0 ? "✓ مطابق" : `نسبت به ما ${c.diff < 0 ? fa(-c.diff) + " کمتر" : "+" + fa(c.diff)}`}</td></tr>`;
+  const missRow = (c, side) => `
+    <tr class="cm-bad"><td>${esc(side === "ours" ? c.part : `قطعه #${fa(c.idx)} CutMaster`)}</td>
+        <td class="sub">${esc(side === "ours" ? c.unit : "—")}</td>
+        <td class="num ltr">${fa(Math.round(c.length_mm))}×${fa(Math.round(c.width_mm))}</td>
+        <td class="num">${fa(c.qty)}</td>
+        <td class="bad-cell">${side === "ours" ? "در CutMaster نیست ⚠" : "در برش‌نامه‌ی ما نیست ⚠"}</td></tr>`;
+  const nBad = (cmp.ours_only || []).length + (cmp.cm_only || []).length;
+  const cmpHtml = `
+    <h4 class="cm-h4">${nBad ? `⚠ ${fa(nBad)} مغایرت پیدا شد — پیش از ارّه ببینید` : "✓ همه‌ی قطعات مطابق است"}</h4>
+    <div class="table-wrap"><table class="data">
+      <thead><tr><th>قطعه</th><th>یونیت</th><th>ابعاد (میلی‌متر)</th><th>تعداد</th><th>وضعیت</th></tr></thead>
+      <tbody>
+        ${(cmp.ours_only || []).map((c) => missRow(c, "ours")).join("")}
+        ${(cmp.cm_only || []).map((c) => missRow(c, "cm")).join("")}
+        ${(cmp.matched || []).map(okRow).join("")}
+      </tbody>
+    </table></div>`;
+
+  /* --- نقشه‌ی چیده‌ماندنِ هر ورق --- */
+  const pIdx = {};
+  (cm.parts || []).forEach((p) => { pIdx[p.idx] = p; });
+  const layoutHtml = (cm.diagrams || []).map((d) => {
+    const W = d.len_mm, H = d.wid_mm;
+    if (!W || !H) return "";
+    const uid = "cml" + d.tnb;
+    const s = Math.min(1, 640 / W, 420 / H);
+    const sw = W * s, sh = H * s;
+    let g = `<svg viewBox="0 0 ${sw} ${sh}" class="cm-sheet" role="img" aria-label="ورق ${fa(d.tnb)}">
+      <rect x="0" y="0" width="${sw}" height="${sh}" fill="#123a5c" stroke="#5b8ab8" stroke-width="2" rx="4"/>
+      <defs><pattern id="${uid}oc" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="7" stroke="rgba(255,217,138,0.5)" stroke-width="1.5"/></pattern></defs>`;
+    (d.offcuts || []).forEach((o) => {
+      g += `<rect x="${o.x_mm * s}" y="${o.y_mm * s}" width="${o.w_mm * s}" height="${o.h_mm * s}"
+        fill="url(#${uid}oc)" stroke="rgba(255,217,138,0.35)" stroke-width="0.8"/>`;
+    });
+    (d.pieces || []).forEach((e) => {
+      g += `<rect x="${e.x_mm * s}" y="${e.y_mm * s}" width="${e.w_mm * s}" height="${e.h_mm * s}"
+        fill="rgba(127,216,196,0.16)" stroke="#7fd8c4" stroke-width="1.1">
+        <title>${esc((pIdx[e.part] ? `قطعه #${fa(e.part)}` : ""))} ${fa(Math.round(e.w_mm))}×${fa(Math.round(e.h_mm))} میلی‌متر</title></rect>`;
+      if (e.w_mm * s > 34 && e.h_mm * s > 14) {
+        g += `<text x="${(e.x_mm + e.w_mm / 2) * s}" y="${(e.y_mm + e.h_mm / 2) * s + 3}"
+          text-anchor="middle" font-size="9" fill="#bfe8de" font-family="Vazirmatn, Tahoma, sans-serif">${e.part}</text>`;
+      }
+    });
+    g += `</svg>`;
+    return `<figure class="cm-fig"><div class="cm-sheet-wrap">${g}</div>
+      <figcaption>ورق ${fa(d.tnb)} — ${fa(Math.round(W))}×${fa(Math.round(H))} میلی‌متر • ${fa((d.pieces || []).length)} قطعه • هشور = پرت (چیده‌ماندن)</figcaption></figure>`;
+  }).join("");
+
+  host.innerHTML = statHtml + cmpHtml +
+    (layoutHtml ? `<h4 class="cm-h4">نقشه‌ی واقعی چیده‌ماندن (از CutMaster)</h4><div class="cm-layouts">${layoutHtml}</div>`
+                : `<p class="tiny muted">در این فایل نقشه‌ی چیدمانی ذخیره نشده بود.</p>`);
+}
+
+async function openWorkshopModal(tab) {
+  const p = state.editingProject;
+  if (!p) return;
+  readEditorFieldsInto(p);
+  if (tab) _wsTab = tab;
   const host = el("ws-cut");
   el("wsProjectName").textContent = `${p.title || ""} — ${p.code || ""}`.trim();
   openModal("workshop");
   host.innerHTML = `<div class="empty">در حال آماده‌سازی برش‌نامه…</div>`;
   el("ws-sheets").innerHTML = ""; el("ws-shop").innerHTML = "";
+  /* ★ هر بار پروژه باز می‌شود، نتیجه‌ی مقایسه‌ی قبلی باید پاک شود وگرنه
+     نتیجه‌ی پروژه‌ی دیگر روی این پروژه دیده می‌شد.                        */
+  _cmData = null;
+  const cmHost = el("cmResult");
+  if (cmHost) cmHost.innerHTML = "";
+  const cmName = el("cmFileName");
+  if (cmName) cmName.textContent = "";
   let pack;
   if (API.ok) {
     try {
@@ -8102,7 +9161,6 @@ async function openWorkshopModal() {
   _wsData = pack;
   renderWorkshop();
 }
-
 function renderWorkshop() {
   const d = _wsData;
   if (!d) return;
@@ -8198,7 +9256,7 @@ function renderWorkshop() {
 async function downloadWorkshopExcel() {
   const p = state.editingProject;
   if (!p) return;
-  if (!API.ok) { toast("خروجی اکسل فقط با سرور کبیر ممکن است (حالت نمایشی)", "warn"); return; }
+  if (!API.ok) { toast("خروجی اکسل فقط با سرور کابینت سازی عرفان ممکن است (حالت نمایشی)", "warn"); return; }
   try {
     const blob = await API.blob("POST", "/api/workshop/xlsx", { project: calcFields(p), pages: p.pages });
     const a = document.createElement("a");
@@ -8286,8 +9344,13 @@ async function buildQuickProject() {
       const r = await API.req("POST", "/api/quick-project", q);
       const np = normalizeProject(r.project);
       PROJECTS.unshift(np);
+      refreshDashboard();
       renderProjects(); fillInvoiceProjects(); renderDashboard();
       closeModal("quick");
+      /* ★ قیمت‌گیری سریع از داشبورد هم قابل اجراست؛ پیش از بازکردنِ ویرایشگر
+         باید به صفحه‌ی پروژه‌ها رفت، وگرنه ویرایشگر در صفحه‌ی پنهان باز می‌شود
+         و کاربر فقط یک مودالِ بسته و صفحه‌ی قبلی را می‌بیند. */
+      await navigate("projects");
       openProjectEditor(np.id);
       const c = r.calc || {};
       toast(`پروژه ساخته شد — مبلغ برآوردی: ${fmt(scaled(c.final_price || 0))} ${CUR.name} • ابعاد را با اندازه‌ی واقعی چک کنید`, "success");
@@ -8310,10 +9373,17 @@ async function buildQuickProject() {
       pg.countertop_lm = q.countertop_id ? (q.countertop_lm || q.ground_lm) : 0;
       pg.wall_length_cm = q.ground_lm * 100;
       applyStyleToPage(pg, sid);
+      /* انتخابِ صفحه در قیمت‌گیری سریع بر سبک اولویت دارد: «بدون صفحه»
+         یعنی هیچ صفحه‌ای، و انتخابِ صریح هم نباید با صفحه‌ی پیش‌فرضِ سبک
+         جایگزین شود (applyStyleToPage صفحه‌ی سبک را روی همه می‌چسباند). */
+      const cid = q.countertop_id ? Number(q.countertop_id) : 0;
+      pg.units.forEach((u) => { if (u.unit_type === "ground") u.countertop_id = cid; });
       p.pages = [pg];
       PROJECTS.unshift(p); demoSave();
+      refreshDashboard();
       renderProjects(); fillInvoiceProjects(); renderDashboard();
       closeModal("quick");
+      await navigate("projects");
       openProjectEditor(p.id);
       toast("پروژه ساخته شد (حالت نمایشی)", "success");
     }
@@ -8396,13 +9466,16 @@ function wire() {
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".search-wrap")) el("searchDrop").hidden = true;
   });
-  el("searchDrop").addEventListener("click", (e) => {
+  el("searchDrop").addEventListener("click", async (e) => {
     const b = e.target.closest(".sd-item");
     if (!b) return;
     el("searchDrop").hidden = true;
     gs.value = "";
     if (b.dataset.sdPage) navigate(b.dataset.sdPage);
-    else if (b.dataset.sdProject) { navigate("projects"); openProjectEditor(b.dataset.sdProject); }
+    else if (b.dataset.sdProject) {
+      await navigate("projects");
+      if (state.page === "projects") openProjectEditor(b.dataset.sdProject);
+    }
     else if (b.dataset.sdMat !== undefined) {
       navigate("materials");
       el("matSearch").value = b.dataset.sdMat;
@@ -8486,9 +9559,11 @@ function wire() {
     if (API.ok) { try { HISTORY = (await API.req("GET", "/api/price-history")).history; } catch (e) { /* ignore */ } }
     renderHistory();
   });
-  el("recentProjects").addEventListener("click", (e) => {
+  el("recentProjects").addEventListener("click", async (e) => {
     const b = e.target.closest("[data-open-project]");
-    if (b) { navigate("projects"); openProjectEditor(b.dataset.openProject); }
+    if (!b) return;
+    await navigate("projects");
+    if (state.page === "projects") openProjectEditor(b.dataset.openProject);
   });
   /* ★ P1/P2/D4: این دکمه دیگر مودال باز نمی‌کند.
      پیش‌تر: کلیک → navigate → مودالِ ۵ فیلدی → پرکردن → «ایجاد پروژه» →
@@ -8500,6 +9575,12 @@ function wire() {
      مودالِ قدیمی فقط برای مسیرِ «ساخت پروژه با این سبک» از صفحه‌ی سبک‌ها
      باقی مانده، چون آن‌جا انتخابِ سبک *دلیلِ* شروع است نه یک مانع. */
   el("btnQuickProject").addEventListener("click", () => startNewProjectInstant());
+  /* میان‌برهای داشبورد («شروع سریع») به همان کنش‌های سراسری وصل می‌شوند،
+     نه به مسیرِ تازه‌ای که رفتار دوگانه بسازد. */
+  const qaNew = el("qaNewProject");
+  if (qaNew) qaNew.addEventListener("click", () => startNewProjectInstant());
+  const qaQuote = el("qaQuickQuote");
+  if (qaQuote) qaQuote.addEventListener("click", () => openQuickModal());
 
   /* ---------------- متریال ---------------- */
   el("matSearch").addEventListener("input", renderMaterials);
@@ -8518,7 +9599,7 @@ function wire() {
   });
   el("btnCloseHistory").addEventListener("click", () => (el("historyCard").hidden = true));
   el("btnMatExcel").addEventListener("click", async () => {
-    if (!API.ok) { toast("خروجی اکسل در حالت نمایشی فعال نیست — کبیر را اجرا کنید: python main.py", "warn"); return; }
+    if (!API.ok) { toast("خروجی اکسل در حالت نمایشی فعال نیست — کابینت سازی عرفان را اجرا کنید: python main.py", "warn"); return; }
     try {
       const f = await API.blob("GET", "/api/materials/export");
       downloadBlob(f.bytes, f.name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -8705,6 +9786,7 @@ function wire() {
   });
 
   el("mfUnit").addEventListener("change", setMfPriceHint);
+  el("mfCat").addEventListener("change", setMfPriceHint);   /* ★ ابعادِ الزامی با تغییرِ دسته هم به‌روز شود */
 
   /* ★ ثبتِ فرمِ متریال — هم با کلیک، هم با Enter/Ctrl+S (از لایه‌ی مودال).
      خطای اعتبارسنجی کنارِ خودِ فیلد نشان داده می‌شود و فوکوس روی اولین
@@ -8712,9 +9794,18 @@ function wire() {
   async function saveMaterialForm() {
     clearFieldErrors(el("modal-material"));
     const payload = matPayload();
+    /* ★ قلمِ ورقیِ واقعی بدونِ ابعاد ورق = هزینه‌ی ورقِ پروژه‌ها بی‌صدا صفر.
+       همین‌جا سد می‌شود (قلم‌های «خدمات» که واحدشان ورق است ابعاد ندارند
+       و نباید سد بخورند — فقط دسته‌های ورقیِ واقعی چک می‌شوند).            */
+    const SHEET_CATS = ["body_sheet", "door_sheet", "back_sheet", "drawer_sheet"];
+    const needsDims = payload.unit === "sheet" && SHEET_CATS.includes(payload.cat);
     if (!validateForm([
       ["mfName", (v) => !!v.trim(), "نام قلم را وارد کنید — بدون نام، در فهرست‌ها پیدا نمی‌شود."],
       ["mfPrice", (v) => parseNum(v) > 0, "قیمت باید عددی بزرگ‌تر از صفر باشد."],
+      ...(needsDims ? [
+        ["mfSheetW", (v) => parseNum(v) > 0, "برای قلمِ ورقی، عرض ورق الزامی است — بدونِ آن قیمتِ هر مترمربع صفر و هزینه‌ی ورقِ پروژه‌ها بی‌صدا صفر می‌شود."],
+        ["mfSheetH", (v) => parseNum(v) > 0, "برای قلمِ ورقی، ارتفاع ورق الزامی است — بدونِ آن قیمتِ هر مترمربع صفر و هزینه‌ی ورقِ پروژه‌ها بی‌صدا صفر می‌شود."],
+      ] : []),
     ])) return false;
     let resp = null;
     if (API.ok) {
@@ -8758,6 +9849,7 @@ function wire() {
       }
       renderProjects();
     }
+    refreshDashboard();
     renderDashboard();
     if (state.editingProject) { renderSectionBar(); renderEditorTables(); scheduleRecalc(100); }
   }
@@ -8972,15 +10064,14 @@ function wire() {
       applyStyleToUnit(u, styleDataOf(pg));
       pg.units.push(u);
     }
-    navigate("projects");
+    await navigate("projects");
+    refreshDashboard();
     renderProjects(); renderDashboard(); fillInvoiceProjects();
     openProjectEditor(np.id);
-    /* فوکوس روی عنوان: اولین چیزی که کاربر باید تایپ کند، نه یک کلیکِ اضافه */
-    requestAnimationFrame(() => {
-      const t = el("edTitle");
-      if (t && !el("projectEditor").hidden) { t.focus(); t.select(); }
-    });
-    toast("پروژه ساخته شد — عنوان را بنویسید و ابعاد یونیت را وارد کنید", "success");
+    /* پروژه‌ی تازه یعنی کاربر باید عنوان و مشتری را بنویسد → فوکوس مستقیم
+       روی «عنوان» در همان نوارِ باریکِ مشخصات می‌نشیند. */
+    focusTitleSoon();
+    toast("پروژه ساخته شد — ابعاد یونیت را وارد کنید", "success");
   }
 
   async function createProjectForm() {
@@ -9014,6 +10105,8 @@ function wire() {
     }
     if (!PROJECTS.includes(np)) PROJECTS.unshift(np);
     closeModal("project");
+    await navigate("projects");
+    refreshDashboard();
     renderProjects(); renderDashboard(); fillInvoiceProjects();
     openProjectEditor(np.id);
     toast("پروژه‌ی جدید ایجاد شد — یونیت‌ها را وارد کنید", "success");
@@ -9040,7 +10133,8 @@ function wire() {
           catch (err) { toast("حذف ناموفق: " + esc(err.message), "error"); return; }
         } else demoSave();
         PROJECTS.splice(PROJECTS.indexOf(p), 1);
-        if (state.editingProject === p) { state.editingProject = null; el("projectEditor").hidden = true; }
+        if (state.editingProject === p) { state.editingProject = null; el("projectEditor").hidden = true; setEditingMode(false); }
+        refreshDashboard();
         renderProjects(); renderDashboard(); fillInvoiceProjects();
         toast("پروژه حذف شد", "success");
       }, "حذف پروژه");
@@ -9072,6 +10166,7 @@ function wire() {
       demoSave();
     }
     PROJECTS.unshift(np);
+    refreshDashboard();
     renderProjects(); fillInvoiceProjects(); renderDashboard();
     openProjectEditor(np.id);
     toast("کپی پروژه ایجاد شد", "success");
@@ -9118,7 +10213,8 @@ function wire() {
       toast("بخش جدید اضافه شد — سبک و یونیت‌ها را وارد کنید");
     }
   });
-  el("btnAddSection").addEventListener("click", () => el("btnAddSection2").click());
+  /* دکمه‌ی قدیمی «افزودن بخش» در نوارِ فشرده حذف شد — قرصِ «＋ بخش» تنها مسیر است */
+  if (el("btnAddSection")) el("btnAddSection").addEventListener("click", () => el("btnAddSection2").click());
   el("btnDelSection").addEventListener("click", () => {
     const p = state.editingProject;
     if (!p) return;
@@ -9146,6 +10242,13 @@ function wire() {
     const st = STYLES.find((s) => s.id === Number(pg.style_id));
     const before = undoSnapshot();          /* وضعیتِ پیش از اعمال — برای بازگردانی */
     applyStyleToPage(pg, pg.style_id);
+    if (defaultsBeatStyle()) {
+      pg.units.forEach((u) => {
+        applyDefaultsOver(u, DP_UNIT_MAP);
+        (u.doors || []).forEach((d) => applyDefaultsOver(d, DP_DOOR_MAP));
+        (u.drawers || []).forEach((d) => applyDefaultsOver(d, DP_DRAWER_MAP));
+      });
+    }
     markDirty();
     renderSectionBar(); renderEditorTables(); scheduleRecalc(50);
     toast(`متریالِ سبک «<b>${esc(st.name)}</b>» روی همه‌ی یونیت‌ها، درها و کشوهای این بخش اعمال شد`,
@@ -9205,13 +10308,17 @@ function wire() {
     return (st && st.data) || {};
   }
   function applyStyleToUnit(u, d) {
-    for (const [role, attr] of [["body", "body_id"], ["back", "back_id"], ["banding", "banding_id"],
-      ["countertop", "countertop_id"], ["leg", "leg_id"], ["shelf_pin", "shelf_pin_id"],
-      ["crown", "crown_id"], ["underlight", "underlight_id"], ["kickboard", "kickboard_id"],
-      ["assembly", "assembly_id"]]) {
-      if (d[role]) u[attr] = midByName(d[role]);
-    }
-    if (!u.assembly_id) u.assembly_id = midByName("سوراخ‌کاری و مونتاژ (هر یونیت)");
+    const setStyle = () => {
+      for (const [role, attr] of [["body", "body_id"], ["back", "back_id"], ["banding", "banding_id"],
+        ["countertop", "countertop_id"], ["leg", "leg_id"], ["shelf_pin", "shelf_pin_id"],
+        ["crown", "crown_id"], ["underlight", "underlight_id"], ["kickboard", "kickboard_id"],
+        ["assembly", "assembly_id"]]) {
+        if (d[role]) u[attr] = midByName(d[role]);
+      }
+      if (!u.assembly_id) u.assembly_id = midByName("سوراخ‌کاری و مونتاژ (هر یونیت)");
+    };
+    /* ★ اولویت قابل تنظیم: «پیش‌فرض‌های من» (روشن) یا «سبک بخش» (خاموش). */
+    applyStyleThenDefaults(u, setStyle, DP_UNIT_MAP);
   }
   $$(".add-row").forEach((b) => b.addEventListener("click", () => {
     const p = state.editingProject;
@@ -9223,7 +10330,17 @@ function wire() {
     let focusKind = null, focusIdx = null;
     if (kind === "units" || (kind && kind.startsWith("unit:"))) {
       const type = kind.startsWith("unit:") ? kind.slice("unit:".length) : "ground";
-      const u = defaultUnit(type);
+      /* ★ گوشه‌ی L: موتور آن را مثل یونیت زمینی می‌شمارد (بدون سقف، با پایه
+         و پاخور) ولی ابعاد پایه‌ی ۹۰×۹۰×۷۲ می‌گیرد تا کاربر مجبور نباشد
+         عمق را دستی از ۵۵ به ۹۰ تغییر دهد. */
+      let u;
+      if (type === "corner") {
+        u = defaultUnit("ground");
+        u.label = "یونیت گوشه";
+        u.length_cm = 90; u.depth_cm = 90; u.height_cm = 72; u.shelves = 1;
+      } else {
+        u = defaultUnit(type);
+      }
       applyStyleToUnit(u, d);
       pg.units.push(u);
       focusKind = "unit"; focusIdx = pg.units.length - 1;
@@ -9231,23 +10348,33 @@ function wire() {
     } else if (kind === "doors") {
       if (!pg.units.length) { toast("ابتدا یک یونیت بسازید", "warn"); return; }
       const dr = defaultDoor();
-      if (d.door) dr.material_id = midByName(d.door);
-      if (d.door_model) dr.door_model_id = midByName(d.door_model);
-      if (d.hinge) dr.hinge_id = midByName(d.hinge);
-      if (d.handle) dr.handle_id = midByName(d.handle);
-      if (d.banding) dr.banding_id = midByName(d.banding);
-      if (d.assembly_door) dr.assembly_id = midByName(d.assembly_door);
-      if (d.packaging_door) dr.packaging_id = midByName(d.packaging_door);
+      const setDoorStyle = () => {
+        if (d.door) dr.material_id = midByName(d.door);
+        if (d.door_model) dr.door_model_id = midByName(d.door_model);
+        if (d.hinge) dr.hinge_id = midByName(d.hinge);
+        if (d.handle) dr.handle_id = midByName(d.handle);
+        if (d.banding) dr.banding_id = midByName(d.banding);
+        if (d.assembly_door) dr.assembly_id = midByName(d.assembly_door);
+        if (d.packaging_door) dr.packaging_id = midByName(d.packaging_door);
+      };
+      applyStyleThenDefaults(dr, setDoorStyle, DP_DOOR_MAP);
+      const doorUnit = pg.units[state.lastUnitIdx || 0];
+      dr.w_cm = leafWidth(doorUnit.length_cm, dr.qty);
+      const fitH = r1((+doorUnit.height_cm || 0) - DOOR_REVEAL_CM);
+      if (!dr.h_cm || dr.h_cm > fitH) dr.h_cm = fitH;
       pg.units[state.lastUnitIdx || 0].doors.push(dr);
       focusKind = "door"; focusIdx = (state.lastUnitIdx || 0) + ":" + (pg.units[state.lastUnitIdx || 0].doors.length - 1);
     } else if (kind === "drawers") {
       if (!pg.units.length) { toast("ابتدا یک یونیت بسازید", "warn"); return; }
       const dw = defaultDrawer();
-      if (d.slide) dw.slide_id = midByName(d.slide);
-      if (d.drawer_sheet) dw.sheet_id = midByName(d.drawer_sheet);
-      if (d.door) dw.front_id = midByName(d.door);
-      if (d.handle) dw.handle_id = midByName(d.handle);
-      if (d.banding) dw.banding_id = midByName(d.banding);
+      const setDrawerStyle = () => {
+        if (d.slide) dw.slide_id = midByName(d.slide);
+        if (d.drawer_sheet) dw.sheet_id = midByName(d.drawer_sheet);
+        if (d.door) dw.front_id = midByName(d.door);
+        if (d.handle) dw.handle_id = midByName(d.handle);
+        if (d.banding) dw.banding_id = midByName(d.banding);
+      };
+      applyStyleThenDefaults(dw, setDrawerStyle, DP_DRAWER_MAP);
       pg.units[state.lastUnitIdx || 0].drawers.push(dw);
       focusKind = "drawer"; focusIdx = (state.lastUnitIdx || 0) + ":" + (pg.units[state.lastUnitIdx || 0].drawers.length - 1);
     } else if (kind === "facade") {
@@ -9255,13 +10382,29 @@ function wire() {
         pg.detail_mode = "detailed";
         renderSectionBar();
       }
-      pg.detail_rows.push({ label: "ردیف درنما", qty: 1, w_cm: 100, h_cm: 60, price_per_sqm: 300000 });
+      pg.detail_rows.push({
+        label: settingStr("default_facade_label", "ردیف درنما"),
+        qty: settingNum("default_facade_qty", 1),
+        w_cm: settingNum("default_facade_w_cm", 100),
+        h_cm: settingNum("default_facade_h_cm", 60),
+        price_per_sqm: settingNum("default_facade_price_per_sqm", 300000),
+      });
       focusKind = "facade"; focusIdx = pg.detail_rows.length - 1;
     } else if (kind === "extras") {
-      pg.extras.push({ label: "قلم جدید", qty: 1, unit: "piece", price: 500000, visible: true });
+      pg.extras.push({
+        label: settingStr("default_extra_label", "قلم جدید"),
+        qty: settingNum("default_extra_qty", 1),
+        unit: settingStr("default_extra_unit", "piece"),
+        price: settingNum("default_extra_price", 500000), visible: true,
+      });
       focusKind = "extra"; focusIdx = pg.extras.length - 1;
     } else if (kind === "services") {
-      pg.services.push({ label: "خدمت جدید", basis: "fixed", qty: 1, price: 300000 });
+      pg.services.push({
+        label: settingStr("default_service_label", "خدمت جدید"),
+        basis: settingStr("default_service_basis", "fixed"),
+        qty: settingNum("default_service_qty", 1),
+        price: settingNum("default_service_price", 300000),
+      });
       focusKind = "service"; focusIdx = pg.services.length - 1;
     }
     markDirty();
@@ -9445,6 +10588,10 @@ function wire() {
     const tp = e.target.closest("[data-tpl-save]");
     if (tp) { openTemplateSaveModal(+tp.dataset.tplSave); return; }
 
+    /* نمای فنی ۲D — کاغذ آبی */
+    const bp = e.target.closest("[data-bp]");
+    if (bp) { openBlueprintModal(+bp.dataset.bp); return; }
+
     const d = e.target.closest("[data-del-row]");
     if (d) {
       const kind = d.dataset.delRow;
@@ -9577,6 +10724,9 @@ function wire() {
   if (typeof ResizeObserver !== "undefined") {
     const tbEl = el("totalBar");
     if (tbEl) { try { new ResizeObserver(() => syncStickyOffsets()).observe(tbEl); } catch (e) {} }
+    /* ★ PATCH P0: نوارِ فرمان با wrap شدن ارتفاعش عوض می‌شود */
+    const ebEl = el("editorBar");
+    if (ebEl) { try { new ResizeObserver(() => syncStickyOffsets()).observe(ebEl); } catch (e) {} }
   }
   window.addEventListener("resize", syncStickyOffsets);
   syncStickyOffsets();
@@ -9638,7 +10788,7 @@ function wire() {
     } else window.print();
   });
   el("btnPdfInv").addEventListener("click", () => busy(el("btnPdfInv"), async () => {
-    if (!API.ok) { toast("خروجی PDF در حالت نمایشی فعال نیست — کبیر را اجرا کنید: python main.py", "warn"); return; }
+    if (!API.ok) { toast("خروجی PDF در حالت نمایشی فعال نیست — کابینت سازی عرفان را اجرا کنید: python main.py", "warn"); return; }
     if (!state.inv.payload) { await refreshInvoice(); }
     try {
       const body = Object.assign({}, state.inv.payload, { number: state.inv.number });
@@ -9648,7 +10798,7 @@ function wire() {
     } catch (e) { toast("خطا: " + esc(e.message), "error"); }
   }));
   el("btnXlsInv").addEventListener("click", () => busy(el("btnXlsInv"), async () => {
-    if (!API.ok) { toast("خروجی اکسل در حالت نمایشی فعال نیست — کبیر را اجرا کنید: python main.py", "warn"); return; }
+    if (!API.ok) { toast("خروجی اکسل در حالت نمایشی فعال نیست — کابینت سازی عرفان را اجرا کنید: python main.py", "warn"); return; }
     if (!state.inv.payload) { await refreshInvoice(); }
     try {
       const body = Object.assign({}, state.inv.payload, { number: state.inv.number });
@@ -9899,7 +11049,12 @@ function wire() {
 
   /* --- برش‌نامه و لیست خرید --- */
   const btnWs = el("btnWorkshop");
-  if (btnWs) btnWs.addEventListener("click", () => busy(btnWs, openWorkshopModal));
+  if (btnWs) btnWs.addEventListener("click", () => busy(btnWs, () => openWorkshopModal("cut")));
+  /* ★ ورودیِ آشکارِ کات مستر — مستقیم روی تب مقایسه باز می‌شود */
+  const btnCm = el("btnCutMaster");
+  if (btnCm) btnCm.addEventListener("click", () => busy(btnCm, () => openWorkshopModal("cm")));
+  const btnCm2 = el("btnCutMaster2");
+  if (btnCm2) btnCm2.addEventListener("click", () => openWorkshopModal("cm"));
   const wsTabs = el("wsTabs");
   if (wsTabs) wsTabs.addEventListener("click", (e) => {
     const t = e.target.closest("[data-wstab]");
@@ -9914,6 +11069,24 @@ function wire() {
     document.body.classList.add("printing-ws");
     const done = () => document.body.classList.remove("printing-ws");
     setTimeout(() => { window.print(); setTimeout(done, 400); }, 60);
+  });
+
+  /* --- پل CutMaster 2D: فایل → مقایسه با برش‌نامه --- */
+  const btnCmPick = el("btnCmPick"), cmFile = el("cmFile");
+  if (btnCmPick && cmFile) {
+    btnCmPick.addEventListener("click", () => cmFile.click());
+    cmFile.addEventListener("change", () => {
+      const f = cmFile.files && cmFile.files[0];
+      if (!f) return;
+      compareCutMasterFile(f);
+      cmFile.value = "";
+    });
+  }
+
+  /* --- نمای فنی ۲D (کاغذ آبی) --- */
+  const btnBpPrint = el("btnBpPrint");
+  if (btnBpPrint) btnBpPrint.addEventListener("click", () => {
+    if (typeof printBlueprint === "function") printBlueprint();
   });
 
   /* --- رند کردن مبلغ نهایی --- */
@@ -10032,6 +11205,13 @@ function wire() {
        باشد — وگرنه «راهنما» فقط با موس باز می‌شد (نقض Keyboard-First).   */
     guideHead.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); }
+    });
+  }
+
+  const btnProjMore = el("btnProjMore");
+  if (btnProjMore) {
+    btnProjMore.addEventListener("click", () => {
+      setProjMoreOpen(el("projMoreFields").hidden);
     });
   }
   const btnSecBar = el("btnSecBar"), secBarWrap = el("secBarWrap");
@@ -10259,6 +11439,7 @@ function renderAll() {
   if (state.editingProject && !PROJECTS.includes(state.editingProject)) {
     state.editingProject = null;
     el("projectEditor").hidden = true;
+    setEditingMode(false);
   }
 }
 
@@ -10286,7 +11467,7 @@ function startConnWatchdog() {
           API.ok = false;
           fails = 0;
           setConnBadge();
-          toast("اتصال به سرور کبیر قطع شد — حالت نمایشی فعال است", "warn");
+          toast("اتصال به سرور کابینت سازی عرفان قطع شد — حالت نمایشی فعال است", "warn");
         }
       } else fails = 0;
     } else {
@@ -10294,7 +11475,7 @@ function startConnWatchdog() {
       if (ok) {
         setConnBadge();
         renderAll();
-        toast("دوباره به سرور کبیر متصل شد", "success");
+        toast("دوباره به سرور کابینت سازی عرفان متصل شد", "success");
       }
     }
   }, 20000);
@@ -10323,17 +11504,17 @@ async function init() {
   wire();
   startConnWatchdog();
 
-  const route = () => {
+  const route = async () => {
     const h = (location.hash || "").replace(/^#\/?/, "").split("/");
     const page = PAGES[h[0]] ? h[0] : "dashboard";
-    navigate(page, h[1], true);
-    if (page === "projects" && h[1]) openProjectEditor(h[1]);
+    await navigate(page, h[1], true);
+    if (page === "projects" && h[1] && state.page === "projects") openProjectEditor(h[1]);
   };
   window.addEventListener("hashchange", route);
   route();
   hideSplash();
   if (!ok) {
-    setTimeout(() => toast("سرور کبیر در دسترس نیست — رابط در <b>حالت نمایشی</b> با داده‌های نمونه اجرا شد. برای اتصال واقعی کبیر را اجرا کنید: <b class='ltr'>python main.py</b>", "warn"), 900);
+    setTimeout(() => toast("سرور کابینت سازی عرفان در دسترس نیست — رابط در <b>حالت نمایشی</b> با داده‌های نمونه اجرا شد. برای اتصال واقعی کابینت سازی عرفان را اجرا کنید: <b class='ltr'>python main.py</b>", "warn"), 900);
   }
 }
 
@@ -10349,6 +11530,7 @@ if (typeof module !== "undefined" && module.exports) {
 
 
 
+
 </head>
 <body>
 
@@ -10361,7 +11543,7 @@ if (typeof module !== "undefined" && module.exports) {
         <line x1="9.5" y1="7" x2="9.5" y2="8"/><line x1="14.5" y1="7" x2="14.5" y2="8"/>
       </svg>
     </div>
-    <div class="splash-title">کبیر</div>
+    <div class="splash-title">کابینت سازی عرفان</div>
     <div class="splash-sub">محاسبه‌گر قیمت تمام‌شده و صدور فاکتور صنعت کابینت</div>
     <div class="splash-bar" aria-hidden="true"><i></i></div>
     <div class="splash-msg" id="splashMsg">در حال راه‌اندازی…</div>
@@ -10370,7 +11552,7 @@ if (typeof module !== "undefined" && module.exports) {
 
 <noscript>
   <div style="padding:2rem;text-align:center;font-family:Tahoma,sans-serif">
-    کبیر برای اجرا به جاوااسکریپت نیاز دارد. لطفاً جاوااسکریپت مرورگر را فعال کنید.
+    کابینت سازی عرفان برای اجرا به جاوااسکریپت نیاز دارد. لطفاً جاوااسکریپت مرورگر را فعال کنید.
   </div>
 </noscript>
 
@@ -10384,7 +11566,7 @@ if (typeof module !== "undefined" && module.exports) {
       </svg>
     </div>
     <div>
-      <h1>کبیر</h1>
+      <h1>کابینت سازی عرفان</h1>
       <p>محاسبه‌گر قیمت تمام‌شده‌ی کابینت</p>
     </div>
   </div>
@@ -10420,7 +11602,7 @@ if (typeof module !== "undefined" && module.exports) {
   </nav>
 
   <div class="sidebar-foot">
-    <div class="ver"><span class="dot"></span> <span id="appVer">کبیر — رابط وب</span></div>
+    <div class="ver"><span class="dot"></span> <span id="appVer">کابینت سازی عرفان — رابط وب</span></div>
     <div id="connBadge" class="conn demo"><span class="dot"></span> در حال اتصال…</div>
     <div class="tiny" style="opacity:.7">
       میان‌بر: <b>/</b> جست‌وجو • <b>Alt+۱..۶</b> صفحه‌ها • <b>Ctrl+S</b> یا <b>Enter</b> ثبتِ فرم •
@@ -10447,7 +11629,7 @@ if (typeof module !== "undefined" && module.exports) {
       </div>
       <div class="search-wrap">
         <svg class="search-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
-        <input type="search" id="globalSearch" placeholder="جست‌وجوی متریال، پروژه…" autocomplete="off" aria-label="جست‌وجوی سراسری">
+        <input type="search" id="globalSearch" placeholder="جست‌وجو…" autocomplete="off" aria-label="جست‌وجوی سراسری">
         <span class="search-kbd">/</span>
         <div class="search-drop" id="searchDrop" hidden></div>
       </div>
@@ -10487,7 +11669,7 @@ if (typeof module !== "undefined" && module.exports) {
 
   <div class="demo-banner" id="demoBanner" hidden role="status">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>
-    <span><b>حالت نمایشی:</b> سرور کبیر در دسترس نیست و داده‌ها فقط در مرورگر ذخیره می‌شوند. برای کار با پایگاه‌داده‌ی واقعی، کبیر را اجرا کنید: <b class="ltr">python main.py</b></span>
+    <span><b>حالت نمایشی:</b> سرور کابینت سازی عرفان در دسترس نیست و داده‌ها فقط در مرورگر ذخیره می‌شوند. برای کار با پایگاه‌داده‌ی واقعی، کابینت سازی عرفان را اجرا کنید: <b class="ltr">python main.py</b></span>
     <button class="btn outline sm" id="btnBannerReconnect" type="button">اتصال به سرور</button>
   </div>
 
@@ -10538,17 +11720,35 @@ if (typeof module !== "undefined" && module.exports) {
           </div>
           <div class="card-body"><div class="chart" id="salesChart" role="img" aria-label="نمودار فروش ماه‌های اخیر"></div></div>
         </div>
+
+        <!-- ستونِ کنارِ نمودار: شروعِ سریع به‌جای فضای خالی.
+             سه کنشِ واقعیِ روزِ اول، با هدف‌های بزرگ؛ کاربر برای شروعِ کار
+             لازم نیست اول منو را بگردد. -->
+        <div class="card quick-card">
+          <div class="card-head"><h3>شروع سریع</h3></div>
+          <div class="card-body quick-actions">
+            <button class="quick-act" id="qaNewProject" type="button">
+              <span class="qa-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+              <span class="qa-txt"><b>پروژه‌ی جدید</b><small>ویرایشگر با یک یونیت آماده</small></span>
+              <kbd class="kbd">Ctrl+N</kbd>
+            </button>
+            <button class="quick-act" id="qaQuickQuote" type="button">
+              <span class="qa-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+              <span class="qa-txt"><b>قیمت‌گیری تلفنی</b><small>فقط با متراژ و سبک</small></span>
+            </button>
+            <button class="quick-act" type="button" data-goto="materials">
+              <span class="qa-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 10 5.5-10 5.5L2 7.5z"/><path d="m2 12.5 10 5.5 10-5.5"/><path d="m2 17 10 5.5L22 17"/></svg></span>
+              <span class="qa-txt"><b>به‌روزرسانی قیمت متریال</b><small>نرخ روز ورق، یراق و اجرت</small></span>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <!-- ★ D3: «راهنمای سریع» پیش‌تر یک کارتِ همیشه‌باز بود که هر بارِ ورود،
-           نیمی از نمای داشبورد را می‌گرفت — ولی محتوایش آموزشیِ ثابت است و بعد
-           از هفته‌ی اول خوانده نمی‌شود. طبق اصلِ افشای تدریجی، حالا پیش‌فرض
-           **بسته** است و فقط یک خط خلاصه نشان می‌دهد؛ با یک کلیک (یا Enter)
-           باز می‌شود. محتوا حذف نشده، فقط از دیدِ روزانه بیرون رفته. -->
+      <!-- راهنمای گام‌به‌گام: تمام‌عرض و پیش‌فرض بسته تا نمای روزانه را نگیرد -->
       <div class="card collapsible collapsed" id="guideCard">
         <div class="card-head" id="guideHead" role="button" tabindex="0"
              aria-expanded="false" aria-controls="guideBody">
-          <h3>راهنمای سریع <span class="head-peek">— ۵ گام از قیمت متریال تا چاپ فاکتور</span></h3>
+          <h3>راهنمای سریع <span class="head-peek">— ۵ گام تا چاپ فاکتور</span></h3>
         </div>
         <div class="card-body" id="guideBody" style="padding-top:.4rem;padding-bottom:.6rem">
           <ol class="guide">
@@ -10581,6 +11781,9 @@ if (typeof module !== "undefined" && module.exports) {
 
     <!-- ================= صفحه‌ی پروژه‌ها ================= -->
     <section class="page" id="page-projects">
+      <!-- فهرست پروژه‌ها فقط وقتی دیده می‌شود که ویرایشگری باز نیست؛ در حال
+           کار روی یک پروژه، تمامِ ارتفاعِ صفحه به میزِ کار (ویرایشگر) می‌رسد. -->
+      <div id="projectsList">
       <div class="toolbar no-print">
         <div class="search-wrap">
           <svg class="search-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
@@ -10617,6 +11820,7 @@ if (typeof module !== "undefined" && module.exports) {
       <div class="card no-print">
         <div class="table-wrap sticky-head"><table class="data" id="projectsTable" aria-label="فهرست پروژه‌ها"></table></div>
       </div>
+      </div><!-- /projectsList -->
 
       <!-- ═══════════ ویرایشگر پروژه ═══════════
            نوارِ فرمانِ چسبان: کنش‌های پرتکرار (ذخیره / صدور فاکتور / برش‌نامه)
@@ -10650,6 +11854,14 @@ if (typeof module !== "undefined" && module.exports) {
               برش‌نامه و خرید
             </button>
 
+            <!-- ★ ورودیِ آشکارِ CutMaster: پیش‌تر فقط تبِ چهارمِ مودالِ برش‌نامه
+                 بود و کاربر پیدایش نمی‌کرد. حالا یک کلیک از خودِ ویرایشگر.     -->
+            <button class="btn outline sm" id="btnCutMaster" type="button"
+                    title="فایل پروژه‌ی CutMaster 2D را انتخاب کنید تا با برش‌نامه مقایسه شود و نقشه‌ی چیده‌ماندنِ ورق‌ها را ببینید">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              کات مستر
+            </button>
+
             <!-- ★ M8/M9/M10/M11: چهار کنشِ کم‌کاربرد که پیش‌تر پراکنده بودند
                  («کپی پروژه» در نوار ویرایشگر، «مدیریت الگوها» در نوار ابزار
                  یونیت‌ها، «اعمال سبک» و «حذف بخش» در نوار بخش‌ها) در **یک** منوی
@@ -10665,6 +11877,10 @@ if (typeof module !== "undefined" && module.exports) {
                 <div class="ovf-label" role="presentation">پروژه</div>
                 <button class="ovf-item" id="btnDupProject" type="button" role="menuitem"
                         title="یک کپیِ کامل از این پروژه بساز (ابتدا تغییرات ذخیره می‌شود)">کپی پروژه</button>
+                <div class="ovf-sep" role="none"></div>
+                <div class="ovf-label" role="presentation">کات مستر ۲D</div>
+                <button class="ovf-item" id="btnCutMaster2" type="button" role="menuitem"
+                        title="افزودن فایل CutMaster و مقایسه با برش‌نامه">مقایسه با فایل CutMaster…</button>
                 <div class="ovf-sep" role="none"></div>
                 <div class="ovf-label" role="presentation">بخشِ جاری</div>
                 <button class="ovf-item" id="btnApplyStyle" type="button" role="menuitem"
@@ -10700,14 +11916,35 @@ if (typeof module !== "undefined" && module.exports) {
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-head">
-            <h3>مشخصات پروژه</h3>
-            <div class="card-actions"><span class="sub ltr" id="edCodeChip"></span></div>
-          </div>
-          <div class="card-body">
-            <div class="fields-grid">
-              <div class="field span2"><label for="edTitle">عنوان پروژه</label><input type="text" id="edTitle" placeholder="مثلاً کابینت آشپزخانه"></div>
+        <!-- ═══ مشخصات پروژه — نوارِ باریکِ همیشه‌باز ═══
+             عنوان و مشتری بیشترین کاربرد را دارند و همیشه دیده می‌شوند؛
+             بقیه‌ی فیلدها (وضعیت، تلفن، اعتبار، نشانی) پشتِ «بیشتر» هستند.
+             پیش‌تر این کارت ۲۷۰ پیکسل ارتفاع داشت و جدولِ یونیت‌ها را از
+             دیدِ اول بیرون می‌برد. -->
+        <div class="card" id="projMetaCard">
+          <div class="card-body" id="projMetaBody">
+            <div class="proj-slim">
+              <span class="ps-code ltr" id="edCodeChip" title="کد پروژه">—</span>
+              <label class="ps-field ps-title"><span>عنوان پروژه</span>
+                <input type="text" id="edTitle" placeholder="مثلاً کابینت آشپزخانه"
+                       aria-label="عنوان پروژه" autocomplete="off">
+              </label>
+              <label class="ps-field ps-cust"><span>نام مشتری</span>
+                <input type="text" id="edCustomer" placeholder="مثلاً آقای رضایی"
+                       aria-label="نام مشتری" autocomplete="off">
+              </label>
+              <label class="ps-field ps-mobile"><span>همراه</span>
+                <input type="tel" id="edMobile" class="ltr" placeholder="۰۹۱۲…"
+                       aria-label="همراه" autocomplete="off">
+              </label>
+              <button class="btn ghost sm ps-more" id="btnProjMore" type="button"
+                      aria-expanded="false" aria-controls="projMoreFields"
+                      title="وضعیت، تلفن ثابت، اعتبار پیش‌فاکتور و نشانی">
+                <span>جزئیات بیشتر</span>
+                <svg class="tb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </div>
+            <div class="fields-grid" id="projMoreFields" hidden style="margin-top:.7rem">
               <div class="field"><label for="edStatus">وضعیت</label>
                 <select id="edStatus">
                   <option value="draft">پیش‌نویس</option>
@@ -10716,37 +11953,30 @@ if (typeof module !== "undefined" && module.exports) {
                   <option value="canceled">لغوشده</option>
                 </select>
               </div>
-              <div class="field"><label for="edCustomer">نام مشتری</label><input type="text" id="edCustomer"></div>
-              <div class="field"><label for="edMobile">همراه</label><input type="tel" id="edMobile" placeholder="۰۹۱۲…" class="ltr" style="text-align:right"></div>
-              <div class="field"><label for="edPhone">تلفن</label><input type="tel" id="edPhone" class="ltr" style="text-align:right"></div>
+              <div class="field"><label for="edPhone">تلفن ثابت</label><input type="tel" id="edPhone" class="ltr" style="text-align:right"></div>
               <div class="field"><label for="edValid">اعتبار تا</label><input type="text" id="edValid" placeholder="۱۴۰۵/۰۸/۱۵"></div>
-              <div class="field span4"><label for="edAddress">نشانی</label><input type="text" id="edAddress"></div>
+              <div class="field span2"><label for="edAddress">نشانی</label><input type="text" id="edAddress"></div>
             </div>
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-head">
-            <h3>بخش‌ها (سبک‌ها) <span class="sub">در یک پروژه چند بخش با سبک‌های متفاوت بسازید</span></h3>
+        <div class="card" id="edSecCard">
+          <!-- ★ نوارِ فشرده‌ی بخش‌ها: عنوانِ بزرگ و دکمه‌ی تکراریِ «افزودن بخش»
+               حذف شد — همه‌چیز در یک ردیف: قرصِ بخش‌ها (+ بخش) و «تنظیمات بخش».
+               فضای عمودیِ کارگاه‌ای مهم‌ترین سرمایه‌ی صفحه است.                -->
+          <div class="sec-strip">
+            <div class="sec-pills" id="secPills"></div>
             <div class="card-actions">
-              <!-- ★ M10: «حذف بخش» از این‌جا برداشته شد و به منوی ⋯ نوارِ
-                   ویرایشگر رفت. نشستنِ «حذف» دقیقاً کنارِ «افزودن» — دو کنش
-                   متضاد با فاصله‌ی چند پیکسل — منبعِ اصلیِ حذفِ اشتباه بود. -->
-              <button class="btn ghost sm" id="btnAddSection" type="button" title="یک بخش (سبک) تازه به این پروژه اضافه کنید">＋ افزودن بخش</button>
+              <button class="btn ghost sm" id="btnSecBar" type="button"
+                      aria-expanded="false" aria-controls="secBarWrap"
+                      title="نام بخش، سبک، پرت ورق، سربار، صفحه و طول دیوار">
+                <svg class="tb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                تنظیمات بخش
+                <span class="sec-peek" id="secBarPeek">—</span>
+              </button>
             </div>
           </div>
           <div class="card-body">
-            <div class="sec-pills" id="secPills"></div>
-            <!-- ★ افشای تدریجی: این نوار «یک‌بار برای هر بخش» تنظیم می‌شود
-                 (نام، سبک، پرت ورق، سربار) ولی پیش‌تر همیشه باز بود و فضای
-                 بالای جدولِ یونیت‌ها — سطحِ اصلیِ کار — را می‌گرفت. حالا پشتِ
-                 یک کلیک است و خلاصه‌اش در همان خط دیده می‌شود. -->
-            <button class="tb-drawer-toggle" id="btnSecBar" type="button"
-                    aria-expanded="false" aria-controls="secBarWrap" style="margin-bottom:.5rem">
-              <svg class="tb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-              <span class="tb-drawer-title">تنظیمات بخش</span>
-              <span class="tb-summary" id="secBarPeek">—</span>
-            </button>
             <div class="section-bar" id="secBarWrap" hidden>
               <label>نام بخش:
                 <input type="text" id="secName" style="width:8rem">
@@ -10809,7 +12039,7 @@ if (typeof module !== "undefined" && module.exports) {
                 <button class="btn ghost sm" id="btnUseTpl" type="button" title="الگوی انتخاب‌شده را به این بخش اضافه می‌کند">＋ از الگو</button>
                 <!-- ★ M8: «مدیریت الگوها» به منوی ⋯ نوار ویرایشگر رفت. ذخیره‌ی
                      الگو همچنان از دکمه‌ی «الگو» در همان ردیف انجام می‌شود. -->
-                <span class="tiny muted ut-hint">برای ذخیره‌ی یک یونیت به‌عنوان الگو، از دکمه‌ی «الگو» در همان ردیف استفاده کنید.</span>
+
               </div>
               <div class="table-wrap grid-head"><table class="data center" id="tblUnits"></table></div>
               <!-- ═══════════ ★ P3: نوارِ افزودنِ چسبان (قانونِ فیتز) ═══════════
@@ -10840,6 +12070,12 @@ if (typeof module !== "undefined" && module.exports) {
                             title="یونیت دیواری با ابعاد پیش‌فرض (⇧N)">یونیت دیواری <kbd class="kbd">⇧N</kbd></button>
                     <button class="ovf-item add-row" data-add="unit:tall" type="button" role="menuitem"
                             title="کمد ایستاده با ابعاد پیش‌فرض">کمد ایستاده</button>
+                    <button class="ovf-item add-row" data-add="unit:drawer" type="button" role="menuitem"
+                            title="پکیج کشو (چند کشوی آماده) با ابعاد پیش‌فرض">پکیج کشو</button>
+                    <button class="ovf-item add-row" data-add="unit:open" type="button" role="menuitem"
+                            title="شلف / قفسهٔ باز با ابعاد پیش‌فرض">شلف باز</button>
+                    <button class="ovf-item add-row" data-add="unit:corner" type="button" role="menuitem"
+                            title="یونیت گوشه‌ی L (۹۰×۹۰×۷۲) — عمق را با اندازه‌ی واقعی گوشه تنظیم کنید">یونیت گوشه (بلایند)</button>
                   </div>
                 </div>
                 <span class="add-hint">
@@ -11272,6 +12508,119 @@ if (typeof module !== "undefined" && module.exports) {
         </div>
 
         <div class="card">
+          <div class="card-head"><h3>ابعاد پیش‌فرض در و کشو</h3>
+            <div class="card-actions"><span class="badge b-draft">جدید</span></div>
+          </div>
+          <div class="card-body">
+            <p class="tiny muted" style="margin-bottom:.9rem">
+              هنگام «افزودن در» یا «افزودن کشو» در ویرایشگر، این ابعاد به‌عنوان نقطه‌ی شروع اعمال می‌شوند
+              (بعداً برای هر ردیف قابل ویرایش است). مقادیر بر حسب سانتی‌متر است.
+            </p>
+            <div class="unit-def-grid">
+              <div class="unit-def-col">
+                <h4><span class="ud-dot wall"></span>در</h4>
+                <div class="field"><label for="setDoorQty">لنگه در هر ردیف</label><input type="text" id="setDoorQty" inputmode="numeric"></div>
+                <div class="field"><label for="setDoorW">عرض هر لنگه</label><input type="text" id="setDoorW" inputmode="numeric"></div>
+                <div class="field"><label for="setDoorH">ارتفاع در</label><input type="text" id="setDoorH" inputmode="numeric"></div>
+              </div>
+              <div class="unit-def-col">
+                <h4><span class="ud-dot ground"></span>کشو</h4>
+                <div class="field"><label for="setDrawerW">عرض</label><input type="text" id="setDrawerW" inputmode="numeric"></div>
+                <div class="field"><label for="setDrawerH">ارتفاع جبهه</label><input type="text" id="setDrawerH" inputmode="numeric"></div>
+                <div class="field"><label for="setDrawerD">عمق</label><input type="text" id="setDrawerD" inputmode="numeric"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card span2">
+          <div class="card-head"><h3>پیش‌فرض‌های جزئیات یونیت، در و کشو</h3>
+            <div class="card-actions"><span class="badge b-draft">جدید</span></div>
+          </div>
+          <div class="card-body">
+            <p class="tiny muted" style="margin-bottom:.9rem">
+              این مقادیر هنگام افزودن یونیت/در/کشوی تازه خودکار پر می‌شوند و بعداً در همان ردیف قابل تغییرند.
+              «— بدون پیش‌فرض —» یعنی از متریال سبک بخش استفاده شود.
+            </p>
+            <h4 class="dp-h4"><span class="ud-dot ground"></span>یونیت</h4>
+            <div class="dp-grid">
+              <div class="field"><label for="dpUnitBody">ورق بدنه</label><select data-dp="default_unit_body_id" data-dpcat="body_sheet" id="dpUnitBody"></select></div>
+              <div class="field"><label for="dpUnitBack">فیبر پشت</label><select data-dp="default_unit_back_id" data-dpcat="back_sheet" id="dpUnitBack"></select></div>
+              <div class="field"><label for="dpUnitBanding">نوار PVC</label><select data-dp="default_unit_banding_id" data-dpcat="banding" id="dpUnitBanding"></select></div>
+              <div class="field"><label for="dpUnitCounter">صفحه کابینت</label><select data-dp="default_unit_countertop_id" data-dpcat="countertop" id="dpUnitCounter"></select></div>
+              <div class="field"><label for="dpUnitCrown">تاج</label><select data-dp="default_unit_crown_id" data-dpcat="crown" id="dpUnitCrown"></select></div>
+              <div class="field"><label for="dpUnitUnder">زیرچراغ</label><select data-dp="default_unit_underlight_id" data-dpcat="underlight" id="dpUnitUnder"></select></div>
+              <div class="field"><label for="dpUnitKick">پاخور</label><select data-dp="default_unit_kickboard_id" data-dpcat="kickboard" id="dpUnitKick"></select></div>
+              <div class="field"><label for="dpUnitLeg">پایه</label><select data-dp="default_unit_leg_id" data-dpcat="leg" id="dpUnitLeg"></select></div>
+              <div class="field"><label for="dpUnitPin">خار طبقه</label><select data-dp="default_unit_shelf_pin_id" data-dpcat="shelf_pin" id="dpUnitPin"></select></div>
+              <div class="field"><label for="dpUnitAsm">مونتاژ یونیت</label><select data-dp="default_unit_assembly_id" data-dpcat="service" id="dpUnitAsm"></select></div>
+              <div class="field"><label for="dpUnitBandMode">حالت نوار PVC</label>
+                <select id="dpUnitBandMode" data-dp-mode="default_unit_banding_mode"><option value="auto">خودکار (قاعده‌ی نوع یونیت)</option></select>
+              </div>
+              <div class="field"><label for="dpUnitLegs">پایه در هر یونیت</label><input type="text" id="dpUnitLegs" data-dp-num="default_unit_legs_per_unit" inputmode="numeric"></div>
+              <div class="field"><label for="dpUnitPins">خار در هر طبقه</label><input type="text" id="dpUnitPins" data-dp-num="default_unit_pins_per_shelf" inputmode="numeric"></div>
+              <div class="field"><label for="dpUnitQty">تعداد پیش‌فرض یونیت</label><input type="text" id="dpUnitQty" data-dp-num="default_unit_qty" inputmode="numeric"></div>
+              <div class="field"><label class="check"><input type="checkbox" data-dp-bool="default_unit_has_top_panel" data-dp-default="1"> سقف یونیت داشته باشد</label></div>
+              <div class="field"><label class="check"><input type="checkbox" data-dp-bool="default_unit_has_bottom_panel" data-dp-default="1"> کف یونیت داشته باشد</label></div>
+            </div>
+            <h4 class="dp-h4"><span class="ud-dot wall"></span>در</h4>
+            <div class="dp-grid">
+              <div class="field"><label for="dpDoorMat">ورق در</label><select data-dp="default_door_material_id" data-dpcat="door_sheet" id="dpDoorMat"></select></div>
+              <div class="field"><label for="dpDoorModel">مدل / اجرت در</label><select data-dp="default_door_model_id" data-dpcat="door_model" id="dpDoorModel"></select></div>
+              <div class="field"><label for="dpDoorHinge">لولا</label><select data-dp="default_door_hinge_id" data-dpcat="hinge" id="dpDoorHinge"></select></div>
+              <div class="field"><label for="dpDoorGas">گازور / جک</label><select data-dp="default_door_gas_spring_id" data-dpcat="gas_spring" id="dpDoorGas"></select></div>
+              <div class="field"><label for="dpDoorHandle">دستگیره</label><select data-dp="default_door_handle_id" data-dpcat="handle" id="dpDoorHandle"></select></div>
+              <div class="field"><label for="dpDoorBanding">نوار در</label><select data-dp="default_door_banding_id" data-dpcat="banding" id="dpDoorBanding"></select></div>
+              <div class="field"><label for="dpDoorAsm">مونتاژ در</label><select data-dp="default_door_assembly_id" data-dpcat="service" id="dpDoorAsm"></select></div>
+              <div class="field"><label for="dpDoorPack">بسته‌بندی در</label><select data-dp="default_door_packaging_id" data-dpcat="service" id="dpDoorPack"></select></div>
+              <div class="field"><label for="dpDoorHinges">لولا در هر لنگه</label><input type="text" id="dpDoorHinges" data-dp-num="default_door_hinges_per_leaf" inputmode="numeric"></div>
+              <div class="field"><label for="dpDoorHandles">دستگیره در هر لنگه</label><input type="text" id="dpDoorHandles" data-dp-num="default_door_handles_per_leaf" inputmode="numeric"></div>
+              <div class="field"><label for="dpDoorGasCount">جک در هر لنگه</label><input type="text" id="dpDoorGasCount" data-dp-num="default_door_gas_springs_per_leaf" inputmode="numeric"></div>
+              <div class="field"><label class="check"><input type="checkbox" data-dp-bool="default_door_glass"> در شیشه‌دار باشد</label></div>
+              <div class="field"><label class="check"><input type="checkbox" data-dp-bool="default_door_from_body"> در از ورق بدنه باشد</label></div>
+            </div>
+            <h4 class="dp-h4"><span class="ud-dot tall"></span>کشو</h4>
+            <div class="dp-grid">
+              <div class="field"><label for="dpDrwSlide">ریل کشو</label><select data-dp="default_drawer_slide_id" data-dpcat="drawer_slide" id="dpDrwSlide"></select></div>
+              <div class="field"><label for="dpDrwSheet">ورق جعبه کشو</label><select data-dp="default_drawer_sheet_id" data-dpcat="drawer_sheet" id="dpDrwSheet"></select></div>
+              <div class="field"><label for="dpDrwFront">جبهه‌ی کشو</label><select data-dp="default_drawer_front_id" data-dpcat="door_sheet" id="dpDrwFront"></select></div>
+              <div class="field"><label for="dpDrwHandle">دستگیره کشو</label><select data-dp="default_drawer_handle_id" data-dpcat="handle" id="dpDrwHandle"></select></div>
+              <div class="field"><label for="dpDrwBanding">نوار کشو</label><select data-dp="default_drawer_banding_id" data-dpcat="banding" id="dpDrwBanding"></select></div>
+              <div class="field"><label for="dpDrwAsm">مونتاژ کشو</label><select data-dp="default_drawer_assembly_id" data-dpcat="service" id="dpDrwAsm"></select></div>
+              <div class="field"><label for="dpDrawerQty">تعداد پیش‌فرض کشو</label><input type="text" id="dpDrawerQty" data-dp-num="default_drawer_qty" inputmode="numeric"></div>
+            </div>
+            <h4 class="dp-h4"><span class="ud-dot ground"></span>درنما، اضافات و خدمات</h4>
+            <div class="dp-grid">
+              <div class="field"><label for="dpFacadeLabel">عنوان ردیف درنما</label><input id="dpFacadeLabel" data-dp-str="default_facade_label" type="text"></div>
+              <div class="field"><label for="dpFacadeQty">تعداد درنما</label><input id="dpFacadeQty" data-dp-num="default_facade_qty" inputmode="numeric"></div>
+              <div class="field"><label for="dpFacadeW">عرض درنما (سم)</label><input id="dpFacadeW" data-dp-num="default_facade_w_cm" inputmode="numeric"></div>
+              <div class="field"><label for="dpFacadeH">ارتفاع درنما (سم)</label><input id="dpFacadeH" data-dp-num="default_facade_h_cm" inputmode="numeric"></div>
+              <div class="field"><label for="dpFacadePrice">قیمت هر مترمربع درنما</label><input id="dpFacadePrice" data-dp-num="default_facade_price_per_sqm" inputmode="numeric"></div>
+              <div class="field"><label for="dpExtraLabel">عنوان قلم اضافه</label><input id="dpExtraLabel" data-dp-str="default_extra_label" type="text"></div>
+              <div class="field"><label for="dpExtraQty">تعداد قلم اضافه</label><input id="dpExtraQty" data-dp-num="default_extra_qty" inputmode="numeric"></div>
+              <div class="field"><label for="dpExtraUnit">واحد قلم اضافه</label><select id="dpExtraUnit" data-dp-str="default_extra_unit"><option value="piece">عدد</option><option value="set">ست</option><option value="lm">متر طول</option><option value="sqm">متر مربع</option><option value="sheet">ورق</option><option value="kg">کیلوگرم</option><option value="job">موردی</option></select></div>
+              <div class="field"><label for="dpExtraPrice">قیمت قلم اضافه</label><input id="dpExtraPrice" data-dp-num="default_extra_price" inputmode="numeric"></div>
+              <div class="field"><label for="dpServiceLabel">عنوان خدمت</label><input id="dpServiceLabel" data-dp-str="default_service_label" type="text"></div>
+              <div class="field"><label for="dpServiceBasis">مبنای خدمت</label><select id="dpServiceBasis" data-dp-str="default_service_basis"><option value="fixed">موردی (ثابت)</option><option value="unit">هر یونیت</option><option value="door">هر لنگه در</option><option value="shelf">هر طبقه</option><option value="sqm">هر مترمربع</option><option value="lm">هر متر طول</option><option value="percent">درصدی از جمع</option></select></div>
+              <div class="field"><label for="dpServiceQty">تعداد خدمت</label><input id="dpServiceQty" data-dp-num="default_service_qty" inputmode="numeric"></div>
+              <div class="field"><label for="dpServicePrice">نرخ خدمت</label><input id="dpServicePrice" data-dp-num="default_service_price" inputmode="numeric"></div>
+            </div>
+
+            <hr style="border:none;border-top:1px solid var(--border);margin:1.1rem 0">
+            <label class="switch">
+              <input type="checkbox" data-dp-bool="defaults_beat_style" data-dp-default="1">
+              <span class="track"></span>
+              <span class="sw-label">اولویت با پیش‌فرض‌های من (نه متریالِ سبک)</span>
+            </label>
+            <p class="tiny muted" style="margin-top:.5rem">
+              روشن = متریالی که بالا انتخاب کرده‌اید بر متریالِ سبکِ بخش مقدم است؛ سبک فقط
+              جاهای خالی را پر می‌کند (همه‌ی بخش‌ها یک‌دست می‌مانند).<br>
+              خاموش = سبک بخش اولویت دارد و این پیش‌فرض‌ها فقط جایی اعمال می‌شوند که سبک چیزی تعیین نکرده.
+            </p>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-head"><h3>پول، مالیات و نمایش</h3></div>
           <div class="card-body">
             <div class="grid2">
@@ -11499,10 +12848,27 @@ if (typeof module !== "undefined" && module.exports) {
         <button class="tab active" data-wstab="cut" type="button" role="tab">برش‌نامه <span class="cnt" id="wsCntCut"></span></button>
         <button class="tab" data-wstab="sheets" type="button" role="tab">خلاصه‌ی ورق <span class="cnt" id="wsCntSheets"></span></button>
         <button class="tab" data-wstab="shop" type="button" role="tab">لیست خرید <span class="cnt" id="wsCntShop"></span></button>
+        <button class="tab" data-wstab="cm" type="button" role="tab">کات مستر ۲D <span class="cnt" id="wsCntCm">📄</span></button>
       </div>
       <div class="ws-panel active" id="ws-cut"></div>
       <div class="ws-panel" id="ws-sheets"></div>
       <div class="ws-panel" id="ws-shop"></div>
+      <div class="ws-panel" id="ws-cm">
+        <p class="tiny muted" style="margin-bottom:.7rem">
+          فایلِ ذخیره‌شده‌ی پروژه‌ی CutMaster 2D (فرمت <b dir="ltr">.xml</b>) را انتخاب کنید تا
+          با برش‌نامه‌ی همین پروژه مقایسه شود: قطعاتِ جاافتاده/اضافه با قرمز مشخص می‌شود و
+          نقشه‌ی واقعیِ چیده‌ماندنِ هر ورق با پرت‌ها رسم می‌شود.
+        </p>
+        <div class="cm-upload">
+          <input type="file" id="cmFile" accept=".xml,text/xml" hidden>
+          <button class="btn primary" id="btnCmPick" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            انتخاب فایل CutMaster…
+          </button>
+          <span class="tiny muted" id="cmFileName"></span>
+        </div>
+        <div id="cmResult"></div>
+      </div>
       <p class="tiny muted" style="margin-top:.7rem">
         ابعاد برش‌نامه بر حسب <b>میلی‌متر</b> است و «طول» همیشه بُعد بزرگ‌تر نوشته می‌شود —
         همان قراردادی که اپراتور ارّه‌ی پنل‌بر و دستگاه CNC انتظار دارد.
@@ -11523,6 +12889,26 @@ if (typeof module !== "undefined" && module.exports) {
     </div>
   </div>
 
+  <!-- ═══════════ نمای فنی ۲D (کاغذ آبی) ═══════════ -->
+  <div class="modal wide" id="modal-blueprint" role="dialog" aria-modal="true" aria-labelledby="bpTitle">
+    <div class="modal-head">
+      <h3>📐 نمای فنی <span class="sub" id="bpTitle"></span></h3>
+      <button class="icon-btn" data-close type="button" aria-label="بستن">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="bp-meta" id="bpMeta"></div>
+      <div class="bp-views" id="bpViews"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn outline" id="btnBpPrint" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        چاپ نقشه
+      </button>
+      <div class="spacer"></div>
+      <button class="btn ghost" data-close type="button">بستن</button>
+    </div>
+  </div>
+
   <!-- ═══════════ قیمت‌گیری سریع ═══════════ -->
   <div class="modal" id="modal-quick" role="dialog" aria-modal="true">
     <div class="modal-head">
@@ -11531,7 +12917,7 @@ if (typeof module !== "undefined" && module.exports) {
     </div>
     <div class="modal-body">
       <p class="tiny muted" style="margin-bottom:.9rem">
-        مشتری زنگ زده و قیمت می‌خواهد؟ فقط متراژ و سبک را بدهید؛ کبیر یک پروژه‌ی
+        مشتری زنگ زده و قیمت می‌خواهد؟ فقط متراژ و سبک را بدهید؛ کابینت سازی عرفان یک پروژه‌ی
         <b>واقعی</b> با یونیت‌های استاندارد و درهای هم‌اندازه می‌سازد که بعداً
         می‌توانید دقیقش کنید. دیگر لازم نیست حدس بزنید.
       </p>

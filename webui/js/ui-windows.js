@@ -1,5 +1,5 @@
 /* ==========================================================================
-   کبیر — ui-windows.js
+   کابینت سازی عرفان — ui-windows.js
    --------------------------------------------------------------------------
    «مدیرِ پنجره‌ها»ی بخشِ ویرایشِ پروژه.
 
@@ -56,7 +56,7 @@
      عوض می‌کنند، نه خودشان را). */
   const REG = [
     { key: "edbar",  sel: "#editorBar",  label: "نوارِ فرمان",     minW: 420, minH: 46,  gripH: false },
-    { key: "info",   sel: "#edInfoCard", label: "مشخصاتِ پروژه",  minW: 330, minH: 140, gripH: true },
+    { key: "info",   sel: "#projMetaCard", label: "مشخصاتِ پروژه",  minW: 330, minH: 140, gripH: true },
     { key: "sec",    sel: "#edSecCard",  label: "بخش‌ها و ردیف‌ها", minW: 460, minH: 200, gripH: true },
     { key: "total",  sel: "#totalBar",   label: "جمع و مالی",      minW: 430, minH: 96,  gripH: true, bottom: true },
   ];

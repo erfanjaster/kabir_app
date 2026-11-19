@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""تست دود سرویس‌دهنده‌ی وب کبیر — اجرا:  pytest tests -v
+"""تست دود سرویس‌دهنده‌ی وب کابینت سازی عرفان — اجرا:  pytest tests -v
 
 سرور واقعی را روی یک پورت آزاد و با پایگاه‌داده‌ی موقت بالا می‌آورد و
 مسیرهای اصلی API و سرو فایل‌های استاتیک را بررسی می‌کند.
@@ -72,7 +72,7 @@ class TestStatic(unittest.TestCase):
         status, headers, raw = _get("/")
         self.assertEqual(status, 200)
         self.assertIn("text/html", headers.get("Content-Type"))
-        self.assertIn("کبیر".encode("utf-8"), raw)
+        self.assertIn("کابینت سازی عرفان".encode("utf-8"), raw)
 
     def test_security_headers(self):
         status, headers, _ = _get("/")
@@ -126,9 +126,46 @@ class TestApi(unittest.TestCase):
 
     def test_settings_roundtrip(self):
         status, body = _json("/api/settings", "PUT",
-                             {"settings": {"company_name": "تست کبیر"}})
+                             {"settings": {"company_name": "تست کابینت سازی عرفان"}})
         self.assertEqual(status, 200)
-        self.assertEqual(body["settings"]["company_name"], "تست کبیر")
+        self.assertEqual(body["settings"]["company_name"], "تست کابینت سازی عرفان")
+
+    def test_detail_default_settings_are_saved(self):
+        """کلیدهای «پیش‌فرض‌های جزئیات» باید در allowlist سرور باشند؛
+        در غیر این صورت ذخیره‌شان بی‌صدا نادیده گرفته می‌شود."""
+        wanted = {
+            "default_unit_qty": "2",
+            "default_unit_has_top_panel": "0",
+            "default_unit_has_bottom_panel": "1",
+            "default_door_label": "لنگه در",
+            "default_door_gas_springs_per_leaf": "1",
+            "default_door_glass": "1",
+            "default_door_from_body": "1",
+            "default_drawer_qty": "3",
+            "default_drawer_label": "کشوی جادار",
+            "default_facade_label": "روکش نمای آشپزخانه",
+            "default_extra_unit": "set",
+            "default_service_basis": "unit",
+            "defaults_beat_style": "0",
+        }
+        status, body = _json("/api/settings", "PUT", {"settings": wanted})
+        self.assertEqual(status, 200)
+        for k, v in wanted.items():
+            self.assertEqual(body["settings"].get(k), v, k)
+        got = body["settings"]
+        self.assertEqual(got["default_unit_qty"], "2")
+        self.assertEqual(got["default_drawer_qty"], "3")
+        self.assertEqual(got["defaults_beat_style"], "0")
+        # برگرداندن به حالت خنثی تا بقیه‌ی تست‌ها تحت تأثیر نمانند
+        _json("/api/settings", "PUT", {"settings": {
+            "default_unit_qty": "1", "default_unit_has_top_panel": "1",
+            "default_unit_has_bottom_panel": "1", "default_door_label": "در",
+            "default_door_gas_springs_per_leaf": "0", "default_door_glass": "0",
+            "default_door_from_body": "0", "default_drawer_qty": "1",
+            "default_drawer_label": "کشو", "default_facade_label": "ردیف درنما",
+            "default_extra_unit": "piece", "default_service_basis": "fixed",
+            "defaults_beat_style": "1",
+        }})
 
     def test_project_crud_and_calc(self):
         status, body = _json("/api/projects", "POST",
@@ -155,6 +192,43 @@ class TestApi(unittest.TestCase):
         status, body = _json("/api/materials", "POST", {"price": 100})
         self.assertEqual(status, 400)
         self.assertFalse(body["ok"])
+
+    def test_sheet_material_without_dims_rejected(self):
+        """★ باگِ «بدنه‌ی رایگانِ بی‌صدا» در دروازه بسته می‌شود — قلمِ ورقیِ
+        دسته‌ی ورقیِ واقعی بدونِ ابعاد ورق نباید ذخیره شود.                    """
+        status, body = _json("/api/materials", "POST",
+                             {"name": "ورق بی‌ابعاد", "cat": "body_sheet",
+                              "unit": "sheet", "price": 1000})
+        self.assertEqual(status, 400)
+        self.assertFalse(body["ok"])
+        self.assertIn("ابعاد ورق", body["error"])
+
+    def test_sheet_material_with_dims_accepted(self):
+        status, body = _json("/api/materials", "POST",
+                             {"name": "ورق درست", "cat": "body_sheet",
+                              "unit": "sheet", "price": 1000,
+                              "sheet_width_cm": 183, "sheet_height_cm": 366})
+        self.assertEqual(status, 200)
+        mid = int(body["id"])
+        # ویرایشِ حذفِ ابعاد هم باید رد شود
+        status, _ = _json(f"/api/materials/{mid}", "PUT", {"sheet_width_cm": 0})
+        self.assertEqual(status, 400)
+        _json(f"/api/materials/{mid}", "DELETE")
+
+    def test_service_sheet_unit_needs_no_dims(self):
+        """قلمِ «خدمات» با واحد ورق (مثل برش و CNC) ابعاد ندارد — نباید سد بخورد."""
+        status, body = _json("/api/materials", "POST",
+                             {"name": "برش آزمایشی (هر ورق)", "cat": "service",
+                              "unit": "sheet", "price": 1000})
+        self.assertEqual(status, 200)
+        _json(f"/api/materials/{body['id']}", "DELETE")
+
+    def test_invoice_for_missing_project_is_404_not_blank_pdf(self):
+        """فاکتورِ پروژه‌ی ناموجود = خطای ۴۰۴، نه PDF خالی."""
+        status, body = _json("/api/invoice/pdf", "POST", {"project": {"id": 987654321}})
+        self.assertEqual(status, 404)
+        self.assertFalse(body["ok"])
+        self.assertIn("یافت نشد", body["error"])
 
     def test_unknown_route_404(self):
         status, body = _json("/api/nope")

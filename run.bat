@@ -2,10 +2,10 @@
 setlocal EnableExtensions
 chcp 65001 >nul
 cd /d "%~dp0"
-title Kabir
+title Erfan Cabinet
 
 echo.
-echo    Kabir - starting web UI on http://localhost:8080
+echo    Erfan Cabinet - starting web UI on http://localhost:8080
 echo    Your browser opens automatically. Press Ctrl+C to stop the server.
 echo.
 
@@ -26,9 +26,9 @@ if not defined PY (
 
 echo.
 if errorlevel 1 (
-    echo [ERROR] Kabir stopped with an error - see the messages above.
+    echo [ERROR] Erfan Cabinet stopped with an error - see the messages above.
     echo         If a module is missing, run install.bat first.
 ) else (
-    echo Kabir stopped.
+    echo Erfan Cabinet stopped.
 )
 pause

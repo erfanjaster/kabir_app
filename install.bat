@@ -2,10 +2,10 @@
 setlocal EnableExtensions
 chcp 65001 >nul
 cd /d "%~dp0"
-title Kabir - Install
+title Erfan Cabinet - Install
 
 echo ============================================
-echo   Kabir - Dependency Installer
+echo   Erfan Cabinet - Dependency Installer
 echo ============================================
 echo.
 
@@ -52,7 +52,7 @@ if errorlevel 1 (
 echo.
 echo ============================================
 echo   [OK] Installation complete.
-echo   Run "run.bat" to start Kabir in your browser.
+echo   Run "run.bat" to start Erfan Cabinet in your browser.
 echo ============================================
 echo.
 pause
