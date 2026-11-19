@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""هسته‌ی محاسباتی کبیر."""
+"""هسته‌ی محاسباتی کابینت سازی عرفان."""
 
 from . import costing, fonts, persian            # noqa: F401
 from .costing import (                            # noqa: F401

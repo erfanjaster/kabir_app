@@ -197,7 +197,7 @@ def main(argv: List[str] | None = None) -> int:
 
     ap = argparse.ArgumentParser(
         prog="python -m kabir.data.migrate",
-        description="Kabir database migration (safe, non-destructive).",
+        description="Erfan Cabinet database migration (safe, non-destructive).",
     )
     ap.add_argument("--no-backup", action="store_true",
                     help="skip creating a pre-migration backup")
@@ -207,7 +207,7 @@ def main(argv: List[str] | None = None) -> int:
 
     # خروجی کنسول به انگشتی/انگلیسی تا در همه‌ی ترمینال‌ها (از جمله cmd ویندوز)
     # بدون مشکل نمایش داده شود.
-    print("Kabir - database migration")
+    print("Erfan Cabinet - database migration")
     print("--------------------------")
 
     if not args.no_backup:

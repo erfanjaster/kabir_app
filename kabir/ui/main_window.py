@@ -12,7 +12,7 @@
 #     📄 راهنمای UX رابط وب: docs/UX_PLAYBOOK_v2.md
 #     منبع: README.md «یادداشت نسخه» • docs/UX_AUDIT_v1.md «یافته‌ی ساختاری»
 #
-"""پنجره‌ی اصلی کبیر با نوار کناری راست‌به‌چپ."""
+"""پنجره‌ی اصلی کابینت سازی عرفان با نوار کناری راست‌به‌چپ."""
 
 from __future__ import annotations
 
@@ -110,7 +110,7 @@ class MainWindow(QMainWindow):
         sv.setContentsMargins(12, 18, 12, 14)
         sv.setSpacing(4)
 
-        brand = QLabel("🗄 کبیر")
+        brand = QLabel("🗄 کابینت سازی عرفان")
         brand.setObjectName("SidebarBrand")
         brand.setAlignment(Qt.AlignCenter)
         sv.addWidget(brand)

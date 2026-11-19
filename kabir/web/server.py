@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-سرویس‌دهنده‌ی وب کبیر
+سرویس‌دهنده‌ی وب کابینت سازی عرفان
 =====================
 رابط HTML/CSS (پوشه‌ی ``webui``) را سرو می‌کند و یک API ساده برای کار با
 پایگاه‌داده‌ی SQLite، موتور محاسبه و صدور فاکتور در اختیارش می‌گذارد.
@@ -33,6 +33,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 from .. import __version__
 from .. import config
 from ..core import costing, invoice as inv, persian as fa, workshop as ws
+from ..core import cutmaster as cm2d
 from ..core import exporters
 from ..data import backup as bk
 from ..data import dao
@@ -47,6 +48,8 @@ EXPORT_DIR = Path(getattr(config, "EXPORT_DIR", Path(config.data_dir()) / "expor
 
 _lock = threading.RLock()
 _START_TIME = datetime.now()
+#: سقفِ بدنه‌ی درخواست — ۲۵ مگابایت (بزرگ‌ترین پروژه هم چند کیلوبایت است)
+_MAX_BODY_BYTES = 25 * 1024 * 1024
 
 #: میزبان‌های مجاز برای صدا زدن API — جلوی DNS-rebinding گرفته می‌شود.
 #: با متغیر محیطی KABIR_ALLOWED_HOSTS می‌توان دامنه‌های اضافه (مثلاً پشت
@@ -374,10 +377,19 @@ def _calc_payload(db: Database, body: Dict[str, Any]) -> Tuple[costing.ProjectRe
 
 
 def _invoice_payload(db: Database, body: Dict[str, Any]) -> Dict[str, Any]:
-    """ساخت داده‌ی فاکتور از پروژه‌ی ذخیره‌شده یا داده‌ی ارسالی."""
+    """ساخت داده‌ی فاکتور از پروژه‌ی ذخیره‌شده یا داده‌ی ارسالی.
+
+    ★ اگر صریحاً شناسه‌ی پروژه داده شده ولی پروژه وجود ندارد (مثلاً حذف شده
+    باشد)، خطای ۴۰۴ برمی‌گردانیم — نه فاکتورِ خالی: فاکتورِ بی‌مشتری و بی‌ردیف
+    به‌راحتی چاپ و به دست مشتری می‌رسید.
+    """
     result, project = _calc_payload(db, body)
     pid = int(project.get("id") or 0)
     row = ProjectRepo(db).get(pid) if pid else None
+    if pid and not row:
+        raise ApiError(
+            f"پروژه‌ی شماره‌ی {pid} یافت نشد — احتمالاً حذف شده است. "
+            "فاکتورِ خالی صادر نمی‌شود.", 404)
     proj_dict = dict(row or {})
     proj_dict.update({
         "title": _str(project.get("title"), proj_dict.get("title", "")),
@@ -468,9 +480,10 @@ def _dashboard(db: Database) -> Dict[str, Any]:
         "styles": int(st["styles"]),
         "invoices": int(st["invoices"]),
         "month_amount": monthly[-1]["amount"] if monthly else 0.0,
+        # ★ بدونِ ماهِ قبلِ دارای فروش، رشد معنا ندارد — None تا رابط نشانش ندهد
         "month_growth": (round((monthly[-1]["amount"] - monthly[-2]["amount"])
                                / monthly[-2]["amount"] * 100, 1)
-                         if len(monthly) > 1 and monthly[-2]["amount"] else 0.0),
+                         if len(monthly) > 1 and monthly[-2]["amount"] else None),
         "profit": _round2(st["sum_profit"]),
         "monthly": monthly,
         "recent_projects": [
@@ -493,7 +506,7 @@ def api_bootstrap(db: Database, body: Dict[str, Any]) -> Dict[str, Any]:
         "version": APP_VERSION,
         "today": fa.jdate_str(),
         "settings": settings,
-        "currency": settings.get("currency", "ریال"),
+        "currency": settings.get("currency", "تومان"),
         "currency_scale": _num(settings.get("currency_scale", 1), 1) or 1,
         "units": costing.PRICE_UNITS,
         "categories": _category_list(db),
@@ -568,16 +581,39 @@ def api_materials_list(db: Database, body: Dict[str, Any]) -> Dict[str, Any]:
     return {"materials": _materials_with_active(db)}
 
 
+def _validate_material_dims(category: str, unit: str, sw: float, sh: float) -> None:
+    """
+    ★ سدِ اصلی باگِ «بدنه‌ی رایگانِ بی‌صدا» در دروازه‌ی ورودِ داده.
+
+    قلمِ ورقی (دسته‌ی body_sheet/door_sheet/back_sheet/drawer_sheet با واحد
+    «ورق») بدونِ ابعاد ورق، ``price_per_sqm = 0`` می‌دهد؛ یعنی هر پروژه‌ای که
+    از آن استفاده کند، هزینه‌ی ورقش **بی‌صدا صفر** می‌شود و فاکتورِ به‌شدت
+    ارزان به مشتری داده می‌شد. موتور محاسبه همین حالت را هشدار می‌دهد، ولی
+    بهتر است اشتباه اصلاً ساخته نشود. قلم‌های «خدمات» که واحدشان ورق است
+    (مثل «برش و CNC هر ورق») ابعاد ندارند و نباید سد بخورند — فقط دسته‌های
+    ورقیِ واقعی چک می‌شوند.
+    """
+    if unit == "sheet" and category in costing.SHEET_CATEGORIES and (sw <= 0 or sh <= 0):
+        raise ApiError(
+            "برای قلمِ ورقی، ابعاد ورق (طول و عرض به سانتی‌متر) الزامی است — "
+            "بدونِ آن، قیمتِ هر مترمربع صفر می‌شود و هزینه‌ی ورقِ پروژه‌ها "
+            "بی‌صدا صفر حساب می‌شود.")
+
+
 def api_material_create(db: Database, body: Dict[str, Any]) -> Dict[str, Any]:
     name = _str(body.get("name")).strip()
     if not name:
         raise ApiError("نام قلم را وارد کنید.")
     if _num(body.get("price")) <= 0:
         raise ApiError("قیمت معتبر وارد کنید.")
+    _cat = _str(body.get("cat"), "accessory")
+    _unit = _str(body.get("unit"), "piece")
+    _sw, _sh = _num(body.get("sheet_width_cm")), _num(body.get("sheet_height_cm"))
+    _validate_material_dims(_cat, _unit, _sw, _sh)
     m = costing.Material(
         name=name,
-        category=_str(body.get("cat"), "accessory"),
-        unit=_str(body.get("unit"), "piece"),
+        category=_cat,
+        unit=_unit,
         price=_round2(body.get("price")),
         sheet_width_cm=_num(body.get("sheet_width_cm")),
         sheet_height_cm=_num(body.get("sheet_height_cm")),
@@ -604,14 +640,19 @@ def api_material_update(db: Database, body: Dict[str, Any], mid: int) -> Dict[st
     price_val = body.get("price")
     if price_val is None:
         price_val = old.price
+    _cat = _str(body.get("cat"), old.category)
+    _unit = _str(body.get("unit"), old.unit)
+    _sw = _num(body.get("sheet_width_cm", old.sheet_width_cm))
+    _sh = _num(body.get("sheet_height_cm", old.sheet_height_cm))
+    _validate_material_dims(_cat, _unit, _sw, _sh)
     m = costing.Material(
         id=mid,
         name=_str(body.get("name"), old.name).strip() or old.name,
-        category=_str(body.get("cat"), old.category),
-        unit=_str(body.get("unit"), old.unit),
+        category=_cat,
+        unit=_unit,
         price=_round2(price_val),
-        sheet_width_cm=_num(body.get("sheet_width_cm", old.sheet_width_cm)),
-        sheet_height_cm=_num(body.get("sheet_height_cm", old.sheet_height_cm)),
+        sheet_width_cm=_sw,
+        sheet_height_cm=_sh,
         thickness_mm=_num(body.get("thickness_mm", old.thickness_mm)),
         width_cm=_num(body.get("width_cm", old.width_cm)),
         supplier=_str(body.get("supplier"), old.supplier),
@@ -969,6 +1010,35 @@ def api_projects_recalc_all(db: Database, body: Dict[str, Any]) -> Dict[str, Any
 
 
 # --------------------------- برش‌نامه و لیست خرید ---------------------------
+
+def api_cutmaster_compare(db: Database, body: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    ★ پل CutMaster 2D: فایلِ ذخیره‌شده‌ی پروژه‌ی CutMaster را می‌خواند و با
+    برش‌نامه‌ی همین پروژه مقایسه می‌کند.
+
+    ورودی: ``xml`` (متنِ فایل cm2d) + همان ``project``/``pages`` مسیرهای دیگر.
+    خروجی: نقشه‌ی واقعیِ چیده‌ماندنِ هر ورق + آمار (ورقِ مصرفی، بازده، مترِ برش)
+    + جدولِ مغایرت: قطعاتِ منطبق / فقط در برش‌نامه‌ی ما / فقط در CutMaster.
+    """
+    xml_text = body.get("xml")
+    if not xml_text or not str(xml_text).strip():
+        raise ApiError("فایل CutMaster ارسال نشده است.")
+    if len(xml_text) > _MAX_BODY_BYTES:
+        raise ApiError("فایل بیش از حد بزرگ است.", 413)
+    try:
+        parsed = cm2d.parse_cm2d(str(xml_text))
+    except cm2d.CutMasterError as exc:
+        raise ApiError(str(exc), 400)
+
+    result, project = _calc_payload(db, body)
+    pages = _pages_from_payload(body.get("pages"))
+    if not pages and project.get("id"):
+        pages = ProjectRepo(db).load_pages(int(project["id"]))
+    engine = _engine_of(db)
+    pack = ws.build_workshop_pack(engine, pages, result, db.all_settings())
+    comparison = cm2d.compare_with_our_parts(parsed, pack["cut_parts"])
+    return {"cm": parsed, "compare": comparison, "our_stats": pack["stats"]}
+
 
 def _engine_of(db: Database) -> costing.CostingEngine:
     """موتور محاسبه با متریال‌ها و تنظیمات جاری پایگاه‌داده."""
@@ -1373,6 +1443,27 @@ SETTING_KEYS = (
     "unit_ground_length_cm", "unit_ground_height_cm", "unit_ground_depth_cm", "unit_ground_shelves",
     "unit_wall_length_cm", "unit_wall_height_cm", "unit_wall_depth_cm", "unit_wall_shelves",
     "unit_tall_length_cm", "unit_tall_height_cm", "unit_tall_depth_cm", "unit_tall_shelves",
+    "default_door_qty", "default_door_w_cm", "default_door_h_cm",
+    "default_door_gas_springs_per_leaf", "default_door_glass", "default_door_from_body", "default_door_label",
+    "default_drawer_qty", "default_drawer_label", "default_drawer_w_cm", "default_drawer_h_cm", "default_drawer_d_cm",
+    "default_unit_qty",
+    "default_facade_label", "default_facade_qty", "default_facade_w_cm", "default_facade_h_cm", "default_facade_price_per_sqm",
+    "default_extra_label", "default_extra_qty", "default_extra_unit", "default_extra_price",
+    "default_service_label", "default_service_basis", "default_service_qty", "default_service_price",
+    # پیش‌فرضِ متریال/یراقِ جزئیات (شناسه‌ی قلم یا خالی)
+    "default_unit_body_id", "default_unit_back_id", "default_unit_banding_id",
+    "default_unit_countertop_id", "default_unit_crown_id", "default_unit_underlight_id",
+    "default_unit_kickboard_id", "default_unit_leg_id", "default_unit_shelf_pin_id",
+    "default_unit_assembly_id", "default_unit_banding_mode",
+    "default_unit_legs_per_unit", "default_unit_pins_per_shelf",
+    "default_unit_has_top_panel", "default_unit_has_bottom_panel",
+    "default_door_material_id", "default_door_model_id", "default_door_hinge_id",
+    "default_door_gas_spring_id", "default_door_handle_id", "default_door_banding_id",
+    "default_door_assembly_id", "default_door_packaging_id",
+    "default_door_hinges_per_leaf", "default_door_handles_per_leaf",
+    "default_drawer_slide_id", "default_drawer_sheet_id", "default_drawer_front_id",
+    "default_drawer_handle_id", "default_drawer_banding_id", "default_drawer_assembly_id",
+    "defaults_beat_style",
     "banding_body_factor", "banding_door_factor", "banding_waste_percent", "banding_width_mm",
     "theme", "font_size", "table_row_height", "persian_digits", "show_decimals",
     "auto_backup", "backup_keep", "web_font_size",
@@ -1480,6 +1571,7 @@ Route = Tuple[str, re.Pattern, Callable[..., Any]]
 ROUTES: List[Route] = [
     ("GET", re.compile(r"^/api/health$"), lambda h, b, m: api_health(h.db, b)),
     ("GET", re.compile(r"^/api/bootstrap$"), lambda h, b, m: api_bootstrap(h.db, b)),
+    ("GET", re.compile(r"^/api/dashboard$"), lambda h, b, m: {"dashboard": _dashboard(h.db)}),
     ("GET", re.compile(r"^/api/settings$"), lambda h, b, m: api_settings_get(h.db, b)),
     ("PUT", re.compile(r"^/api/settings$"), lambda h, b, m: api_settings_save(h.db, b)),
     ("POST", re.compile(r"^/api/settings$"), lambda h, b, m: api_settings_save(h.db, b)),
@@ -1521,6 +1613,7 @@ ROUTES: List[Route] = [
 
     ("POST", re.compile(r"^/api/workshop$"), lambda h, b, m: api_workshop(h.db, b)),
     ("POST", re.compile(r"^/api/workshop/xlsx$"), lambda h, b, m: api_workshop_xlsx(h.db, b)),
+    ("POST", re.compile(r"^/api/cutmaster/compare$"), lambda h, b, m: api_cutmaster_compare(h.db, b)),
     ("POST", re.compile(r"^/api/quick-project$"), lambda h, b, m: api_quick_project(h.db, b)),
 
     ("GET", re.compile(r"^/api/unit-templates$"),
@@ -1562,7 +1655,7 @@ ROUTES: List[Route] = [
 
 class KabirHandler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
-    server_version = f"Kabir/{APP_VERSION}"
+    server_version = f"Erfan Cabinet/{APP_VERSION}"
 
     # ---------------- پاسخ‌ها ----------------
     def _cors(self) -> None:
@@ -1570,7 +1663,7 @@ class KabirHandler(BaseHTTPRequestHandler):
         هدرهای CORS — فقط برای مبدأهای هم‌تراز با Host.
 
         ⚠ پیش‌تر `Access-Control-Allow-Origin: *` ارسال می‌شد؛ یعنی «هر»
-        وب‌سایتی که کاربر باز می‌کرد می‌توانست با fetch به API محلی کبیر
+        وب‌سایتی که کاربر باز می‌کرد می‌توانست با fetch به API محلی کابینت سازی عرفان
         بنویسد/بخواند (پروژه‌ها را پاک کند یا داده‌ها را بدزدد). اکنون:
           - درخواست هم‌ریشه (بدون Origin) → همیشه مجاز؛
           - Origin «null» (رابط مستقل file://) → مجاز؛
@@ -1669,6 +1762,11 @@ class KabirHandler(BaseHTTPRequestHandler):
             length = 0
         if length <= 0:
             return {}
+        # ★ سقفِ بدنه‌ی درخواست — حتی در شبکه‌ی محلی، بدنه‌ی غول‌آسا نباید
+        #   حافظه‌ی سیستمِ کارگاه را ببلعد. ۲۵ مگابایت برای بزرگ‌ترین
+        #   پروژه‌ها با همه‌ی ریزها چند ده برابر حاشیه دارد.
+        if length > _MAX_BODY_BYTES:
+            raise ApiError("حجم درخواست بیش از حد مجاز است.", 413)
         raw = self.rfile.read(length)
         if not raw:
             return {}
@@ -1797,7 +1895,7 @@ def serve(host: str = "127.0.0.1", port: int = 8080,
     # اگر پورت اشغال بود و نرم‌افزار دیگری آن‌جا نیست، پورت آزاد بعدی انتخاب می‌شود
     if _port_in_use(host, port):
         if _is_kabir_running(host, port):
-            print(f"  ✔ کبیر از قبل روی {port} در حال اجراست — مرورگر باز می‌شود.")
+            print(f"  ✔ کابینت سازی عرفان از قبل روی {port} در حال اجراست — مرورگر باز می‌شود.")
             if open_browser:
                 webbrowser.open(f"http://{host}:{port}/")
             return None  # type: ignore[return-value]
@@ -1806,7 +1904,7 @@ def serve(host: str = "127.0.0.1", port: int = 8080,
             if not _port_in_use(host, candidate):
                 port = candidate
                 if not quiet:
-                    print(f"  ⚠ پورت {original} اشغال بود — کبیر روی پورت {port} اجرا می‌شود.")
+                    print(f"  ⚠ پورت {original} اشغال بود — کابینت سازی عرفان روی پورت {port} اجرا می‌شود.")
                 break
         else:
             raise RuntimeError(f"پورت آزاد در بازه‌ی {original}..{original + 20} یافت نشد.")
@@ -1847,7 +1945,7 @@ def serve(host: str = "127.0.0.1", port: int = 8080,
 
 
 def _is_kabir_running(host: str, port: int) -> bool:
-    """آیا سرویس در حال اجرا روی این پورت، خودِ کبیر است؟"""
+    """آیا سرویس در حال اجرا روی این پورت، خودِ کابینت سازی عرفان است؟"""
     import urllib.error
     import urllib.request
     try:
@@ -1863,7 +1961,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     import argparse
     ap = argparse.ArgumentParser(
         prog="kabir",
-        description="کبیر — نرم‌افزار محاسبه‌ی قیمت تمام‌شده و صدور فاکتور کابینت (رابط وب)",
+        description="کابینت سازی عرفان — نرم‌افزار محاسبه‌ی قیمت تمام‌شده و صدور فاکتور کابینت (رابط وب)",
     )
     ap.add_argument("--host", default=os.environ.get("KABIR_WEB_HOST", "127.0.0.1"),
                     help="نشانی میزبان (پیش‌فرض: 127.0.0.1)")
@@ -1872,7 +1970,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--no-browser", action="store_true", help="مرورگر باز نشود")
     ap.add_argument("--quiet", action="store_true", help="بدون پیام‌های راه‌اندازی")
     ap.add_argument("--version", action="version",
-                    version=f"کبیر {APP_VERSION}")
+                    version=f"کابینت سازی عرفان {APP_VERSION}")
     args = ap.parse_args(argv)
     serve(args.host, args.port, open_browser=not args.no_browser, quiet=args.quiet)
     return 0

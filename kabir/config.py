@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""پیکربندی مسیرها و تنظیمات سراسری کبیر (رابط وب) — مستقل از سیستم‌عامل."""
+"""پیکربندی مسیرها و تنظیمات سراسری کابینت سازی عرفان (رابط وب) — مستقل از سیستم‌عامل."""
 
 from __future__ import annotations
 
@@ -10,9 +10,11 @@ from pathlib import Path
 
 from . import __version__ as APP_VERSION
 
-APP_NAME = "کبیر"
-APP_NAME_EN = "KabirCabinet"
-ORG_NAME = "Kabir"
+APP_NAME = "کابینت سازی عرفان"
+APP_NAME_EN = "ErfanCabinet"
+ORG_NAME = "Erfan Cabinet"
+#: نامِ پیشینِ پوشه‌ی داده — برای مهاجرتِ بی‌دردسرِ نسخه‌های قبلی
+LEGACY_APP_NAME_EN = "KabirCabinet"
 
 SYSTEM = platform.system()          # 'Windows' | 'Linux' | 'Darwin'
 IS_WINDOWS = SYSTEM == "Windows"
@@ -44,11 +46,11 @@ def resource_path(*parts: str) -> Path:
 def data_dir() -> Path:
     """
     مسیر ذخیره‌سازی داده‌های کاربر؛ طبق استاندارد هر سیستم‌عامل:
-      ویندوز : %APPDATA%\\KabirCabinet
-      لینوکس : ~/.local/share/KabirCabinet   (یا $XDG_DATA_HOME)
-      مک     : ~/Library/Application Support/KabirCabinet
+      ویندوز : %APPDATA%\\ErfanCabinet
+      لینوکس : ~/.local/share/ErfanCabinet   (یا $XDG_DATA_HOME)
+      مک     : ~/Library/Application Support/ErfanCabinet
     """
-    override = os.environ.get("KABIR_DATA_DIR")
+    override = os.environ.get("ERFAN_DATA_DIR") or os.environ.get("KABIR_DATA_DIR")
     if override:
         p = Path(override).expanduser()
     elif IS_WINDOWS:
@@ -59,6 +61,19 @@ def data_dir() -> Path:
     else:
         base = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
         p = Path(base) / APP_NAME_EN
+
+    # مهاجرتِ یک‌باره: اگر پوشه‌ی نامِ قدیمی وجود دارد و پوشه‌ی تازه ساخته
+    # نشده، همان داده‌ها (متریال، پروژه‌ها، فاکتورها) به مسیر تازه منتقل
+    # می‌شوند تا کاربر نسخه‌ی جدید را با پایگاه‌داده‌ی خالی شروع نکند.
+    if not override and not p.exists():
+        legacy = p.with_name(LEGACY_APP_NAME_EN)
+        if legacy.is_dir():
+            try:
+                legacy.rename(p)
+            except OSError:
+                import shutil
+                shutil.copytree(legacy, p, dirs_exist_ok=True)
+
     p.mkdir(parents=True, exist_ok=True)
     return p
 
@@ -114,7 +129,7 @@ FONT_URLS = [
 
 DEFAULT_SETTINGS = {
     # مشخصات فروشگاه
-    "company_name": "کارگاه کابینت‌سازی کبیر",
+    "company_name": "کارگاه کابینت سازی عرفان",
     "company_manager": "",
     "company_phone": "",
     "company_mobile": "",
@@ -126,7 +141,7 @@ DEFAULT_SETTINGS = {
     "invoice_title": "پیش‌فاکتور",
 
     # مالی
-    "currency": "ریال",
+    "currency": "تومان",
     "currency_scale": "1",              # 1 = ریال ، 10 = تومان (نمایش تقسیم بر ۱۰)
     "vat_enabled": "0",
     "vat_percent": "10",
@@ -160,6 +175,76 @@ DEFAULT_SETTINGS = {
     "unit_tall_height_cm": "220",
     "unit_tall_depth_cm": "58",
     "unit_tall_shelves": "2",
+
+    # ابعاد پیش‌فرض در و کشو — هنگام «افزودن در/کشو» در ویرایشگر اعمال می‌شوند
+    "default_door_qty": "1",           # تعداد لنگه در هر ردیف در
+    "default_door_w_cm": "45",         # عرض هر لنگه
+    "default_door_h_cm": "70",         # ارتفاع در
+    "default_door_gas_springs_per_leaf": "0",
+    "default_door_glass": "0",
+    "default_door_from_body": "0",
+    "default_door_label": "در",
+    "default_drawer_qty": "1",
+    "default_drawer_label": "کشو",
+    "default_unit_qty": "1",
+    "default_drawer_w_cm": "60",
+    "default_drawer_h_cm": "18",
+    "default_drawer_d_cm": "45",
+    "default_facade_label": "ردیف درنما",
+    "default_facade_qty": "1",
+    "default_facade_w_cm": "100",
+    "default_facade_h_cm": "60",
+    "default_facade_price_per_sqm": "300000",
+    "default_extra_label": "قلم جدید",
+    "default_extra_qty": "1",
+    "default_extra_unit": "piece",
+    "default_extra_price": "500000",
+    "default_service_label": "خدمت جدید",
+    "default_service_basis": "fixed",
+    "default_service_qty": "1",
+    "default_service_price": "300000",
+
+    # ── پیش‌فرضِ متریال و یراقِ «جزئیات» ────────────────────────────────
+    # شناسه‌ی قلم‌های کتابخانه (۰ = خالی). یونیت/در/کشوی تازه با همین‌ها
+    # پر می‌شود تا کاربر مجبور نباشد هر بار ۶ انتخاب تکرار کند.
+    # یونیت
+    "default_unit_body_id": "",
+    "default_unit_back_id": "",
+    "default_unit_banding_id": "",
+    "default_unit_countertop_id": "",
+    "default_unit_crown_id": "",
+    "default_unit_underlight_id": "",
+    "default_unit_kickboard_id": "",
+    "default_unit_leg_id": "",
+    "default_unit_shelf_pin_id": "",
+    "default_unit_assembly_id": "",
+    "default_unit_banding_mode": "auto",
+    "default_unit_legs_per_unit": "4",
+    "default_unit_pins_per_shelf": "4",
+    "default_unit_has_top_panel": "1",
+    "default_unit_has_bottom_panel": "1",
+    # در
+    "default_door_material_id": "",
+    "default_door_model_id": "",
+    "default_door_hinge_id": "",
+    "default_door_gas_spring_id": "",
+    "default_door_handle_id": "",
+    "default_door_banding_id": "",
+    "default_door_assembly_id": "",
+    "default_door_packaging_id": "",
+    "default_door_hinges_per_leaf": "2",
+    "default_door_handles_per_leaf": "1",
+    # کشو
+    "default_drawer_slide_id": "",
+    "default_drawer_sheet_id": "",
+    "default_drawer_front_id": "",
+    "default_drawer_handle_id": "",
+    "default_drawer_banding_id": "",
+    "default_drawer_assembly_id": "",
+    #: ★ اولویتِ پیش‌فرض‌های من بر متریالِ «سبک» (قابل تغییر در تنظیمات)
+    #:   ۱ (پیش‌فرض) = انتخاب‌های تنظیمات روی سبک می‌نشینند؛ سبک فقط جاهای خالی را
+    #:   ۰ = متریالِ سبک اولویت دارد و پیش‌فرض‌ها فقط جاهای خالیِ سبک را پر می‌کنند
+    "defaults_beat_style": "1",
 
     # ضریب نوار PVC
     "banding_body_factor": "2.2",

@@ -140,7 +140,7 @@ def build_invoice_data(result: ProjectResult, project: Dict[str, Any],
             "logo": settings.get("company_logo", "") or "",
         },
         "mode": mode,
-        "currency": settings.get("currency", "ریال"),
+        "currency": settings.get("currency", "تومان"),
         "scale": float(settings.get("currency_scale", "1") or 1),
         "items": items,
         "totals": totals,
@@ -149,7 +149,7 @@ def build_invoice_data(result: ProjectResult, project: Dict[str, Any],
         "show_stats": bool(project.get("show_stats", True)),
         "note": project.get("note", "") or "",
         "persian_digits": str(settings.get("persian_digits", "1")) == "1",
-        "generated_by": "نرم‌افزار کبیر — محاسبه‌گر قیمت تمام‌شده‌ی کابینت",
+        "generated_by": "نرم‌افزار کابینت سازی عرفان — محاسبه‌گر قیمت تمام‌شده‌ی کابینت",
     }
 
 

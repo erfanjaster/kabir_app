@@ -148,7 +148,7 @@ def build_pdf(data: Dict[str, Any], out_path: Path, *, accent: Tuple[float, floa
                             rightMargin=10 * mm, leftMargin=10 * mm,
                             topMargin=12 * mm, bottomMargin=14 * mm,
                             title=f"{data.get('kind_label', 'فاکتور')} {data.get('number', '')}",
-                            author=data.get("seller", {}).get("name", "Kabir"))
+                            author=data.get("seller", {}).get("name", "Erfan Cabinet"))
 
     base = getSampleStyleSheet()
 

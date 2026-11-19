@@ -244,7 +244,7 @@ class SettingsPage(QWidget):
         w7 = QWidget()
         v7 = QVBoxLayout(w7)
         about = QLabel(
-            f"<h2 style='color:#0f766e'>کبیر — نسخه {config.APP_VERSION}</h2>"
+            f"<h2 style='color:#0f766e'>کابینت سازی عرفان — نسخه {config.APP_VERSION}</h2>"
             "نرم‌افزار محاسبه‌ی قیمت تمام‌شده و صدور پیش‌فاکتور صنعت کابینت<br><br>"
             "• محاسبه‌ی دقیق مساحت ورق، تعداد ورق مصرفی، متراژ نوار PVC و ریز هزینه‌ها<br>"
             "• پشتیبانی پروژه‌های ترکیبی (چند سبک در یک پروژه)<br>"

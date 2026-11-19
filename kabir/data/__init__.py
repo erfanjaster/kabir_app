@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""لایه‌ی داده‌ی کبیر."""
+"""لایه‌ی داده‌ی کابینت سازی عرفان."""
 
 from . import backup, dao, db, seed               # noqa: F401
 from .db import Database                            # noqa: F401
